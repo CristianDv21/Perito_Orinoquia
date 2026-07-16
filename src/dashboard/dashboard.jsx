@@ -1,49 +1,93 @@
 import { useState } from 'react';
+import Documentacion from '../modules/Documentacion';
+import Accesorios from '../modules/Accesorios';
 
 export default function Dashboard({ onLogout }) {
+  // --- ESTADOS DE CONTROL DE INTERFAZ ---
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('Bandeja'); // 'Bandeja', 'Estadisticas', 'Configuracion'
-  const [isInspecting, setIsInspecting] = useState(false); // Controla si estamos dentro de un peritaje
+  const [activeTab, setActiveTab] = useState('Bandeja');
+  const [isInspecting, setIsInspecting] = useState(false);
   const [inspectionStep, setInspectionStep] = useState('Documentacion'); // Paso actual del peritaje
 
-  const inspecciones = [
-    { id: "V-001", placa: "XYZ-123", marca: "Toyota Hilux", estado: "Pendiente", fecha: "15/07/2026" },
-    { id: "V-002", placa: "ABC-890", marca: "Chevrolet D-Max", estado: "En Proceso", fecha: "15/07/2026" },
-    { id: "V-003", placa: "KLP-456", marca: "Ford Ranger", estado: "Completado", fecha: "14/07/2026" },
-  ];
+  // --- EL ÚNICO ESTADO DE VERDAD DE TODO EL PERITAJE ---
+  const [peritajeData, setPeritajeData] = useState({
+    // Módulo 1: Datos & RUNT
+    placa: '',
+    marca: '',
+    linea: '',
+    modelo: '',
+    numMotor: '',
+    numChasis: '',
+    soatAlDia: true,
+    venceSoat: '',
+    tecnicoMecanicaAlDia: true,
+    venceTecnicoMecanica: '',
+    organismoTransito: '',
+    comentariosSiniestros: '',
 
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
+    // Módulo 2: Accesorios (Inicializado con la lista de prueba desde el origen)[cite: 1]
+    accesoriosList: [
+      { id: "aire", name: "Aire Acondicionado / Climatizador", categoria: "Interior", presente: true, danado: false },
+      { id: "abs", name: "Frenos ABS", categoria: "Seguridad", presente: true, danado: false },
+      { id: "airbag", name: "Airbags Piloto/Copiloto", categoria: "Seguridad", presente: true, danado: false },
+      { id: "vidrios", name: "Alza Vidrios Eléctricos", categoria: "Interior", presente: true, danado: false },
+      { id: "alarma", name: "Alarma y Bloqueo Central", categoria: "Seguridad", presente: true, danado: false },
+      { id: "camara", name: "Cámara de Reversa", categoria: "Tecnología", presente: false, danado: false },
+      { id: "sensores", name: "Sensores de Parqueo", categoria: "Tecnología", presente: false, danado: false },
+      { id: "radio", name: "Pantalla / Radio Bluetooth", categoria: "Tecnología", presente: true, danado: false },
+      { id: "retrovisores", name: "Retrovisores Eléctricos", categoria: "Exterior", presente: true, danado: false },
+      { id: "gato", name: "Gato Hidráulico y Palanca", categoria: "Herramientas / Maleta", presente: true, danado: false },
+      { id: "repuesto", name: "Llanta de Repuesto", categoria: "Herramientas / Maleta", presente: true, danado: false },
+      { id: "cruceta", name: "Cruceta de Pernos", categoria: "Herramientas / Maleta", presente: true, danado: false },
+    ],
+    llantasData: { presente: true, danado: false, foto: null },
+    accesoriosObservaciones: '',
+    accesoriosCosto: 0
+  });
 
-  // Menú principal de la barra lateral (Limpio y corporativo)
+  // --- DATOS ESTATICOS DE NAVEGACION ---
   const mainMenuItems = [
     { id: 'Bandeja', label: 'Bandeja de Entrada', icon: '📥' },
     { id: 'Estadisticas', label: 'Estadísticas', icon: '📊' },
     { id: 'Configuracion', label: 'Configuración', icon: '⚙️' },
   ];
 
-  // Pasos secuenciales que vivirán ÚNICAMENTE dentro del peritaje activo
   const inspectionSteps = [
-    { id: 'Documentacion', label: '1. Datos & RUNT', icon: '📝' },
-    { id: 'Accesorios', label: '2. Accesorios', icon: '🔌' },
-    { id: 'VistaExterna', label: '3. Inspección Externa', icon: '🚗' },
-    { id: 'VistaInterna', label: '4. Inspección Interna', icon: '💺' },
-    { id: 'Mecanica', label: '5. Mecánica', icon: '⚙️' },
-    { id: 'SetImagenes', label: '6. Fotos Vehículo', icon: '📸' },
-    { id: 'EquiposDiag', label: '7. Fotos Equipos', icon: '🛠️' },
-    { id: 'Reportes', label: '8. Reporte PDF', icon: '📄' },
+    { id: 'Documentacion', label: '1. Documentación', icon: '📄' },
+    { id: 'Accesorios', label: '2. Accesorios', icon: '🚗' },
+    { id: 'Motor', label: '3. Motor', icon: '⚙️' },
+    { id: 'Pintura', label: '4. Estructura & Pintura', icon: '🎨' },
+    { id: 'Reportes', label: '5. Resumen & Reporte', icon: '📋' },
   ];
+
+  // Datos mock para la bandeja de peritajes guardados
+  const inspecciones = [
+    { id: 'PER-001', placa: 'HBS124', marca: 'Mazda 3', fecha: '2026-07-15', estado: 'Completado' },
+    { id: 'PER-002', placa: 'KLY789', marca: 'Chevrolet Onix', fecha: '2026-07-16', estado: 'En Proceso' },
+  ];
+
+  // --- MANEJADORES DE EVENTOS ---
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  const handleDataChange = (updatedFields) => {
+    setPeritajeData((prev) => {
+      const newState = {
+        ...prev,
+        ...updatedFields
+      };
+      return newState;
+    });
+  };
 
   return (
     <div className="flex min-h-screen bg-[#f4f6fa] text-slate-800 font-sans relative overflow-x-hidden">
       
-      {/* 1. SOBRECAPA OSCURA */}
+      {/* 1. SOBRECAPA OSCURA MÓVIL */}
       {isSidebarOpen && (
         <div onClick={toggleSidebar} className="fixed inset-0 bg-black/40 z-40 lg:hidden" />
       )}
 
-      {/* 2. BARRA LATERAL OSCURA (Limpia, solo navegación general) */}
+      {/* 2. BARRA LATERAL (Sidebar) */}
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-[#080d1a] border-r border-slate-800/50 flex flex-col justify-between shrink-0
         transition-transform duration-300 ease-in-out lg:static lg:translate-x-0
@@ -66,7 +110,7 @@ export default function Dashboard({ onLogout }) {
                 key={item.id}
                 onClick={() => {
                   setActiveTab(item.id);
-                  setIsInspecting(false); // Salir del modo peritaje si cambia de pestaña general
+                  setIsInspecting(false); // Salir del peritaje si va a otra pestaña
                   setIsSidebarOpen(false);
                 }}
                 className={`w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold rounded-lg transition duration-150 border-l-2 ${
@@ -104,7 +148,7 @@ export default function Dashboard({ onLogout }) {
         {/* Área de Trabajo Dinámica */}
         <div className="p-6 lg:p-8 space-y-8 overflow-y-auto flex-1">
           
-          {/* MODO PERITAJE ACTIVO (Cuando se está creando o editando un peritaje) */}
+          {/* MODO PERITAJE ACTIVO */}
           {isInspecting ? (
             <div className="space-y-6">
               {/* Botón de regreso y título */}
@@ -125,7 +169,7 @@ export default function Dashboard({ onLogout }) {
                 </div>
               </div>
 
-              {/* Stepper Horizontal / Selector de Módulo del Peritaje */}
+              {/* Stepper Horizontal / Selector de Módulo */}
               <div className="flex overflow-x-auto pb-2 gap-2 scrollbar-thin">
                 {inspectionSteps.map((step) => (
                   <button
@@ -146,21 +190,34 @@ export default function Dashboard({ onLogout }) {
               {/* Contenedor del Formulario del Paso Activo */}
               <div className="bg-white border border-slate-200/80 p-8 rounded-xl shadow-sm min-h-[350px] flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center space-x-3 mb-4">
+                  <div className="flex items-center space-x-3 mb-6">
                     <span className="text-3xl">{inspectionSteps.find(s => s.id === inspectionStep)?.icon}</span>
                     <h2 className="text-lg font-bold text-slate-900">
                       {inspectionSteps.find(s => s.id === inspectionStep)?.label}
                     </h2>
                   </div>
                   
-                  {/* Aquí renderizaremos dinámicamente el contenido de cada paso */}
-                  <div className="text-slate-500 text-sm mt-2">
-                    <p className="max-w-xl">
-                      Campos específicos para recolectar información de: <strong>{inspectionSteps.find(s => s.id === inspectionStep)?.label}</strong>.
-                    </p>
-                    <div className="mt-6 p-4 bg-slate-50 border border-slate-100 rounded-lg border-dashed">
-                      [Espacio para inputs, fotos, checklists y el dibujo 2D del vehículo]
-                    </div>
+                  {/* RENDERIZADO DINÁMICO DE MÓDULOS ACTIVOS */}
+                  <div className="mt-2">
+                    {inspectionStep === 'Documentacion' && (
+                      <Documentacion data={peritajeData} onChange={handleDataChange} />
+                    )}
+                    
+                    {inspectionStep === 'Accesorios' && (
+                      <Accesorios data={peritajeData} onChange={handleDataChange} />
+                    )}
+
+                    {/* Pasos en desarrollo o temporales */}
+                    {!['Documentacion', 'Accesorios'].includes(inspectionStep) && (
+                      <div className="text-slate-500 text-sm">
+                        <p className="max-w-xl">
+                          Campos específicos para recolectar información de: <strong>{inspectionSteps.find(s => s.id === inspectionStep)?.label}</strong>.
+                        </p>
+                        <div className="mt-6 p-12 bg-slate-50 border border-slate-150 rounded-lg border-dashed text-center font-semibold text-slate-400">
+                          Sección en construcción
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 

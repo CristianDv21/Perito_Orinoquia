@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
-export default function Login() {
+// 🚀 1. Agrega { onLoginSuccess } aquí adentro de las llaves
+export default function Login({ onLoginSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -8,8 +9,17 @@ export default function Login() {
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log({ email, password, rememberMe });
-    // Aquí puedes manejar la lógica de tu API de autenticación
+    
+    // Aquí puedes manejar la lógica de tu API de autenticación.
+    // De momento, simulamos un inicio de sesión exitoso directo:
+    
+    // 🚀 2. Ejecuta esta función para avisarle a App.jsx que cambie de pantalla
+    if (onLoginSuccess) {
+      onLoginSuccess();
+    }
   };
+
+  // ... tu código del return de HTML/JSX sigue igual abajo
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-[#020813] px-4 py-12 font-sans selection:bg-cyan-500 selection:text-white">

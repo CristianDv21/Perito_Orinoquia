@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->enum('rol', ['admin', 'tecnico'])->default('tecnico'); // <--- Columna agregada para HU-01
             $table->rememberToken();
             $table->timestamps();
         });

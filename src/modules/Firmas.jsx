@@ -1,25 +1,40 @@
 import { useRef, useState } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 
-export default function ModuloFirma() {
-  const padFirma = useRef({});
+export default function ModuloFirma({ onFirmaChange }) {
+  const padFirma = useRef(null);
   const [firmaGuardada, setFirmaGuardada] = useState(null);
 
   // Función para limpiar el recuadro y volver a firmar
   const limpiarFirma = () => {
-    padFirma.current.clear();
-    setFirmaGuardada(null);
+    if (padFirma.current) {
+      padFirma.current.clear();
+      setFirmaGuardada(null);
+      if (onFirmaChange) onFirmaChange(null);
+    }
   };
 
-  // Función para guardar el trazo como imagen
+  // Función para guardar el trazo de manera segura
   const guardarFirma = () => {
-    if (padFirma.current.isEmpty()) {
+    if (!padFirma.current || padFirma.current.isEmpty()) {
       alert("Por favor, inserte una firma primero.");
       return;
     }
-    // Convierte el dibujo en una URL de imagen base64
-    const urlImagenFirma = padFirma.current.getTrimmedCanvas().toDataURL('image/png');
-    setFirmaGuardada(urlImagenFirma);
+
+    try {
+      // Método seguro: extrae el elemento canvas interno sin fallos de referencia
+      const canvasElement = padFirma.current.getCanvas();
+      const urlImagenFirma = canvasElement.toDataURL('image/png');
+
+      setFirmaGuardada(urlImagenFirma);
+
+      if (onFirmaChange) {
+        onFirmaChange(urlImagenFirma);
+      }
+    } catch (error) {
+      console.error("Error al procesar la firma:", error);
+      alert("Ocurrió un error al guardar la firma. Intente nuevamente.");
+    }
   };
 
   return (
@@ -45,7 +60,7 @@ export default function ModuloFirma() {
         />
       </div>
 
-      {/* Botones de acción del módulo ajustados a tu diseño */}
+      {/* Botones de acción */}
       <div style={{ marginTop: '20px', display: 'flex', gap: '12px' }}>
         <button 
           type="button"
@@ -60,9 +75,7 @@ export default function ModuloFirma() {
             fontWeight: '700',
             fontSize: '13px',
             textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-            transition: 'all 0.2s'
+            letterSpacing: '0.05em'
           }}
         >
           ♻️ Volver a Intentar
@@ -81,9 +94,7 @@ export default function ModuloFirma() {
             fontWeight: '700',
             fontSize: '13px',
             textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-            transition: 'all 0.2s'
+            letterSpacing: '0.05em'
           }}
         >
           💾 Confirmar Firma

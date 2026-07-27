@@ -1,25 +1,29 @@
 import { useState } from 'react';
+import { useAuth } from '../useAuth';
 
-// 🚀 1. Agrega { onLoginSuccess } aquí adentro de las llaves
-export default function Login({ onLoginSuccess }) {
+export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+
+  // Extraemos la función login del contexto global
+  const { login } = useAuth();
 
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log({ email, password, rememberMe });
     
-    // Aquí puedes manejar la lógica de tu API de autenticación.
-    // De momento, simulamos un inicio de sesión exitoso directo:
-    
-    // 🚀 2. Ejecuta esta función para avisarle a App.jsx que cambie de pantalla
-    if (onLoginSuccess) {
-      onLoginSuccess();
-    }
-  };
+    // Datos simulados del usuario y token (reemplaza esto con la respuesta real de tu API cuando la conectes)
+    const userData = {
+      email: email,
+      name: email.split('@')[0],
+      role: 'Inspector'
+    };
+    const token = 'peritaje_token_seguro_123456';
 
-  // ... tu código del return de HTML/JSX sigue igual abajo
+    // Guardamos en el localStorage y actualizamos el estado global del contexto
+    login(userData, token); 
+  };
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-[#020813] px-4 py-12 font-sans selection:bg-cyan-500 selection:text-white">
@@ -126,7 +130,7 @@ export default function Login({ onLoginSuccess }) {
           {/* Submit Button */}
           <button
             type="submit"
-            className="relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-3.5 text-sm font-bold uppercase tracking-wider text-white shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-all duration-300 hover:scale-[1.01] hover:brightness-110 active:scale-[0.99] active:brightness-95"
+            className="relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-3.5 text-sm font-bold uppercase tracking-wider text-white shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-all duration-300 hover:scale-[1.01] hover:brightness-110 active:scale-[0.99] active:brightness-95 cursor-pointer"
           >
             Iniciar Diagnóstico
           </button>

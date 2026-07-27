@@ -1,13 +1,20 @@
 import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable"; // 👈 Importación directa de la función para máxima compatibilidad con Vite
+import autoTable from "jspdf-autotable";
 
-/**
- * Genera el reporte en PDF con la información completa del peritaje vehicular.
- * Estructurado con tablas estilizadas usando jspdf-autotable.
- * @param {Object} peritajeData - Estado completo del peritaje desde Dashboard.jsx
- */
+export const previsualizarPdfEstiloCliente = (peritajeData) => {
+  const doc = generarInstanciaPdf(peritajeData);
+  const pdfBlobUrl = doc.output('bloburl');
+  window.open(pdfBlobUrl, '_blank');
+};
+
 export const generarPdfEstiloCliente = (peritajeData) => {
-  // 1. Crear la instancia de jsPDF
+  const doc = generarInstanciaPdf(peritajeData);
+  const placa = peritajeData?.placa;
+  const nombreArchivo = `Peritaje_${placa ? placa.toUpperCase() : "REGISTRO"}_${new Date().toISOString().slice(0,10)}.pdf`;
+  doc.save(nombreArchivo);
+};
+
+export const generarInstanciaPdf = (peritajeData) => {
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "mm",
@@ -21,13 +28,14 @@ export const generarPdfEstiloCliente = (peritajeData) => {
     coincidePropietarioRunt, tieneEmbargosOAlertas, restriccionBlindaje,
     accesoriosList, llantasData, accesoriosObservaciones, accesoriosCosto,
     compresionMotor, fugasAceite, estadoBateria, ruidosExtranos, motorObservaciones,
-    estadoGeneralVehiculo, conceptofinal
-  } = peritajeData;
+    estadoGeneralVehiculo, conceptofinal,
+    imagenesList, // Array de imágenes [{ urlBase64: "..." }]
+    firma         // 👈 Imagen de la firma en Base64 (capturada del módulo de firmas)
+  } = peritajeData || {};
 
-  // --- CONFIGURACIÓN DE COLORES Y PALETA ---
-  const colorPrimario = [8, 13, 26];    // Slate oscuro (#080d1a)
-  const colorSecundario = [37, 99, 235]; // Azul corporativo (#2563eb)
-  const colorTexto = [51, 65, 85];      // Slate gris (#334155)
+  const colorPrimario = [8, 13, 26];    
+  const colorSecundario = [37, 99, 235]; 
+  const colorTexto = [51, 65, 85];      
 
   // --- ENCABEZADO PRINCIPAL (PÁGINA 1) ---
   doc.setFillColor(...colorPrimario);
@@ -44,11 +52,10 @@ export const generarPdfEstiloCliente = (peritajeData) => {
   doc.text("Yopal, Casanare", 155, 14);
   doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 155, 20);
 
-  // --- RECUADRO DE LA PLACA (BANDERA VISUAL) ---
   doc.setFillColor(...colorPrimario);
   doc.roundedRect(160, 38, 42, 16, 2, 2, "F");
   doc.setTextColor(255, 255, 255);
-  doc.setFont("font_mono", "bold");
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
   doc.text(placa ? placa.toUpperCase() : "SIN PLACA", 164, 49);
 
@@ -58,7 +65,6 @@ export const generarPdfEstiloCliente = (peritajeData) => {
   doc.setFontSize(12);
   doc.text("1. IDENTIFICACIÓN Y DATOS RUNT", 14, 45);
 
-  // Llamada corregida usando autoTable como función directa
   autoTable(doc, {
     startY: 48,
     margin: { left: 14, right: 14 },
@@ -124,15 +130,14 @@ export const generarPdfEstiloCliente = (peritajeData) => {
     ],
   });
 
-  // --- NUEVA PÁGINA PARA ACCESORIOS Y DIAGNÓSTICO DE LLANTAS ---
+  // --- NUEVA PÁGINA PARA ACCESORIOS Y LLANTAS ---
   doc.addPage();
   
-  // Encabezado secundario resumido
   doc.setFillColor(...colorPrimario);
   doc.rect(0, 0, 216, 15, "F");
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(12);
-  doc.text(`Reporte de Peritaje Complementario - Placa: ${placa ? placa.toUpperCase() : "N/A"}`, 14, 10);
+  doc.text(`Reporte Complementario - Placa: ${placa ? placa.toUpperCase() : "N/A"}`, 14, 10);
 
   // --- SECCIÓN 4: ACCESORIOS ---
   doc.setTextColor(...colorSecundario);
@@ -141,10 +146,7 @@ export const generarPdfEstiloCliente = (peritajeData) => {
   doc.text("4. ACCESORIOS E INVENTARIO", 14, 25);
 
   const bodyAccesorios = (accesoriosList || []).map(acc => [
-    acc.name,
-    acc.categoria,
-    acc.presente ? "SÍ" : "NO",
-    acc.danado ? "MALO / DAÑADO" : "OPERATIVO"
+    acc.name, acc.categoria, acc.presente ? "SÍ" : "NO", acc.danado ? "MALO / DAÑADO" : "OPERATIVO"
   ]);
 
   autoTable(doc, {
@@ -157,7 +159,7 @@ export const generarPdfEstiloCliente = (peritajeData) => {
     body: bodyAccesorios.length > 0 ? bodyAccesorios : [["Sin datos de accesorios", "", "", ""]],
   });
 
-  // --- SECCIÓN 5: ESTADO DE LLANTAS (PROFUNDIDAD Y VIDA) ---
+  // --- SECCIÓN 5: ESTADO DE LLANTAS ---
   doc.setTextColor(...colorSecundario);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
@@ -196,26 +198,122 @@ export const generarPdfEstiloCliente = (peritajeData) => {
       ["Estado General del Vehículo:", estadoGeneralVehiculo ? estadoGeneralVehiculo.toUpperCase() : "ACEPTABLE"],
       ["Costos Estimados en Accesorios:", `$ ${Number(accesoriosCosto || 0).toLocaleString()}`],
       ["Observaciones de Inventario:", accesoriosObservaciones || "Ninguna"],
-      ["Concepto Técnico Final:", conceptofinal || "Vehículo inspeccionado bajo los estándares requeridos en la fecha de registro. Cumple condiciones operativas básicas."],
+      ["Concepto Técnico Final:", conceptofinal || "Vehículo inspeccionado bajo los estándares requeridos."],
     ],
   });
 
+  // --- NUEVA PÁGINA: REGISTRO FOTOGRÁFICO Y FIRMA ---
+  doc.addPage();
+  doc.setFillColor(...colorPrimario);
+  doc.rect(0, 0, 216, 15, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(12);
+  doc.text(`Evidencia y Firmas - Placa: ${placa ? placa.toUpperCase() : "N/A"}`, 14, 10);
+
+  doc.setTextColor(...colorSecundario);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("7. EVIDENCIA FOTOGRÁFICA DEL VEHÍCULO", 14, 25);
+
+  let posX = 14;
+  let posY = 32;
+  let imgWidth = 55;   
+  let imgHeight = 40;  
+  let marginX = 10;
+  let marginY = 12;
+  let maxPerRow = 3;
+
+  if (imagenesList && imagenesList.length > 0) {
+    imagenesList.forEach((imgObj, index) => {
+      if (posY + imgHeight > 220) { // Dejamos espacio abajo para la firma
+        doc.addPage();
+        posY = 25;
+      }
+
+      const base64Data = imgObj?.urlBase64 || imgObj?.url;
+      if (base64Data) {
+        try {
+          doc.addImage(base64Data, 'JPEG', posX, posY, imgWidth, imgHeight);
+          doc.setDrawColor(200, 200, 200);
+          doc.rect(posX, posY, imgWidth, imgHeight);
+        } catch (error) {
+          console.error("Error al cargar imagen en el PDF", error);
+        }
+      }
+
+      if ((index + 1) % maxPerRow === 0) {
+        posX = 14;
+        posY += imgHeight + marginY;
+      } else {
+        posX += imgWidth + marginX;
+      }
+    });
+  } else {
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text("No se registraron imágenes fotográficas en este peritaje.", 14, 33);
+    posY = 40;
+  }
+
+  // --- SECCIÓN DE FIRMA DIGITAL ---
+  // Calculamos una posición segura para la firma al fondo de la última página o en nueva página si no cabe
+  let firmaPosY = posY + 15;
+  if (firmaPosY > 220) {
+    doc.addPage();
+    firmaPosY = 30;
+  }
+
+  doc.setTextColor(...colorSecundario);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("8. FIRMA DE VALIDACIÓN Y CONFORMIDAD", 14, firmaPosY);
+
+  // Cuadro para la firma
+  const firmaAncho = 60;
+  const firmaAlto = 25;
+  const firmaPosX = 14;
+  const firmaBoxY = firmaPosY + 5;
+
+  doc.setDrawColor(150, 150, 150);
+  doc.rect(firmaPosX, firmaBoxY, firmaAncho, firmaAlto);
+
+  if (firma) {
+    try {
+      doc.addImage(firma, 'PNG', firmaPosX + 2, firmaBoxY + 2, firmaAncho - 4, firmaAlto - 4);
+    } catch (e) {
+      console.error("Error al cargar la firma", e);
+    }
+  } else {
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text("Sin firma registrada", firmaPosX + 15, firmaBoxY + 14);
+  }
+
+  // Línea de firma y datos del perito/cliente
+  doc.setDrawColor(50, 50, 50);
+  doc.line(firmaPosX, firmaBoxY + firmaAlto + 10, firmaPosX + firmaAncho, firmaBoxY + firmaAlto + 10);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...colorTexto);
+  doc.text("Firma del Perito / Inspector", firmaPosX, firmaBoxY + firmaAlto + 14);
+  doc.text("Perito Orinoquia", firmaPosX, firmaBoxY + firmaAlto + 18);
+
   // --- PIE DE PÁGINA DE CIERRE LEGAL ---
   const finalY = doc.lastAutoTable.finalY + 15;
-  doc.setDrawColor(200, 200, 200);
-  doc.line(14, finalY, 202, finalY);
+  if (finalY < 260) {
+    doc.setDrawColor(200, 200, 200);
+    doc.line(14, finalY, 202, finalY);
+    doc.setFontSize(8);
+    doc.setTextColor(120, 130, 140);
+    doc.text("Este peritaje representa una inspección técnico-visual al momento del examen.", 14, finalY + 5);
+    doc.text("Perito Orinoquia - Yopal, Casanare, Colombia.", 14, finalY + 9);
+  }
 
-  doc.setFontSize(8);
-  doc.setTextColor(120, 130, 140);
-  doc.text("Este peritaje representa una inspección técnico-visual al momento del examen y no constituye una garantía mecánica extendida.", 14, finalY + 5);
-  doc.text("Perito Orinoquia - Documento Informativo Emitido en Yopal, Casanare, Colombia.", 14, finalY + 9);
-
-  // 4. Descargar el archivo automáticamente
-  const nombreArchivo = `Peritaje_${placa ? placa.toUpperCase() : "REGISTRO"}_${new Date().toISOString().slice(0,10)}.pdf`;
-  doc.save(nombreArchivo);
+  return doc;
 };
 
-// --- MÉTODOS AUXILIARES DE FORMATEO ---
 const restrictionLabel = (key) => {
   const types = {
     sin_blindaje: "Sin Blindaje",

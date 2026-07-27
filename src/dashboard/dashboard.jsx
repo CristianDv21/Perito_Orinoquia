@@ -7,6 +7,7 @@ import VistaInterna from '../modules/VistaInterna';
 import Firma from '../modules/Firmas';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import InformePdf from '../modules/informePdf';
 
 export default function Dashboard({ onLogout }) {
 
@@ -60,7 +61,6 @@ export default function Dashboard({ onLogout }) {
       { id: "repuesto", name: "Llanta de Repuesto", categoria: "Herramientas / Maleta", presente: true, danado: false },
       { id: "cruceta", name: "Cruceta de Pernos", categoria: "Herramientas / Maleta", presente: true, danado: false },
     ],
-    // Estructura normalizada para las 5 posiciones de llantas
     llantasData: {
       delantera_der: { marca: '', medida: '', profundidad_mm: '', porcentaje_vida: '' },
       delantera_izq: { marca: '', medida: '', profundidad_mm: '', porcentaje_vida: '' },
@@ -78,8 +78,8 @@ export default function Dashboard({ onLogout }) {
     ruidosExtranos: false,
     motorObservaciones: '',
 
-    // Módulo 4: Estructura & Pintura (Plano Interactivo 2D)
-    danosExternos: {}, // Mapeará { pieza: { tipo: 'Rayón', micras: 120, foto: File } }
+    // Módulo 4: Estructura & Pintura
+    danosExternos: {},
     tiempoEstimadoReparacion: '',
 
     // Módulo 5: Cierre & Reporte
@@ -87,7 +87,6 @@ export default function Dashboard({ onLogout }) {
     estadoGeneralVehiculo: 'Aceptable',
     conceptoFinal: '',
 
-    // Puntajes de Control Técnico Interno
     scoreEstructura: 100,
     scoreCarroceria: 100,
     scoreMecanica: 100,
@@ -112,13 +111,57 @@ export default function Dashboard({ onLogout }) {
     { id: 'PDF', label: '7. Reporte & PDF', icon: '📋' },
   ];
 
-  // Datos mock para la bandeja de peritajes guardados
   const inspecciones = [
-    { id: 'PER-001', placa: 'HBS124', marca: 'Mazda 3', fecha: '2026-07-15', estado: 'Completado' },
-    { id: 'PER-002', placa: 'KLY789', marca: 'Chevrolet Onix', fecha: '2026-07-16', estado: 'En Proceso' },
+    { 
+      id: 'PER-001', 
+      fechaPeritaje: '17/07/26 - 14:15', 
+      marca: 'CHEVROLET', 
+      modelo: 'TRAVERSE', 
+      anioModelo: '2017', 
+      km: '157.700', 
+      placa: 'DOL507', 
+      sucursalVendedor: 'Mg Yopal', 
+      sucursalInspeccion: 'Mg Yopal', 
+      vendedor: 'Cristian Eduardo Castillo Triana', 
+      inspector: 'Kevin Osorio', 
+      costoReparacion: '$1,400,000', 
+      tiempoReparacion: '0 días', 
+      estado: 'Completado' 
+    },
+    { 
+      id: 'PER-002', 
+      fechaPeritaje: '24/07/26 - 16:03', 
+      marca: 'CHEVROLET', 
+      modelo: 'JOY', 
+      anioModelo: '2022', 
+      km: '53.500', 
+      placa: 'KST810', 
+      sucursalVendedor: 'Chevrolet Yopal', 
+      sucursalInspeccion: 'Chevrolet Yopal', 
+      vendedor: 'Yuly Martinez', 
+      inspector: 'Kevin Osorio', 
+      costoReparacion: '$500,000', 
+      tiempoReparacion: '0 días', 
+      estado: 'En Proceso' 
+    },
+    { 
+      id: 'PER-003', 
+      fechaPeritaje: '23/07/26 - 22:07', 
+      marca: 'JAC', 
+      modelo: 'REFINE', 
+      anioModelo: '2013', 
+      km: '275.000', 
+      placa: 'SPD868', 
+      sucursalVendedor: 'Chevrolet Yopal', 
+      sucursalInspeccion: 'Chevrolet Yopal', 
+      vendedor: 'Joiner Requiniva', 
+      inspector: 'Kevin Osorio', 
+      costoReparacion: '$550,000', 
+      tiempoReparacion: '0 días', 
+      estado: 'Completado' 
+    },
   ];
 
-  // --- MANEJADORES DE EVENTOS ---
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   const handleDataChange = (updatedFields) => {
@@ -128,7 +171,6 @@ export default function Dashboard({ onLogout }) {
     }));
   };
 
-  // --- FUNCIÓN PARA DESCARGAR EL PDF DESDE LA BANDEJA ---
   const handleDescargarPDF = (item) => {
     const data = peritajeData; 
 
@@ -138,13 +180,11 @@ export default function Dashboard({ onLogout }) {
       format: 'a4'
     });
 
-    // --- CONFIGURACIÓN DE COLORES Y ESTILOS (Identidad Visual) ---
-    const colorPrimario = [8, 13, 26];     // #080D1A - Azul Oscuro Corporativo
-    const colorSecundario = [37, 99, 235]; // #2563EB - Blue 600
-    const colorExito = [16, 185, 129];    // #3d0597 - Emerald 500
-    const colorGris = [100, 116, 139];    // #64748B - Slate 500
+    const colorPrimario = [8, 13, 26]; 
+    const colorSecundario = [37, 99, 235]; 
+    const colorExito = [16, 185, 129]; 
+    const colorGris = [100, 116, 139]; 
 
-    // --- ENCABEZADO PRINCIPAL (PÁGINA 1) ---
     doc.setFillColor(colorSecundario[0], colorSecundario[1], colorSecundario[2]);
     doc.rect(160, 0, 50, 10, 'F');
 
@@ -159,7 +199,6 @@ export default function Dashboard({ onLogout }) {
     doc.text('CONSOLA DE PERITAJE TÉCNICO AUTOMOTRIZ', 14, 26);
     doc.text('Sede Central: Yopal, Casanare', 14, 31);
 
-    // Cuadro de Control del Reporte (Derecha)
     doc.setDrawColor(226, 232, 240);
     doc.setFillColor(248, 250, 252);
     doc.roundedRect(135, 14, 61, 18, 2, 2, 'FD');
@@ -168,15 +207,13 @@ export default function Dashboard({ onLogout }) {
     doc.setFontSize(8);
     doc.setTextColor(colorPrimario[0], colorPrimario[1], colorPrimario[2]);
     doc.text(`INSPECCIÓN: ${item.id}`, 139, 20);
-    doc.text(`FECHA: ${item.fecha}`, 139, 25);
+    doc.text(`FECHA: ${item.fechaPeritaje}`, 139, 25);
     doc.text(`ESTADO: ${item.estado.toUpperCase()}`, 139, 30);
 
-    // Línea divisoria elegante
     doc.setDrawColor(colorSecundario[0], colorSecundario[1], colorSecundario[2]); 
     doc.setLineWidth(0.8);
     doc.line(14, 36, 196, 36);
 
-    // --- MÓDULO 1: DATOS BÁSICOS DEL VEHÍCULO Y RUNT ---
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(colorSecundario[0], colorSecundario[1], colorSecundario[2]);
@@ -193,12 +230,11 @@ export default function Dashboard({ onLogout }) {
       },
       body: [
         ['Placa:', item.placa || data.placa || 'N/A', 'Marca / Línea:', `${item.marca || data.marca || 'N/A'} ${data.linea || ''}`],
-        ['Modelo / Año:', data.modelo || 'N/A', 'N° de Motor:', data.numMotor || 'N/A'],
+        ['Modelo / Año:', item.anioModelo || data.modelo || 'N/A', 'N° de Motor:', data.numMotor || 'N/A'],
         ['N° de Chasis:', data.numChasis || 'N/A', 'Organismo Tránsito:', data.organismoTransito || 'N/A'],
       ],
     });
 
-    // --- MÓDULO 2: LEGAL Y DOCUMENTACIÓN (SOAT & RTM) ---
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(colorSecundario[0], colorSecundario[1], colorSecundario[2]);
@@ -211,24 +247,11 @@ export default function Dashboard({ onLogout }) {
       bodyStyles: { fontSize: 8 },
       head: [['DOCUMENTO', 'NÚMERO DE CONTROL', 'ENTIDAD EMISORA', 'VENCIMIENTO', 'ESTADO']],
       body: [
-        [
-          'SOAT', 
-          data.numeroSoat || 'N/A', 
-          data.entityEmisoraSoat || 'N/A', 
-          data.venceSoat || 'N/A', 
-          data.soatAlDia ? 'AL DÍA' : 'VENCIDO'
-        ],
-        [
-          'RTM (Tecnicomecánica)', 
-          data.numeroControlRtm || 'N/A', 
-          data.cdaEmisor || 'N/A', 
-          data.venceTecnicoMecanica || 'N/A', 
-          data.tecnicoMecanicaAlDia ? 'AL DÍA' : 'VENCIDO'
-        ],
+        ['SOAT', data.numeroSoat || 'N/A', data.entityEmisoraSoat || 'N/A', data.venceSoat || 'N/A', data.soatAlDia ? 'AL DÍA' : 'VENCIDO'],
+        ['RTM (Tecnicomecánica)', data.numeroControlRtm || 'N/A', data.cdaEmisor || 'N/A', data.venceTecnicoMecanica || 'N/A', data.tecnicoMecanicaAlDia ? 'AL DÍA' : 'VENCIDO'],
       ],
     });
 
-    // Cuadro de alertas legales breves debajo de la tabla
     doc.setFillColor(254, 243, 199); 
     doc.setDrawColor(245, 158, 11);
     doc.roundedRect(14, doc.lastAutoTable.finalY + 4, 182, 12, 1, 1, 'FD');
@@ -238,7 +261,6 @@ export default function Dashboard({ onLogout }) {
     doc.setTextColor(180, 83, 9);
     doc.text(`ALERTAS RUNT: Coincide Propietario: ${data.coincidePropietarioRunt ? 'SÍ' : 'NO'}  |  Posee Embargos/Alertas: ${data.tieneEmbargosOAlertas ? 'SÍ' : 'NO'}  |  Blindaje: ${data.restriccionBlindaje.toUpperCase()}`, 18, doc.lastAutoTable.finalY + 11);
 
-    // --- MÓDULO 3: DIAGNÓSTICO DEL MOTOR ---
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(colorSecundario[0], colorSecundario[1], colorSecundario[2]);
@@ -262,10 +284,8 @@ export default function Dashboard({ onLogout }) {
       doc.text(`Notas del Inspector: ${data.motorObservaciones}`, 14, doc.lastAutoTable.finalY + 5);
     }
 
-    // --- SALTO DE PÁGINA AUTOMÁTICO PARA ACCESORIOS Y CIERRE ---
     doc.addPage();
 
-    // Encabezado resumido para segunda página
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(10);
     doc.setTextColor(colorPrimario[0], colorPrimario[1], colorPrimario[2]);
@@ -273,7 +293,6 @@ export default function Dashboard({ onLogout }) {
     doc.setDrawColor(226, 232, 240);
     doc.line(14, 18, 196, 18);
 
-    // --- MÓDULO 4: INVENTARIO DE ACCESORIOS ---
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(colorSecundario[0], colorSecundario[1], colorSecundario[2]);
@@ -296,7 +315,6 @@ export default function Dashboard({ onLogout }) {
       styles: { cellPadding: 1.5 }
     });
 
-    // --- MÓDULO 5: REPORTE DE LLANTAS ---
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(colorSecundario[0], colorSecundario[1], colorSecundario[2]);
@@ -319,7 +337,6 @@ export default function Dashboard({ onLogout }) {
       body: filasLlantas,
     });
 
-    // --- MÓDULO 6: CONCEPTO FINAL Y FIRMAS ---
     const YFinal = doc.lastAutoTable.finalY + 12;
     
     doc.setFont('Helvetica', 'bold');
@@ -327,13 +344,11 @@ export default function Dashboard({ onLogout }) {
     doc.setTextColor(colorSecundario[0], colorSecundario[1], colorSecundario[2]);
     doc.text('6. CONCEPTO FINAL DE EVALUACIÓN', 14, YFinal);
 
-    // Calculamos el alto del texto dinámicamente para dimensionar el cuadro
     const observacionesTexto = data.conceptoFinal || 'El vehículo se encuentra en condiciones óptimas operativas de acuerdo a la documentación examinada y pruebas dinámicas de motor realizadas en el departamento de Casanare.';
     const textoDividido = doc.splitTextToSize(observacionesTexto, 174);
     const lineasTexto = textoDividido.length;
-    const altoCuadro = 12 + (lineasTexto * 4); // Altura adaptable
+    const altoCuadro = 12 + (lineasTexto * 4);
 
-    // Cuadro de Dictamen Final Técnico
     doc.setDrawColor(209, 213, 219);
     doc.setFillColor(248, 250, 252);
     doc.roundedRect(14, YFinal + 3, 182, altoCuadro, 1, 1, 'FD');
@@ -349,18 +364,17 @@ export default function Dashboard({ onLogout }) {
 
     doc.setFont('Helvetica', 'normal');
     doc.setFontSize(8.5);
-    doc.setTextColor([51, 65, 85]);
+    doc.text(textoDividido, 18, YFinal + 15, { width: 180 });
     doc.text(textoDividido, 18, YFinal + 15);
 
-    // --- SECCIÓN DE FIRMA DIGITAL (Posición Dinámica según el cuadro) ---
     const YFirma = YFinal + altoCuadro + 25;
 
-    // Línea de firma
     doc.setDrawColor(148, 163, 184);
     doc.setLineWidth(0.5);
     doc.line(14, YFirma, 74, YFirma);
 
-    if (data.firmaInspector) {
+    // Validación segura de la firma digital
+    if (data.firmaInspector && typeof data.firmaInspector === 'string' && data.firmaInspector.startsWith('data:image')) {
       try {
         doc.addImage(data.firmaInspector, 'PNG', 16, YFirma - 22, 50, 20);
       } catch (e) {
@@ -378,7 +392,6 @@ export default function Dashboard({ onLogout }) {
     doc.setTextColor(colorGris[0], colorGris[1], colorGris[2]);
     doc.text('Perito Certificado - Orinoquia', 14, YFirma + 8);
 
-    // Pie de página
     doc.setFontSize(7.5);
     doc.text('Este documento es un dictamen técnico de inspección automotriz y no constituye un seguro contractual.', 14, 285);
     doc.text(`Página 2 de 2`, 180, 285);
@@ -441,7 +454,7 @@ export default function Dashboard({ onLogout }) {
       </aside>
 
       {/* 3. CONTENIDO PRINCIPAL */}
-      <main className="flex-1 flex flex-col min-w-0 w-full">
+      <main className="flex-1 flex flex-1 flex-col min-w-0 w-full">
         
         {/* Topbar */}
         <header className="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-6 lg:px-8 shrink-0">
@@ -470,7 +483,7 @@ export default function Dashboard({ onLogout }) {
                 </div>
                 <div className="flex items-center space-x-2">
                   <span className="text-xs bg-amber-50 text-amber-700 px-3 py-1 rounded-full font-bold border border-amber-200">
-                    Brador en Progreso
+                    Borrador en Progreso
                   </span>
                 </div>
               </div>
@@ -530,10 +543,7 @@ export default function Dashboard({ onLogout }) {
                     )}
                     
                     {inspectionStep === 'PDF' && (
-                      <div className="p-8 border border-dashed border-slate-300 rounded-xl text-center bg-slate-50">
-                        <p className="text-sm font-semibold text-slate-500">Resumen & Reportes</p>
-                        <p className="text-xs text-slate-400 mt-1">Listo para finalizar el registro y compilar los datos.</p>
-                      </div>
+                      <InformePdf peritajeData={peritajeData} onChange={handleDataChange} />
                     )}
                   </div>
                 </div>
@@ -568,7 +578,7 @@ export default function Dashboard({ onLogout }) {
               </div>
             </div>
           ) : (
-            /* VISTAS GENERALES DEL DASHBOARD (BANDEJA) */
+            /* VISTAS GENERALES DEL DASHBOARD (BANDEJA) ACTUALIZADA */
             <>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
@@ -598,54 +608,60 @@ export default function Dashboard({ onLogout }) {
                 </div>
                 <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm border-l-4 border-l-emerald-500">
                   <p className="text-[10px] font-bold uppercase text-emerald-600 tracking-wider">Completadas</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-2">1</p>
+                  <p className="text-2xl font-bold text-slate-900 mt-2">2</p>
                 </div>
               </div>
 
-              {/* Tabla de Vehículos */}
+              {/* Tabla de Vehículos Completa */}
               <div className="bg-white border border-slate-200/80 rounded-xl shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100">
-                  <h2 className="text-sm font-bold text-slate-900">Vehículos Registrados</h2>
+                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                  <h2 className="text-sm font-bold text-slate-900">HISTORIAL DE INSPECCIONES</h2>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm text-slate-600 min-w-[600px]">
+                  <table className="w-full text-left text-xs text-slate-600 min-w-[1200px]">
                     <thead className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
                       <tr>
-                        <th className="px-6 py-4">ID</th>
-                        <th className="px-6 py-4">Placa</th>
-                        <th className="px-6 py-4">Vehículo</th>
-                        <th className="px-6 py-4">Fecha</th>
-                        <th className="px-6 py-4">Estado</th>
-                        <th className="px-6 py-4 text-right">Acciones</th>
+                        <th className="px-4 py-3">Fecha de Peritaje</th>
+                        <th className="px-4 py-3">Marca</th>
+                        <th className="px-4 py-3">Modelo</th>
+                        <th className="px-4 py-3">Año del modelo</th>
+                        <th className="px-4 py-3">Km</th>
+                        <th className="px-4 py-3">Placa</th>
+                        <th className="px-4 py-3">Sucursal Vendedor</th>
+                        <th className="px-4 py-3">Sucursal Inspección</th>
+                        <th className="px-4 py-3">Vendedor</th>
+                        <th className="px-4 py-3">Inspector</th>
+                        <th className="px-4 py-3">Costo reparación</th>
+                        <th className="px-4 py-3">Tiempo de reparación</th>
+                        <th className="px-4 py-3 text-right">Acciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {inspecciones.map((item) => (
                         <tr key={item.id} className="hover:bg-slate-50/50 transition duration-100">
-                          <td className="px-6 py-5 font-mono text-xs text-slate-400 whitespace-nowrap">{item.id}</td>
-                          <td className="px-6 py-5 whitespace-nowrap">
-                            <span className="inline-block bg-slate-900 text-white px-3 py-1.5 rounded-md font-mono font-bold border border-slate-800 text-xs tracking-wider shadow-sm">
+                          <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.fechaPeritaje}</td>
+                          <td className="px-4 py-4 whitespace-nowrap font-semibold text-slate-800">{item.marca}</td>
+                          <td className="px-4 py-4 whitespace-nowrap">{item.modelo}</td>
+                          <td className="px-4 py-4 whitespace-nowrap">{item.anioModelo}</td>
+                          <td className="px-4 py-4 whitespace-nowrap font-mono">{item.km}</td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <span className="inline-block bg-slate-900 text-white px-2.5 py-1 rounded-md font-mono font-bold text-[11px] shadow-sm">
                               {item.placa}
                             </span>
                           </td>
-                          <td className="px-6 py-5 font-semibold text-slate-800 whitespace-nowrap">{item.marca}</td>
-                          <td className="px-6 py-5 text-slate-500 whitespace-nowrap">{item.fecha}</td>
-                          <td className="px-6 py-5 whitespace-nowrap">
-                            <span className={`px-2.5 py-1 text-[10px] font-bold uppercase rounded border ${
-                              item.estado === "Completado" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                              item.estado === "En Proceso" ? "bg-amber-50 text-amber-700 border-amber-200" :
-                              "bg-slate-50 text-slate-600 border-slate-200"
-                            }`}>
-                              {item.estado}
-                            </span>
-                          </td>
-                          <td className="px-6 py-5 text-right whitespace-nowrap">
+                          <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.sucursalVendedor}</td>
+                          <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.sucursalInspeccion}</td>
+                          <td className="px-4 py-4 whitespace-nowrap text-slate-700">{item.vendedor}</td>
+                          <td className="px-4 py-4 whitespace-nowrap font-medium text-slate-800">{item.inspector}</td>
+                          <td className="px-4 py-4 whitespace-nowrap font-semibold text-emerald-600">{item.costoReparacion}</td>
+                          <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.tiempoReparacion}</td>
+                          <td className="px-4 py-4 text-right whitespace-nowrap">
                             {item.estado === "Completado" ? (
                               <button 
                                 onClick={() => handleDescargarPDF(item)}
-                                className="px-4 py-2 bg-slate-900 text-white text-xs font-bold uppercase rounded-lg shadow hover:bg-slate-800 transition duration-150"
+                                className="px-3 py-1.5 bg-slate-900 text-white text-[11px] font-bold uppercase rounded-lg shadow hover:bg-slate-800 transition duration-150"
                               >
-                                ⬇️ Descargar PDF
+                                ⬇️ PDF
                               </button>
                             ) : (
                               <button 
@@ -653,9 +669,9 @@ export default function Dashboard({ onLogout }) {
                                   setIsInspecting(true);
                                   setInspectionStep('Documentacion');
                                 }}
-                                className="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline transition duration-150"
+                                className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline transition duration-140"
                               >
-                                Editar Peritaje
+                                Editar
                               </button>
                             )}
                           </td>

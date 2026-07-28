@@ -44,3 +44,14 @@ yarn-error.log*
 .eslintcache
 .DS_Store
 .vscode/
+
+# Laravel
+/vendor/
+/storage/*.log
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/bootstrap/cache/*
+
+# Laravel SQLite
+/database/database.sqlite

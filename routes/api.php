@@ -12,7 +12,9 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,
 Route::middleware('auth:sanctum')->group(function () {
     
     // HU-01: Registro de nuevos usuarios
-    Route::post('/registro-usuarios', [AuthController::class, 'register']);
+    // Route::post('/registro-usuarios', [AuthController::class, 'register']);
+    // HU-01: Registro de nuevos usuarios (Ahora con doble candado: Token + Rol Admin)
+    Route::middleware('admin')->post('/registro-usuarios', [AuthController::class, 'register']);
     
     // HU-05: Cerrar sesión
     Route::post('/logout', [AuthController::class, 'logout']);

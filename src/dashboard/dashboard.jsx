@@ -48,29 +48,52 @@ export default function Dashboard({ onLogout }) {
 
     // Módulo 2: Accesorios
     accesoriosList: [
-      { id: "aire", name: "Aire Acondicionado / Climatizador", categoria: "Interior", presente: true, danado: false },
-      { id: "abs", name: "Frenos ABS", categoria: "Seguridad", presente: true, danado: false },
-      { id: "airbag", name: "Airbags Piloto/Copiloto", categoria: "Seguridad", presente: true, danado: false },
-      { id: "vidrios", name: "Alza Vidrios Eléctricos", categoria: "Interior", presente: true, danado: false },
-      { id: "alarma", name: "Alarma y Bloqueo Central", categoria: "Seguridad", presente: true, danado: false },
-      { id: "camara", name: "Cámara de Reversa", categoria: "Tecnología", presente: false, danado: false },
-      { id: "sensores", name: "Sensores de Parqueo", categoria: "Tecnología", presente: false, danado: false },
-      { id: "radio", name: "Pantalla / Radio Bluetooth", categoria: "Tecnología", presente: true, danado: false },
-      { id: "retrovisores", name: "Retrovisores Eléctricos", categoria: "Exterior", presente: true, danado: false },
-      { id: "gato", name: "Gato Hidráulico y Palanca", categoria: "Herramientas / Maleta", presente: true, danado: false },
-      { id: "repuesto", name: "Llanta de Repuesto", categoria: "Herramientas / Maleta", presente: true, danado: false },
-      { id: "cruceta", name: "Cruceta de Pernos", categoria: "Herramientas / Maleta", presente: true, danado: false },
+      { id: 'aire', name: 'Aire Acondicionado', presente: true, danado: false },
+      { id: 'climatizador', name: 'Climatizador', presente: true, danado: false },
+      { id: 'frenos_abs', name: 'Frenos ABS', presente: true, danado: false },
+      { id: 'airbags', name: 'Airbags', presente: true, danado: false },
+      { id: 'cierre', name: 'Cierre Centralizado', presente: true, danado: false },
+      { id: 'llantas', name: 'Llantas', presente: true, danado: false },
+      { id: 'neblineros', name: 'Neblineros', presente: true, danado: false },
+      { id: 'espejos', name: 'Espejos Eléctricos', presente: true, danado: false },
+      { id: 'alza_vidrios', name: 'Alza Vidrios Eléctricos', presente: true, danado: false },
+      { id: 'direccion', name: 'Dirección', tipo: 'seleccion_multiple', opciones: ['Asistida', 'Eléctrica', 'Hidráulica'], seleccion: 'Eléctrica' },
+      { id: 'techo_corr', name: 'Techo Corredizo', presente: true, danado: false },
+      { id: 'techo_pano', name: 'Techo Panorámico', presente: true, danado: false },
+      { id: 'crucero', name: 'Velocidad Crucero', presente: true, danado: false },
+      { id: 'gps', name: 'GPS', presente: true, danado: false },
+      { id: 'bluetooth', name: 'Bluetooth', presente: true, danado: false },
+      { id: 'sensor_retro', name: 'Sensor de Retroceso', tipo: 'seleccion_multiple', opciones: ['Solo Sensor', 'Solo Cámara', 'Ambos', 'No'], seleccion: 'Ambos' },
+      { id: 'paddle_shift', name: 'Paddle shift', presente: true, danado: false },
+      { id: 'asientos_elec', name: 'Asientos Eléctricos', presente: true, danado: false },
+      { id: 'radio_orig', name: 'Radio Original', presente: true, danado: false },
+      { id: 'segunda_copia', name: 'Segunda copia llave', tipo: 'seleccion_multiple', opciones: ['Sí', 'No'], seleccion: 'No' },
+      { id: 'anclaje_isofix', name: 'Anclaje Isofix', presente: true, danado: false },
+      { id: 'control_est', name: 'Control de Estabilidad', presente: true, danado: false },
+      { id: 'pelicula_seg', name: 'Película de seguridad', presente: true, danado: false },
+      { id: 'sensor_lluvia', name: 'Sensor de Lluvia', presente: true, danado: false },
+      { id: 'tiro_arrastre', name: 'Tiro de Arrastre', presente: true, danado: false },
+      { id: 'volante_ajust', name: 'Volante Ajustable', presente: true, danado: false },
+      { id: 'asiento_memoria', name: 'Asiento con memoria', presente: true, danado: false },
+      { id: 'tapiz_cuero', name: 'Tapiz de Cuero', presente: true, danado: false },
+      { id: 'transmision', name: 'Transmisión', tipo: 'seleccion_multiple', opciones: ['Mecánico', 'Automático'], seleccion: 'Automático' },
+      { id: 'traccion', name: 'Tracción', tipo: 'seleccion_multiple', opciones: ['4x2', '4x4'], seleccion: '4x2' },
+      { id: 'combustible', name: 'Tipo de combustible', tipo: 'seleccion_multiple', opciones: ['Gasolina', 'Diesel', 'Híbrido', 'Eléctrico'], seleccion: 'Gasolina' },
+      { id: 'kit_inflado', name: 'Kit de inflado', tipo: 'seleccion_multiple', opciones: ['Sí', 'No', 'No corresponde'], seleccion: 'No' },
+      { id: 'piso_goma', name: 'Piso de goma', tipo: 'seleccion_multiple', opciones: ['Sí (original de la marca)', 'Alternativo', 'Sin piso de goma'], seleccion: 'Sí (original de la marca)' },
+      { id: 'tuerca_seg', name: 'Dado y tuerca de seguridad', presente: true, danado: false },
+      // Maleta
+      { id: 'gato', name: 'Gato hidráulico', presente: true, danado: false },
+      { id: 'llave_rueda', name: 'Llave rueda', presente: true, danado: false },
+      { id: 'extintor', name: 'Extintor', presente: true, danado: false },
+      { id: 'triangulo', name: 'Triángulo', presente: true, danado: false },
+      { id: 'botiquin', name: 'Botiquín', presente: true, danado: false },
+      { id: 'chaleco', name: 'Chaleco reflectante', presente: true, danado: false },
+      { id: 'libro', name: 'Libro de mantenciones', presente: true, danado: false },
+      { id: 'repuesto', name: 'Rueda de Repuesto', presente: true, danado: false },
+      { id: 'cubre_equipaje', name: 'Cubre equipaje', presente: true, danado: false },
+// 
     ],
-    llantasData: {
-      delantera_der: { marca: '', medida: '', profundidad_mm: '', porcentaje_vida: '' },
-      delantera_izq: { marca: '', medida: '', profundidad_mm: '', porcentaje_vida: '' },
-      trasera_der:  { marca: '', medida: '', profundidad_mm: '', porcentaje_vida: '' },
-      trasera_izq:  { marca: '', medida: '', profundidad_mm: '', porcentaje_vida: '' },
-      repuesto:     { marca: '', medida: '', profundidad_mm: '', porcentaje_vida: '' }
-    },
-    accesoriosObservaciones: '',
-    accesoriosCosto: 0,
-
     // Módulo 3: Motor
     compresionMotor: '',
     fugasAceite: false,
@@ -96,6 +119,7 @@ export default function Dashboard({ onLogout }) {
 
   // --- DATOS ESTÁTICOS DE NAVEGACIÓN ---
   const mainMenuItems = [
+    { id: 'Perfil', label: 'Perfil', icon: '👤' },
     { id: 'Bandeja', label: 'Bandeja de Entrada', icon: '📥' },
     { id: 'Estadisticas', label: 'Estadísticas', icon: '📊' },
     { id: 'Configuracion', label: 'Configuración', icon: '⚙️' },
@@ -103,12 +127,11 @@ export default function Dashboard({ onLogout }) {
 
   const inspectionSteps = [
     { id: 'Documentacion', label: '1. Documentación', icon: '📄' },
-    { id: 'Accesorios', label: '2. Accesorios', icon: '🚗' },
-    { id: 'Motor', label: '3. Motor', icon: '⚙️' },
-    { id: 'Pintura', label: '4. Estructura & Pintura', icon: '🎨' },
-    { id: 'VistaInterna', label: '5. Vista Interna', icon: '👀' },
-    { id: 'Firma', label: '6. Firma Digital', icon: '🖋️' },
-    { id: 'PDF', label: '7. Reporte & PDF', icon: '📋' },
+    { id: 'Accesorios y Equipamiento', label: '2. Accesorios y Equipamiento', icon: '🚗' },
+    { id: 'Pintura', label: '3. Vista Externa', icon: '🎨' },
+    { id: 'VistaInterna', label: '4. Vista Interna', icon: '👀' },
+    { id: 'Firma', label: '5. Firma Digital', icon: '🖋️' },
+    { id: 'PDF', label: '6. Reporte & PDF', icon: '📋' },
   ];
 
   const inspecciones = [
@@ -522,7 +545,7 @@ export default function Dashboard({ onLogout }) {
                       <Documentacion data={peritajeData} onChange={handleDataChange} />
                     )}
                     
-                    {inspectionStep === 'Accesorios' && (
+                    {inspectionStep === 'Accesorios y Equipamiento' && (
                       <Accesorios data={peritajeData} onChange={handleDataChange} />
                     )}
 

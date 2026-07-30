@@ -1,316 +1,146 @@
 import { useState } from 'react';
 
-// COMPONENTE PRINCIPAL: EVALUACIÓN DE VISTA INTERNA Y HABITÁCULO
 export default function VistaInterna({ data, onChange }) {
-  const safeData = data || {};
+  const [zonaSeleccionada, setZonaSeleccionada] = useState(null);
+  
+  const [formCabina, setFormCabina] = useState({
+    estado: 'Óptimo',
+    desgaste: 'Normal',
+    comentario: '',
+  });
 
-  // Estado local para rastrear qué zona de la silletería está seleccionada en el mapa interactivo
-  const [selectedAsiento, setSelectedAsiento] = useState('piloto');
+  const zonasInternas = [
+    { id: 'tapiceria_del', name: 'Silletería / Tapicería Delantera' },
+    { id: 'tapiceria_tras', name: 'Silletería / Tapicería Trasera' },
+    { id: 'tablero', name: 'Tablero de Instrumentos y Testigos' },
+    { id: 'volante', name: 'Volante y Columnas de Dirección' },
+    { id: 'cinturones', name: 'Cinturones de Seguridad y Airbags' },
+    { id: 'cielo', name: 'Cielo raso / Tapizado de techo' },
+    { id: 'alfombras', name: 'Alfombras y Pisos' },
+    { id: 'paneles_puertas', name: 'Paneles y Tapizados de Puertas' },
+  ];
 
-  // Manejador genérico para actualizar campos raíz
-  const handleInputChange = (field, value) => {
-    if (onChange) {
-      onChange({ [field]: value });
+  const handleSelectZona = (zonaId) => {
+    setZonaSeleccionada(zonaId);
+    if (data.danosInternos && data.danosInternos[zonaId]) {
+      setFormCabina(data.danosInternos[zonaId]);
+    } else {
+      setFormCabina({ estado: 'Óptimo', desgaste: 'Normal', comentario: '' });
     }
   };
 
-  // Manejador específico para los componentes del habitáculo
-  const handleInternoItemChange = (itemKey, field, value) => {
-    const currentItems = safeData.sistemasInternos || {};
-    const updatedItems = {
-      ...currentItems,
-      [itemKey]: {
-        ...(currentItems[itemKey] || { estado: 'OPERATIVO', observaciones: '' }),
-        [field]: value
-      }
-    };
-    handleInputChange('sistemasInternos', updatedItems);
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setFormCabina(prev => ({ ...prev, [name]: value }));
   };
 
-  // Manejador para el estado específico de cada zona de la silletería
-  const handleSilleteriaChange = (asientoKey, field, value) => {
-    const currentSilleteria = safeData.silleteriaData || {};
-    const updatedSilleteria = {
-      ...currentSilleteria,
-      [asientoKey]: {
-        ...(currentSilleteria[asientoKey] || { estado: 'Buen Estado', material: 'Cuero', observaciones: '' }),
-        [field]: value
-      }
-    };
-    handleInputChange('silleteriaData', updatedSilleteria);
+  const handleGuardarZona = () => {
+    const nuevosDanos = { ...(data.danosInternos || {}) };
+    if (formCabina.estado === 'Óptimo' && !formCabina.comentario) {
+      delete nuevosDanos[zonaSeleccionada];
+    } else {
+      nuevosDanos[zonaSeleccionada] = { ...formCabina };
+    }
+    onChange({ danosInternos: nuevosDanos });
+    setZonaSeleccionada(null);
   };
 
-  // Clase de diseño estándar y uniforme
-  const inputStyle = "w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-500 transition duration-150";
-  
-  // Clases compartidas para los selectores de diagnóstico tipo pastilla (Pills)
-  const pillBase = "px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg border transition duration-150 cursor-pointer flex-1 text-center select-none";
-
-  // Listado de componentes internos a inspeccionar
-  const itemsInternos = [
-    { key: 'testigosTablero', label: 'Testigos de Alerta en Tablero (Check Engine, Airbag, ABS)' },
-    { key: 'odometro', label: 'Funcionamiento de Odómetro y Clúster de Instrumentos' },
-    { key: 'pitoClaxon', label: 'Funcionamiento del Pito / Claxon' },
-    { key: 'lucesInteriores', label: 'Iluminación de Cortesía y Luces del Techo' },
-    { key: 'limpiaparabrisas', label: 'Comando de Limpiaparabrisas (Velocidades / Agua)' },
-    { key: 'cinturones', label: 'Cinturones de Seguridad (Anclajes y Retracción)' },
-    { key: 'bloqueoCentral', label: 'Bloqueo Central y Seguros Eléctricos' },
-    { key: 'manijasCerraduras', label: 'Manijas Internas y Cerraduras de Puertas' },
-  ];
-
-  // Configuración de los asientos para el plano esquemático
-  const asientosConfig = [
-    { id: 'piloto', label: 'Piloto', gridClass: 'col-start-1 row-start-1' },
-    { id: 'copiloto', label: 'Copiloto', gridClass: 'col-start-2 row-start-1' },
-    { id: 'trasero_izq', label: 'Trasero Izq.', gridClass: 'col-start-1 row-start-2' },
-    { id: 'trasero_central', label: 'Trasero Central', gridClass: 'col-start-1 col-span-2 row-start-3' },
-    { id: 'trasero_der', label: 'Trasero Der.', gridClass: 'col-start-2 row-start-2' },
-  ];
-
-  // Obtener el estado actual del asiento seleccionado en el formulario dinámico
-  const currentAsientoState = safeData.silleteriaData?.[selectedAsiento] || { estado: 'Buen Estado', material: 'Cuero', observaciones: '' };
+  const getZonaColorClass = (zonaId) => {
+    const info = data.danosInternos?.[zonaId];
+    if (!info || info.estado === 'Óptimo') return 'bg-slate-100 hover:bg-blue-100 border-slate-300 text-slate-700';
+    if (info.estado === 'Regular') return 'bg-amber-500 text-white border-amber-600';
+    if (info.estado === 'Dañado') return 'bg-red-500 text-white border-red-600';
+    return 'bg-slate-100';
+  };
 
   return (
-    <div className="space-y-6 text-slate-800">
-      
-      {/* 🧭 SECCIÓN 1: CHECKLIST DE COMPONENTES INTERNOS */}
-      <div className="bg-white border border-slate-200/60 rounded-xl p-6 space-y-4 shadow-sm">
-        <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider border-b border-slate-100 pb-3">
-          Inspección de Mandos y Sistemas del Habitáculo
-        </h3>
-
-        <div className="divide-y divide-slate-100">
-          {itemsInternos.map((item) => {
-            const itemState = safeData.sistemasInternos?.[item.key] || { estado: 'OPERATIVO', observaciones: '' };
-            
-            return (
-              <div key={item.key} className="py-4 first:pt-0 last:pb-0 flex flex-col lg:flex-row lg:items-center justify-between gap-4 animate-fadeIn">
-                
-                {/* Nombre del sistema interno */}
-                <div className="lg:w-1/3">
-                  <span className="text-xs font-bold text-slate-700 block">{item.label}</span>
-                </div>
-
-                {/* Controles de estado y notas */}
-                <div className="flex flex-col sm:flex-row items-center gap-3 flex-1 lg:w-2/3 w-full">
-                  
-                  {/* Selector de Estado (Pills) */}
-                  <div className="flex bg-slate-100 p-1 rounded-xl w-full sm:w-auto min-w-[260px] gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleInternoItemChange(item.key, 'estado', 'FUNCIONAL')}
-                      className={`${pillBase} ${itemState.estado === 'FUNCIONAL' ? 'bg-emerald-500 border-emerald-600 text-white shadow-sm' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-                    >
-                      Funcional
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleInternoItemChange(item.key, 'estado', 'DEFECTUOSO')}
-                      className={`${pillBase} ${itemState.estado === 'DEFECTUOSO' ? 'bg-rose-500 border-rose-600 text-white shadow-sm' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-                    >
-                      Falla
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleInternoItemChange(item.key, 'estado', 'N/A')}
-                      className={`${pillBase} ${itemState.estado === 'N/A' ? 'bg-slate-300 border-slate-400 text-slate-700 shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
-                    >
-                      N/A
-                    </button>
-                  </div>
-
-                  {/* Detalle del hallazgo */}
-                  <div className="flex-1 w-full">
-                    <input 
-                      type="text" 
-                      placeholder="Describa si hay bombillos quemados, botones rotos o fallas..."
-                      value={itemState.observaciones || ''}
-                      onChange={(e) => handleInternoItemChange(item.key, 'observaciones', e.target.value)}
-                      className={inputStyle}
-                    />
-                  </div>
-
-                </div>
-              </div>
-            );
-          })}
-        </div>
+    <div className="space-y-6 animate-fadeIn">
+      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+        <p className="text-xs text-slate-500 font-medium">
+          💡 <strong>Instrucciones:</strong> Selecciona un componente de la cabina en el panel izquierdo para evaluar el estado de conservación, desgaste o anomalías en la electrónica interior.
+        </p>
       </div>
 
-      {/* 💺 NUEVA SECCIÓN: PLANO INTERACTIVO DE SILLETERÍA Y COJINERÍA */}
-      <div className="bg-white border border-slate-200/60 rounded-xl p-6 space-y-4 shadow-sm">
-        <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider border-b border-slate-100 pb-3">
-          Evaluación y Mapeo de Silletería (Cojinería)
-        </h3>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
-          {/* Columna Izquierda: Esquema Interactivo de Distribución del Habitáculo */}
-          <div className="lg:col-span-5 bg-slate-50 p-6 rounded-xl border border-slate-200/60 flex flex-col items-center justify-center min-h-[280px]">
-            <p className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-6 text-center">
-              Seleccione la zona a evaluar en el plano
-            </p>
-            
-            <div className="grid grid-cols-2 gap-4 w-full max-w-[240px]">
-              {asientosConfig.map((asiento) => {
-                const estadoAsiento = safeData.silleteriaData?.[asiento.id]?.estado || 'Buen Estado';
-                const isSelected = selectedAsiento === asiento.id;
-                
-                // Color dinámico del mapa según el estado registrado en ese asiento
-                let estadoColorClass = "bg-white border-slate-200 text-slate-700 hover:bg-slate-100";
-                if (estadoAsiento === 'Roto / Quemado') estadoColorClass = "bg-rose-50 border-rose-300 text-rose-700 hover:bg-rose-100";
-                if (estadoAsiento === 'Manchado / Sucio') estadoColorClass = "bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100";
-                
-                return (
-                  <button
-                    key={asiento.id}
-                    type="button"
-                    onClick={() => setSelectedAsiento(asiento.id)}
-                    className={`
-                      ${asiento.gridClass} ${estadoColorClass}
-                      p-4 text-[11px] font-bold rounded-xl border-2 transition duration-150 flex flex-col items-center justify-center gap-1.5 shadow-sm
-                      ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2 border-transparent scale-105 z-10' : ''}
-                    `}
-                  >
-                    <span className="text-lg">💺</span>
-                    <span className="text-center leading-tight">{asiento.label}</span>
-                  </button>
-                );
-              })}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* ZONAS DE CABINA */}
+        <div className="lg:col-span-7 bg-white p-6 border border-slate-200 rounded-xl flex flex-col items-center justify-center">
+          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6 w-full text-left">Distribución Interior de Cabina</h3>
+          
+          <div className="w-full max-w-md space-y-3 font-mono text-[11px] font-bold">
+            <div className="grid grid-cols-2 gap-3">
+              {zonasInternas.map((zona) => (
+                <button
+                  key={zona.id}
+                  type="button"
+                  onClick={() => handleSelectZona(zona.id)}
+                  className={`py-5 px-3 border rounded-xl transition shadow-sm text-center flex items-center justify-center ${getZonaColorClass(zona.id)} ${zonaSeleccionada === zona.id ? 'ring-4 ring-blue-500 border-blue-500' : ''}`}
+                >
+                  {zona.name}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Columna Derecha: Formulario de Estado del Asiento Seleccionado */}
-          <div className="lg:col-span-7 bg-white p-2 flex flex-col justify-between space-y-4">
-            <div>
-              <div className="flex items-center space-x-2 mb-4 bg-blue-50/50 border border-blue-100 p-3 rounded-lg">
-                <span className="text-base">📝</span>
-                <p className="text-xs font-bold text-blue-900">
-                  Evaluando: <span className="uppercase text-blue-600 font-extrabold">{asientosConfig.find(a => a.id === selectedAsiento)?.label}</span>
-                </p>
+          <div className="flex flex-wrap justify-center gap-4 mt-8 pt-4 border-t border-slate-100 text-xs font-semibold">
+            <div className="flex items-center space-x-1.5"><span className="w-3 h-3 bg-slate-100 border border-slate-300 rounded"></span><span className="text-slate-500">Óptimo / Sin Daño</span></div>
+            <div className="flex items-center space-x-1.5"><span className="w-3 h-3 bg-amber-500 rounded"></span><span className="text-slate-500">Desgaste Regular</span></div>
+            <div className="flex items-center space-x-1.5"><span className="w-3 h-3 bg-red-500 rounded"></span><span className="text-slate-500">Dañado / Roto</span></div>
+          </div>
+        </div>
+
+        {/* FORMULARIO DE EVALUACIÓN INTERNA */}
+        <div className="lg:col-span-5">
+          {zonaSeleccionada ? (
+            <div className="bg-slate-900 text-white p-6 rounded-xl shadow-lg border border-slate-950 space-y-4 sticky top-4">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-blue-400 tracking-widest">Inspección Cabina</span>
+                <h3 className="text-base font-bold tracking-tight mt-0.5">
+                  {zonasInternas.find(z => z.id === zonaSeleccionada)?.name}
+                </h3>
               </div>
 
-              <div className="space-y-4">
-                {/* Diagnóstico del tapizado */}
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Estado del Tapizado</label>
-                  <div className="flex bg-slate-100 p-1 rounded-xl gap-1 w-full">
-                    {['Buen Estado', 'Manchado / Sucio', 'Roto / Quemado'].map((estado) => (
-                      <button
-                        key={estado}
-                        type="button"
-                        onClick={() => handleSilleteriaChange(selectedAsiento, 'estado', estado)}
-                        className={`
-                          ${pillBase} 
-                          ${currentAsientoState.estado === estado 
-                            ? estado === 'Buen Estado' ? 'bg-emerald-500 border-emerald-600 text-white shadow-sm' :
-                              estado === 'Manchado / Sucio' ? 'bg-amber-500 border-amber-600 text-white shadow-sm' : 
-                              'bg-rose-500 border-rose-600 text-white shadow-sm'
-                            : 'border-transparent text-slate-500 hover:text-slate-800'
-                          }
-                        `}
-                      >
-                        {estado}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+              <hr className="border-slate-800" />
 
-                {/* Tipo de Material de Cojinería */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Material</label>
-                    <select
-                      value={currentAsientoState.material || 'Cuero'}
-                      onChange={(e) => handleSilleteriaChange(selectedAsiento, 'material', e.target.value)}
-                      className={inputStyle}
-                    >
-                      <option value="Cuero">Cuero Original</option>
-                      <option value="Tela">Tela / Paño</option>
-                      <option value="Sintetico">Sintético / Vinilcuero</option>
-                      <option value="Alcantara">Alcántara</option>
-                    </select>
-                  </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Estado del Componente</label>
+                <select name="estado" value={formCabina.estado} onChange={handleFormChange} className="w-full p-2.5 text-xs font-bold bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500">
+                  <option value="Óptimo">Óptimo / Buen Estado</option>
+                  <option value="Regular">Desgaste Regular</option>
+                  <option value="Dañado">Dañado / Inoperativo</option>
+                </select>
+              </div>
 
-                  {/* Observación puntual por pieza */}
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Detalle de Daños</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. Desgaste en la oreja izquierda..."
-                      value={currentAsientoState.observaciones || ''}
-                      onChange={(e) => handleSilleteriaChange(selectedAsiento, 'observaciones', e.target.value)}
-                      className={inputStyle}
-                    />
-                  </div>
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Nivel de Desgaste</label>
+                <select name="desgaste" value={formCabina.desgaste} onChange={handleFormChange} className="w-full p-2.5 text-xs font-bold bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500">
+                  <option value="Mínimo">Mínimo / Muy Conservado</option>
+                  <option value="Normal">Normal acorde al kilometraje</option>
+                  <option value="Acelerado">Acelerado / Maltrato evidente</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Observaciones de Cabina</label>
+                <textarea name="comentario" value={formCabina.comentario} onChange={handleFormChange} rows="3" placeholder="Detalles de roturas, manchas o fallas eléctricas..." className="w-full p-2.5 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white placeholder:text-slate-600 focus:ring-2 focus:ring-blue-500" />
+              </div>
+
+              <div className="pt-2 flex space-x-2">
+                <button type="button" onClick={() => setZonaSeleccionada(null)} className="w-1/3 py-2 text-xs font-bold uppercase tracking-wider border border-slate-700 text-slate-400 rounded-lg hover:bg-slate-800 transition">
+                  Cancelar
+                </button>
+                <button type="button" onClick={handleGuardarZona} className="w-2/3 py-2 text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow transition">
+                  Guardar Zona
+                </button>
               </div>
             </div>
-
-            <p className="text-[10px] text-slate-400 font-medium">
-              * Nota: Los cambios realizados se guardan automáticamente en la estructura interna de sincronización del peritaje.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* 📊 SECCIÓN 3: LECTURAS Y DATOS DE CONTROL */}
-      <div className="bg-white border border-slate-200/60 rounded-xl p-6 space-y-4 shadow-sm">
-        <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider border-b border-slate-100 pb-3">
-          Lecturas de Tablero y Control de Mandos
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Kilometraje Actual *</label>
-            <div className="relative flex items-center">
-              <input 
-                type="number" 
-                placeholder="Ej. 85000"
-                value={safeData.kilometraje || ''} 
-                onChange={(e) => handleInputChange('kilometraje', e.target.value)}
-                className={`${inputStyle} pr-12 font-mono font-bold text-blue-600 text-right`}
-                required
-              />
-              <span className="absolute right-3 text-[10px] font-extrabold text-slate-400 uppercase select-none pointer-events-none">
-                KM
-              </span>
+          ) : (
+            <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-400 flex flex-col items-center justify-center h-full min-h-[300px]">
+              <span className="text-3xl mb-2">👈</span>
+              <p className="text-xs font-bold uppercase tracking-wide">Selecciona un elemento en el plano interior para registrar su estado.</p>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Estado de las Llaves / Comandos</label>
-            <select 
-              value={safeData.estadoLlaves || ''} 
-              onChange={(e) => handleInputChange('estadoLlaves', e.target.value)}
-              className={inputStyle}
-            >
-              <option value="">Seleccione una opción...</option>
-              <option value="originalDuplicado">Posee Llave Original y Duplicado Operativos</option>
-              <option value="soloOriginal">Posee Únicamente Llave Original</option>
-              <option value="controlFalla">Tiene llave pero el control remoto no funciona</option>
-              <option value="llaveCopia">Posee solo una copia sencilla (Sin chip/control)</option>
-            </select>
-          </div>
+          )}
         </div>
       </div>
-
-      {/* 📝 SECCIÓN 4: RESUMEN DE LA INSPECCIÓN INTERNA */}
-      <div className="bg-white border border-slate-200/60 rounded-xl p-6 space-y-4 shadow-sm">
-        <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider border-b border-slate-100 pb-3">
-          Concepto Final del Habitáculo y Mandos
-        </h3>
-        <div>
-          <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Notas y Observaciones de la Vista Interna</label>
-          <textarea 
-            rows="3" 
-            placeholder="Registre observaciones específicas sobre el estado del sistema eléctrico interno, testigos encendidos permanentemente o mal funcionamiento de mandos..."
-            value={safeData.comentariosVistaInterna || ''} 
-            onChange={(e) => handleInputChange('comentariosVistaInterna', e.target.value)}
-            className={`${inputStyle} resize-none`}
-          />
-        </div>
-      </div>
-
     </div>
   );
 }

@@ -16,9 +16,14 @@ export default function Dashboard({ onLogout }) {
   const [activeTab, setActiveTab] = useState('Bandeja');
   const [isInspecting, setIsInspecting] = useState(false);
   const [inspectionStep, setInspectionStep] = useState('Documentacion'); // Paso actual del peritaje
+  
+  // --- ESTADO PARA SELECCIÓN DE TIPO DE VEHÍCULO ---
+  const [showVehicleSelector, setShowVehicleSelector] = useState(false);
 
   // --- ESTADO GENERAL DE PERITAJE ---
   const [peritajeData, setPeritajeData] = useState({
+    tipoVehiculo: '', // carro, moto, pesado, motocarro
+    
     // Módulo 1: Datos & RUNT Ampliado
     placa: '',
     marca: '',
@@ -46,54 +51,9 @@ export default function Dashboard({ onLogout }) {
     tieneEmbargosOAlertas: false,
     restriccionBlindaje: 'sin_blindaje',
 
-    // Módulo 2: Accesorios
-    accesoriosList: [
-      { id: 'aire', name: 'Aire Acondicionado', presente: true, danado: false },
-      { id: 'climatizador', name: 'Climatizador', presente: true, danado: false },
-      { id: 'frenos_abs', name: 'Frenos ABS', presente: true, danado: false },
-      { id: 'airbags', name: 'Airbags', presente: true, danado: false },
-      { id: 'cierre', name: 'Cierre Centralizado', presente: true, danado: false },
-      { id: 'llantas', name: 'Llantas', presente: true, danado: false },
-      { id: 'neblineros', name: 'Neblineros', presente: true, danado: false },
-      { id: 'espejos', name: 'Espejos Eléctricos', presente: true, danado: false },
-      { id: 'alza_vidrios', name: 'Alza Vidrios Eléctricos', presente: true, danado: false },
-      { id: 'direccion', name: 'Dirección', tipo: 'seleccion_multiple', opciones: ['Asistida', 'Eléctrica', 'Hidráulica'], seleccion: 'Eléctrica' },
-      { id: 'techo_corr', name: 'Techo Corredizo', presente: true, danado: false },
-      { id: 'techo_pano', name: 'Techo Panorámico', presente: true, danado: false },
-      { id: 'crucero', name: 'Velocidad Crucero', presente: true, danado: false },
-      { id: 'gps', name: 'GPS', presente: true, danado: false },
-      { id: 'bluetooth', name: 'Bluetooth', presente: true, danado: false },
-      { id: 'sensor_retro', name: 'Sensor de Retroceso', tipo: 'seleccion_multiple', opciones: ['Solo Sensor', 'Solo Cámara', 'Ambos', 'No'], seleccion: 'Ambos' },
-      { id: 'paddle_shift', name: 'Paddle shift', presente: true, danado: false },
-      { id: 'asientos_elec', name: 'Asientos Eléctricos', presente: true, danado: false },
-      { id: 'radio_orig', name: 'Radio Original', presente: true, danado: false },
-      { id: 'segunda_copia', name: 'Segunda copia llave', tipo: 'seleccion_multiple', opciones: ['Sí', 'No'], seleccion: 'No' },
-      { id: 'anclaje_isofix', name: 'Anclaje Isofix', presente: true, danado: false },
-      { id: 'control_est', name: 'Control de Estabilidad', presente: true, danado: false },
-      { id: 'pelicula_seg', name: 'Película de seguridad', presente: true, danado: false },
-      { id: 'sensor_lluvia', name: 'Sensor de Lluvia', presente: true, danado: false },
-      { id: 'tiro_arrastre', name: 'Tiro de Arrastre', presente: true, danado: false },
-      { id: 'volante_ajust', name: 'Volante Ajustable', presente: true, danado: false },
-      { id: 'asiento_memoria', name: 'Asiento con memoria', presente: true, danado: false },
-      { id: 'tapiz_cuero', name: 'Tapiz de Cuero', presente: true, danado: false },
-      { id: 'transmision', name: 'Transmisión', tipo: 'seleccion_multiple', opciones: ['Mecánico', 'Automático'], seleccion: 'Automático' },
-      { id: 'traccion', name: 'Tracción', tipo: 'seleccion_multiple', opciones: ['4x2', '4x4'], seleccion: '4x2' },
-      { id: 'combustible', name: 'Tipo de combustible', tipo: 'seleccion_multiple', opciones: ['Gasolina', 'Diesel', 'Híbrido', 'Eléctrico'], seleccion: 'Gasolina' },
-      { id: 'kit_inflado', name: 'Kit de inflado', tipo: 'seleccion_multiple', opciones: ['Sí', 'No', 'No corresponde'], seleccion: 'No' },
-      { id: 'piso_goma', name: 'Piso de goma', tipo: 'seleccion_multiple', opciones: ['Sí (original de la marca)', 'Alternativo', 'Sin piso de goma'], seleccion: 'Sí (original de la marca)' },
-      { id: 'tuerca_seg', name: 'Dado y tuerca de seguridad', presente: true, danado: false },
-      // Maleta
-      { id: 'gato', name: 'Gato hidráulico', presente: true, danado: false },
-      { id: 'llave_rueda', name: 'Llave rueda', presente: true, danado: false },
-      { id: 'extintor', name: 'Extintor', presente: true, danado: false },
-      { id: 'triangulo', name: 'Triángulo', presente: true, danado: false },
-      { id: 'botiquin', name: 'Botiquín', presente: true, danado: false },
-      { id: 'chaleco', name: 'Chaleco reflectante', presente: true, danado: false },
-      { id: 'libro', name: 'Libro de mantenciones', presente: true, danado: false },
-      { id: 'repuesto', name: 'Rueda de Repuesto', presente: true, danado: false },
-      { id: 'cubre_equipaje', name: 'Cubre equipaje', presente: true, danado: false },
-// 
-    ],
+    // Módulo 2: Accesorios (Se inicializa vacío para que el módulo hijo cargue la lista independiente según el vehículo)
+    accesoriosList: [],
+
     // Módulo 3: Motor
     compresionMotor: '',
     fugasAceite: false,
@@ -323,7 +283,6 @@ export default function Dashboard({ onLogout }) {
 
     const filasAccesorios = data.accesoriosList.map(acc => [
       acc.name,
-      acc.categoria,
       acc.presente ? 'SÍ' : 'NO',
       acc.danado ? 'MAL ESTADO' : 'OPERATIVO'
     ]);
@@ -333,31 +292,9 @@ export default function Dashboard({ onLogout }) {
       theme: 'striped',
       headStyles: { fillColor: [71, 85, 105], fontStyle: 'bold', fontSize: 8.5 },
       bodyStyles: { fontSize: 8 },
-      head: [['ELEMENTO / ACCESORIO', 'CATEGORÍA', 'PRESENTE', 'ESTADO EVALUADO']],
+      head: [['ELEMENTO / ACCESORIO', 'PRESENTE', 'ESTADO EVALUADO']],
       body: filasAccesorios,
       styles: { cellPadding: 1.5 }
-    });
-
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(colorSecundario[0], colorSecundario[1], colorSecundario[2]);
-    doc.text('5. ESTADO Y PROFUNDIDAD DE NEUMÁTICOS', 14, doc.lastAutoTable.finalY + 8);
-
-    const filasLlantas = Object.entries(data.llantasData).map(([posicion, info]) => [
-      posicion.toUpperCase().replace('_', ' '),
-      info.marca || 'N/A',
-      info.medida || 'N/A',
-      info.profundidad_mm ? `${info.profundidad_mm} mm` : 'N/A',
-      info.porcentaje_vida ? `${info.porcentaje_vida}%` : 'N/A'
-    ]);
-
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 11,
-      theme: 'grid',
-      headStyles: { fillColor: colorPrimario, fontStyle: 'bold', fontSize: 8.5 },
-      bodyStyles: { fontSize: 8 },
-      head: [['POSICIÓN', 'MARCA', 'MEDIDA', 'PROFUNDIDAD', 'VIDA ÚTIL ESTIMADA']],
-      body: filasLlantas,
     });
 
     const YFinal = doc.lastAutoTable.finalY + 12;
@@ -365,7 +302,7 @@ export default function Dashboard({ onLogout }) {
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(colorSecundario[0], colorSecundario[1], colorSecundario[2]);
-    doc.text('6. CONCEPTO FINAL DE EVALUACIÓN', 14, YFinal);
+    doc.text('5. CONCEPTO FINAL DE EVALUACIÓN', 14, YFinal);
 
     const observacionesTexto = data.conceptoFinal || 'El vehículo se encuentra en condiciones óptimas operativas de acuerdo a la documentación examinada y pruebas dinámicas de motor realizadas en el departamento de Casanare.';
     const textoDividido = doc.splitTextToSize(observacionesTexto, 174);
@@ -388,7 +325,6 @@ export default function Dashboard({ onLogout }) {
     doc.setFont('Helvetica', 'normal');
     doc.setFontSize(8.5);
     doc.text(textoDividido, 18, YFinal + 15, { width: 180 });
-    doc.text(textoDividido, 18, YFinal + 15);
 
     const YFirma = YFinal + altoCuadro + 25;
 
@@ -396,7 +332,6 @@ export default function Dashboard({ onLogout }) {
     doc.setLineWidth(0.5);
     doc.line(14, YFirma, 74, YFirma);
 
-    // Validación segura de la firma digital
     if (data.firmaInspector && typeof data.firmaInspector === 'string' && data.firmaInspector.startsWith('data:image')) {
       try {
         doc.addImage(data.firmaInspector, 'PNG', 16, YFirma - 22, 50, 20);
@@ -428,6 +363,62 @@ export default function Dashboard({ onLogout }) {
       {/* 1. SOBRECAPA OSCURA MÓVIL */}
       {isSidebarOpen && (
         <div onClick={toggleSidebar} className="fixed inset-0 bg-black/40 z-40 lg:hidden" />
+      )}
+
+      {/* MODAL DE SELECCIÓN DE TIPO DE VEHÍCULO */}
+      {showVehicleSelector && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Seleccionar Tipo de Vehículo</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Elige la categoría para iniciar el protocolo de peritaje</p>
+              </div>
+              <button 
+                onClick={() => setShowVehicleSelector(false)}
+                className="text-slate-400 hover:text-slate-700 text-lg font-bold p-1 rounded-lg hover:bg-slate-200/50 transition"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="p-6 grid grid-cols-2 gap-4">
+              {[
+                { id: 'carro', label: 'Carro / Automóvil', icon: '🚗', desc: 'Livianos, Sedán, SUV, Camperos' },
+                { id: 'moto', label: 'Moto', icon: '🏍️', desc: 'Motocicletas de cilindrada variada' },
+                { id: 'pesado', label: 'Vehículo Pesado', icon: '🚛', desc: 'Camiones, Tractocamiones, Buses' },
+                { id: 'motocarro', label: 'Motocarro', icon: '🛺', desc: 'Tricimotos de carga o pasajeros' },
+              ].map((tipo) => (
+                <button
+                  key={tipo.id}
+                  onClick={() => {
+                    handleDataChange({ 
+                      tipoVehiculo: tipo.id,
+                      accesoriosList: [] // Limpiamos accesorios para que el módulo hijo cargue los específicos del vehículo
+                    });
+                    setShowVehicleSelector(false);
+                    setIsInspecting(true);
+                    setInspectionStep('Documentacion');
+                  }}
+                  className="flex flex-col text-left p-5 border border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 rounded-xl transition group relative shadow-sm hover:shadow"
+                >
+                  <span className="text-3xl mb-3 group-hover:scale-110 transition transform origin-left">{tipo.icon}</span>
+                  <span className="text-sm font-bold text-slate-900 group-hover:text-blue-600">{tipo.label}</span>
+                  <span className="text-[11px] text-slate-500 mt-1 leading-relaxed">{tipo.desc}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={() => setShowVehicleSelector(false)}
+                className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-slate-900"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* 2. BARRA LATERAL (Sidebar) */}
@@ -502,7 +493,9 @@ export default function Dashboard({ onLogout }) {
                   >
                     <span>←</span> <span>Volver a la Bandeja</span>
                   </button>
-                  <h1 className="text-2xl font-bold tracking-tight text-slate-900">Nuevo Peritaje Vehicular</h1>
+                  <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+                    Nuevo Peritaje Vehicular {peritajeData.tipoVehiculo && <span className="text-blue-600 uppercase text-lg">({peritajeData.tipoVehiculo})</span>}
+                  </h1>
                 </div>
                 <div className="flex items-center space-x-2">
                   <span className="text-xs bg-amber-50 text-amber-700 px-3 py-1 rounded-full font-bold border border-amber-200">
@@ -609,10 +602,7 @@ export default function Dashboard({ onLogout }) {
                   <p className="text-slate-500 mt-1 text-sm">Monitoreo y registro de peritajes en tiempo real.</p>
                 </div>
                 <button 
-                  onClick={() => {
-                    setIsInspecting(true);
-                    setInspectionStep('Documentacion');
-                  }}
+                  onClick={() => setShowVehicleSelector(true)}
                   className="bg-blue-600 hover:bg-blue-700 px-5 py-3 text-xs font-bold uppercase tracking-wider text-white rounded-lg shadow-md transition duration-150 self-start sm:self-auto"
                 >
                   Nueva Inspección +
@@ -689,8 +679,7 @@ export default function Dashboard({ onLogout }) {
                             ) : (
                               <button 
                                 onClick={() => {
-                                  setIsInspecting(true);
-                                  setInspectionStep('Documentacion');
+                                  setShowVehicleSelector(true);
                                 }}
                                 className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline transition duration-140"
                               >

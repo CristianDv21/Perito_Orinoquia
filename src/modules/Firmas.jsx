@@ -22,7 +22,6 @@ export default function ModuloFirma({ onFirmaChange }) {
     }
 
     try {
-      // Método seguro: extrae el elemento canvas interno sin fallos de referencia
       const canvasElement = padFirma.current.getCanvas();
       const urlImagenFirma = canvasElement.toDataURL('image/png');
 
@@ -38,45 +37,35 @@ export default function ModuloFirma({ onFirmaChange }) {
   };
 
   return (
-    <div style={{ padding: '15px', border: '1px solid #ccc', borderRadius: '5px', backgroundColor: '#fff' }}>
-      <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '10px' }}>
-        🖋️ Registro de Firma Digital del Perito
-      </h3>
-      <p style={{ fontSize: '13px', color: '#555', marginBottom: '15px' }}>
-        Dibuje su firma dentro del recuadro usando el mouse o la pantalla táctil de su dispositivo.
-      </p>
+    <div className="p-6 bg-white border border-slate-200 rounded-xl shadow-sm space-y-4">
+      <div>
+        <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+          🖋️ Registro de Firma Digital del Perito
+        </h3>
+        <p className="text-xs text-slate-500 mt-1">
+          Dibuje su firma dentro del recuadro usando el mouse o la pantalla táctil de su dispositivo.
+        </p>
+      </div>
 
       {/* Contenedor del lienzo de dibujo */}
-      <div style={{ border: '2px dashed #000', borderRadius: '4px', width: '100%', maxWidth: '500px', backgroundColor: '#fafafa' }}>
+      <div className="border-2 border-dashed border-slate-300 rounded-xl w-full max-w-md bg-slate-50 overflow-hidden">
         <SignatureCanvas 
           ref={padFirma}
           penColor='black'
           canvasProps={{
             width: 500, 
             height: 150, 
-            className: 'sigCanvas',
-            style: { width: '100%', height: '150px' }
+            className: 'sigCanvas w-full h-[150px] cursor-crosshair'
           }}
         />
       </div>
 
       {/* Botones de acción */}
-      <div style={{ marginTop: '20px', display: 'flex', gap: '12px' }}>
+      <div className="flex flex-wrap gap-3 pt-2">
         <button 
           type="button"
           onClick={limpiarFirma}
-          style={{ 
-            padding: '8px 20px', 
-            backgroundColor: '#ffffff', 
-            color: '#ef4444', 
-            border: '1px solid #fca5a5', 
-            borderRadius: '8px', 
-            cursor: 'pointer', 
-            fontWeight: '700',
-            fontSize: '13px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em'
-          }}
+          className="px-5 py-2.5 bg-white text-red-500 border border-red-200 rounded-xl hover:bg-red-50 transition font-bold text-xs uppercase tracking-wider shadow-sm"
         >
           ♻️ Volver a Intentar
         </button>
@@ -84,18 +73,7 @@ export default function ModuloFirma({ onFirmaChange }) {
         <button 
           type="button"
           onClick={guardarFirma}
-          style={{ 
-            padding: '8px 20px', 
-            backgroundColor: '#00c789', 
-            color: '#ffffff', 
-            border: 'none', 
-            borderRadius: '8px', 
-            cursor: 'pointer', 
-            fontWeight: '700',
-            fontSize: '13px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em'
-          }}
+          className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition font-bold text-xs uppercase tracking-wider shadow-sm"
         >
           💾 Confirmar Firma
         </button>
@@ -103,14 +81,14 @@ export default function ModuloFirma({ onFirmaChange }) {
 
       {/* Vista previa de la firma procesada */}
       {firmaGuardada && (
-        <div style={{ marginTop: '20px', padding: '10px', backgroundColor: '#e8f5e9', borderRadius: '4px' }}>
-          <p style={{ fontSize: '13px', color: '#2e7d32', fontWeight: 'bold', margin: '0 0 5px 0' }}>
+        <div className="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2 animate-fadeIn">
+          <p className="text-xs text-emerald-800 font-bold flex items-center gap-1.5">
             ✓ Firma digitalizada con éxito para el reporte técnico:
           </p>
           <img 
             src={firmaGuardada} 
             alt="Firma del perito" 
-            style={{ border: '1px solid #aaa', backgroundColor: '#fff', maxHeight: '80px' }} 
+            className="border border-emerald-300 bg-white rounded-lg max-h-20 shadow-inner p-1" 
           />
         </div>
       )}

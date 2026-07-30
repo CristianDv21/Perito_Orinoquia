@@ -1,17 +1,25 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 
-export default function ModuloFirma({ onFirmaChange }) {
+export default function ModuloFirma({ peritajeData, onChange }) {
+  const safeData = peritajeData || {};
   const padFirma = useRef(null);
-  const [firmaGuardada, setFirmaGuardada] = useState(null);
+  const [firmaGuardada, setFirmaGuardada] = useState(safeData.firmaInspector || null);
+
+  // Si ya existe una firma guardada previamente en el peritaje (por ejemplo,
+  // al volver a este paso), la reflejamos en la vista previa.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFirmaGuardada(safeData.firmaInspector || null);
+  }, [safeData.firmaInspector]);
 
   // Función para limpiar el recuadro y volver a firmar
   const limpiarFirma = () => {
     if (padFirma.current) {
       padFirma.current.clear();
-      setFirmaGuardada(null);
-      if (onFirmaChange) onFirmaChange(null);
     }
+    setFirmaGuardada(null);
+    if (onChange) onChange({ firmaInspector: null });
   };
 
   // Función para guardar el trazo de manera segura
@@ -27,8 +35,8 @@ export default function ModuloFirma({ onFirmaChange }) {
 
       setFirmaGuardada(urlImagenFirma);
 
-      if (onFirmaChange) {
-        onFirmaChange(urlImagenFirma);
+      if (onChange) {
+        onChange({ firmaInspector: urlImagenFirma });
       }
     } catch (error) {
       console.error("Error al procesar la firma:", error);

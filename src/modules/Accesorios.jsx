@@ -1,4 +1,4 @@
-export default function Accesorios({ data, onChange }) {
+export default function Accesorios({ peritajeData: data, onChange }) {
   const safeData = data || {};
   const tipoVehiculo = safeData.tipoVehiculo || 'carro';
 

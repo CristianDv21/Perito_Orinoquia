@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function VistaExterna({ data, onChange }) {
+export default function VistaExterna({ peritajeData: data, onChange }) {
   const safeData = data || {};
   const tipoVehiculo = safeData.tipoVehiculo || 'carro'; // Heredado globalmente
 
@@ -13,7 +13,7 @@ export default function VistaExterna({ data, onChange }) {
     foto: null
   });
 
-  // 🌐 Catálogo de piezas adaptado por tipo de vehículo
+  // Catálogo de piezas adaptado por tipo de vehículo
   const piezasPorModelo = {
     carro: [
       { id: 'capo', name: 'Capó / Motor' },
@@ -65,6 +65,9 @@ export default function VistaExterna({ data, onChange }) {
 
   const piezasCarroceria = piezasPorModelo[tipoVehiculo] || piezasPorModelo.carro;
 
+  // Validación para ocultar el módulo de micras en vehículos donde no aplique o mantenerlo condicional
+  const esVehiculoLivianoPesado = tipoVehiculo === 'carro' || tipoVehiculo === 'pesado';
+
   const handleSelectPieza = (piezaId) => {
     setPiezaSeleccionada(piezaId);
     if (safeData.danosExternos && safeData.danosExternos[piezaId]) {
@@ -82,7 +85,14 @@ export default function VistaExterna({ data, onChange }) {
   const handleFileChange = (e) => {
     const { files } = e.target;
     if (files && files[0]) {
-      setFormDano(prev => ({ ...prev, foto: files[0] }));
+      const archivo = files[0];
+      // Convertimos a data URL (base64) aquí mismo, porque jsPDF no puede
+      // dibujar un objeto File crudo: necesita una imagen ya decodificada.
+      const lector = new FileReader();
+      lector.onload = (evento) => {
+        setFormDano(prev => ({ ...prev, foto: evento.target.result, fotoNombre: archivo.name }));
+      };
+      lector.readAsDataURL(archivo);
     }
   };
 
@@ -128,7 +138,7 @@ export default function VistaExterna({ data, onChange }) {
               Plano Esquemático de Inspección ({tipoVehiculo.toUpperCase()})
             </h3>
             
-            {/* 🚗 ESQUEMA DE CARRO */}
+            {/* ESQUEMA DE CARRO */}
             {tipoVehiculo === 'carro' && (
               <div className="w-full max-w-md mx-auto space-y-2 font-mono text-[11px] font-bold">
                 <div className="flex justify-center">
@@ -191,7 +201,7 @@ export default function VistaExterna({ data, onChange }) {
               </div>
             )}
 
-            {/* 🏍️ ESQUEMA DE MOTO */}
+            {/* ESQUEMA DE MOTO */}
             {tipoVehiculo === 'moto' && (
               <div className="w-full max-w-sm mx-auto space-y-3 font-mono text-[11px] font-bold">
                 <div className="flex justify-center">
@@ -234,7 +244,7 @@ export default function VistaExterna({ data, onChange }) {
               </div>
             )}
 
-            {/* 🚛 ESQUEMA DE PESADO */}
+            {/* ESQUEMA DE PESADO */}
             {tipoVehiculo === 'pesado' && (
               <div className="w-full max-w-md mx-auto space-y-2 font-mono text-[11px] font-bold">
                 <div className="flex justify-center">
@@ -277,7 +287,7 @@ export default function VistaExterna({ data, onChange }) {
               </div>
             )}
 
-            {/* 🛺 ESQUEMA DE MOTOCARRO */}
+            {/* ESQUEMA DE MOTOCARRO */}
             {tipoVehiculo === 'motocarro' && (
               <div className="w-full max-w-sm mx-auto space-y-3 font-mono text-[11px] font-bold">
                 <div className="flex justify-center">
@@ -348,10 +358,13 @@ export default function VistaExterna({ data, onChange }) {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Espesor de Pintura (Micras μm)</label>
-                <input type="number" name="micras" value={formDano.micras} onChange={handleFormChange} placeholder="Ej: 110" className="w-full p-2.5 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white font-mono placeholder:text-slate-600 focus:ring-2 focus:ring-blue-500" />
-              </div>
+              {/* El campo de micras se muestra opcionalmente según el tipo de vehículo */}
+              {esVehiculoLivianoPesado && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Espesor de Pintura (Micras μm)</label>
+                  <input type="number" name="micras" value={formDano.micras} onChange={handleFormChange} placeholder="Ej: 110" className="w-full p-2.5 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white font-mono placeholder:text-slate-600 focus:ring-2 focus:ring-blue-500" />
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Anotaciones Específicas</label>
@@ -361,7 +374,7 @@ export default function VistaExterna({ data, onChange }) {
               <div>
                 <label className="block text-xs font-bold text-slate-400 tracking-wider uppercase mb-1.5">Foto de Evidencia</label>
                 <input type="file" name="foto" accept="image/*" onChange={handleFileChange} className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-bold file:bg-slate-800 file:text-blue-400 hover:file:bg-slate-700 cursor-pointer" />
-                {formDano.foto && <p className="text-[11px] text-emerald-400 mt-1 font-mono">✓ Cargada: {formDano.foto.name}</p>}
+                {formDano.foto && <p className="text-[11px] text-emerald-400 mt-1 font-mono">✓ Cargada: {formDano.fotoNombre || 'imagen'}</p>}
               </div>
 
               <div className="pt-2 flex space-x-2">
@@ -377,7 +390,7 @@ export default function VistaExterna({ data, onChange }) {
             <div className="bg-white border border-dashed border-slate-300 p-8 rounded-xl text-center h-full flex flex-col items-center justify-center text-slate-400 min-h-[300px]">
               <span className="text-3xl mb-2">🎨</span>
               <p className="text-xs font-bold uppercase tracking-wider">Ninguna Pieza Seleccionada</p>
-              <p className="text-[11px] text-slate-400 mt-1 max-w-xs">Toca cualquier componente en el esquema para registrar daños o lecturas de pintura.</p>
+              <p className="text-[11px] text-slate-400 mt-1 max-w-xs">Toca cualquier componente en el esquema para registrar daños.</p>
               
               {Object.keys(safeData.danosExternos || {}).length > 0 && (
                 <div className="w-full mt-6 pt-4 border-t border-slate-100 text-left">

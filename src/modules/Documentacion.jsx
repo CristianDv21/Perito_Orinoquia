@@ -80,7 +80,7 @@ function FileUploader({ field, acceptedFile, onFileChange }) {
   );
 }
 
-export default function Documentacion({ data, onChange }) {
+export default function Documentacion({ peritajeData: data, onChange }) {
   const safeData = data || {};  
   const tipoVehiculo = safeData.tipoVehiculo || 'carro'; // Heredado globalmente de la inspección
 
@@ -95,7 +95,7 @@ export default function Documentacion({ data, onChange }) {
   // 🌐 Diccionario de ejemplos universales según el tipo de vehículo
   const placeholdersConfig = {
     carro: {
-      placa: "Ej. HBS12H",
+      placa: "Ej. HBS126",
       marca: "Ej. Chevrolet / Mazda",
       linea: "Ej. Spark / Mazda 3",
       modelo: "Ej. 2022",
@@ -116,7 +116,7 @@ export default function Documentacion({ data, onChange }) {
       siniestros: "Ej. Sin historial de colisión / Reparación de carrocería en 2024",
     },
     motocarro: {
-      placa: "Ej. MTC12C",
+      placa: "Ej. 722ABC",
       marca: "Ej. Bajaj / TVS",
       linea: "Ej. RE Maxima / Torito",
       modelo: "Ej. 2021",

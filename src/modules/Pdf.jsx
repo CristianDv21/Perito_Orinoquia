@@ -28,12 +28,20 @@ export const generarInstanciaPdf = (peritajeData) => {
     coincidePropietarioRunt, tieneEmbargosOAlertas, restriccionBlindaje,
     accesoriosList, accesoriosObservaciones,
     compresionMotor, fugasAceite, estadoBateria, ruidosExtranos, motorObservaciones,
-    estadoGeneralVehiculo, conceptofinal,
-    imagenesList, 
-    firma,
+    estadoGeneralVehiculo, conceptoFinal,
+    imagenesList,
+    firmaInspector,
     svgEsquemaVehiculo,
     comentariosGenerales
   } = peritajeData || {};
+
+  // Las fotos de evidencia no viven en un solo array: quedan guardadas
+  // dentro de cada pieza dañada (Vista Externa) y cada componente técnico
+  // (Detalles Técnicos). Si no nos pasan un "imagenesList" ya armado,
+  // lo construimos aquí recogiendo todas las fotos disponibles.
+  const imagenesEvidencia = (imagenesList && imagenesList.length > 0)
+    ? imagenesList
+    : construirImagenesEvidencia(peritajeData);
 
   const colorPrimario = [8, 13, 26];    
   const colorSecundario = [37, 99, 235]; 
@@ -280,7 +288,7 @@ export const generarInstanciaPdf = (peritajeData) => {
       ["Costos Totales Estimados:", `$ ${Number(totalCostoAccesorios).toLocaleString()}`],
       ["Observaciones de Inventario:", accesoriosObservaciones || "Ninguna"],
       ["Comentarios Adicionales / Generales:", comentariosGenerales || comentariosSiniestros || "Sin comentarios adicionales."],
-      ["Concepto Técnico Final:", conceptofinal || "Vehículo inspeccionado bajo los estándares requeridos."],
+      ["Concepto Técnico Final:", conceptoFinal || "Vehículo inspeccionado bajo los estándares requeridos."],
     ],
   });
 
@@ -302,12 +310,12 @@ export const generarInstanciaPdf = (peritajeData) => {
   let imgWidth = 55;   
   let imgHeight = 40;  
   let marginX = 10;
-  let marginY = 12;
+  let marginY = 18; // deja espacio extra para la etiqueta bajo cada foto
   let maxPerRow = 3;
 
-  if (imagenesList && imagenesList.length > 0) {
-    imagenesList.forEach((imgObj, index) => {
-      if (posY + imgHeight > 220) { 
+  if (imagenesEvidencia && imagenesEvidencia.length > 0) {
+    imagenesEvidencia.forEach((imgObj, index) => {
+      if (posY + imgHeight + 8 > 225) {
         doc.addPage();
         posY = 25;
       }
@@ -322,6 +330,20 @@ export const generarInstanciaPdf = (peritajeData) => {
             doc.addImage(processedImg.data, processedImg.format, posX, posY, imgWidth, imgHeight);
             doc.setDrawColor(200, 200, 200);
             doc.rect(posX, posY, imgWidth, imgHeight);
+
+            // Etiqueta descriptiva bajo la foto (qué elemento es y qué se detectó)
+            if (imgObj?.titulo) {
+              doc.setFont("helvetica", "bold");
+              doc.setFontSize(7);
+              doc.setTextColor(30, 41, 59);
+              doc.text(imgObj.titulo, posX, posY + imgHeight + 4, { maxWidth: imgWidth });
+            }
+            if (imgObj?.subtitulo) {
+              doc.setFont("helvetica", "normal");
+              doc.setFontSize(6.5);
+              doc.setTextColor(100, 116, 139);
+              doc.text(imgObj.subtitulo, posX, posY + imgHeight + 7.5, { maxWidth: imgWidth });
+            }
           }
         } catch (error) {
           console.error("Error al renderizar imagen fotográfica:", error);
@@ -363,9 +385,9 @@ export const generarInstanciaPdf = (peritajeData) => {
   doc.setDrawColor(150, 150, 150);
   doc.rect(firmaPosX, firmaBoxY, firmaAncho, firmaAlto);
 
-  if (firma) {
+  if (firmaInspector) {
     try {
-      const processedFirma = prepararImagenParaPdf(firma);
+      const processedFirma = prepararImagenParaPdf(firmaInspector);
       if (processedFirma) {
         doc.addImage(processedFirma.data, processedFirma.format, firmaPosX + 2, firmaBoxY + 2, firmaAncho - 4, firmaAlto - 4);
       }
@@ -399,6 +421,43 @@ export const generarInstanciaPdf = (peritajeData) => {
   }
 
   return doc;
+};
+
+// Recorre danosExternos (Vista Externa) y detallesTecnicos (Detalles Técnicos)
+// para juntar en un solo listado todas las fotos que sí se cargaron,
+// con un título y subtítulo legibles para mostrar debajo de cada una.
+const formatearEtiqueta = (id) =>
+  (id || '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (letra) => letra.toUpperCase());
+
+const construirImagenesEvidencia = (peritajeData) => {
+  const lista = [];
+
+  const piezasExternas = peritajeData?.danosExternos || {};
+  Object.entries(piezasExternas).forEach(([piezaId, info]) => {
+    if (info?.foto && typeof info.foto === 'string' && info.foto.startsWith('data:image')) {
+      const partes = [info.tipo, info.micras ? `${info.micras} μm` : null].filter(Boolean);
+      lista.push({
+        urlBase64: info.foto,
+        titulo: formatearEtiqueta(piezaId),
+        subtitulo: partes.length > 0 ? partes.join(' · ') : (info.comentario || 'Carrocería'),
+      });
+    }
+  });
+
+  const detallesTecnicos = peritajeData?.detallesTecnicos || {};
+  Object.entries(detallesTecnicos).forEach(([itemId, info]) => {
+    if (info?.imagen && typeof info.imagen === 'string' && info.imagen.startsWith('data:image')) {
+      lista.push({
+        urlBase64: info.imagen,
+        titulo: formatearEtiqueta(itemId),
+        subtitulo: info.comentario || (info.dañado ? 'Dañado' : 'Detalle técnico'),
+      });
+    }
+  });
+
+  return lista;
 };
 
 // Función auxiliar mejorada para formatear imágenes y firmas de manera segura

@@ -1,6 +1,6 @@
-// COMPONENTE PRINCIPAL: EVALUACIÓN MECÁNICA Y MOTOR
-export default function Motor({ data, onChange }) {
+export default function Motor({ peritajeData: data, onChange }) {
   const safeData = data || {};
+  const tipoVehiculo = safeData.tipoVehiculo || 'carro'; // Heredado globalmente
 
   // Manejador genérico para actualizar campos raíz
   const handleInputChange = (field, value) => {
@@ -22,31 +22,73 @@ export default function Motor({ data, onChange }) {
     handleInputChange('sistemasMecanicos', updatedItems);
   };
 
-  // Clase de diseño estándar y uniforme (idéntica a Documentación y Accesorios)
+  // Clase de diseño estándar y uniforme
   const inputStyle = "w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-500 transition duration-150";
   
   // Clases compartidas para los selectores de diagnóstico tipo pastilla (Pills)
   const pillBase = "px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg border transition duration-150 cursor-pointer flex-1 text-center select-none";
 
-  // Listado de sistemas mecánicos clave a inspeccionar bajo el capó
-  const itemsMecanicos = [
-    { key: 'fugasMotor', label: 'Estanqueidad del Motor (Fugas de Aceite)' },
-    { key: 'fugasRefrigerante', label: 'Sistema de Refrigeración (Fugas / Radiador)' },
-    { key: 'ruidosMotor', label: 'Componentes Internos (Ruidos / Cascabeleo)' },
-    { key: 'correas', label: 'Correas de Accesorios (Estado / Tensión)' },
-    { key: 'soportesMotor', label: 'Soportes de Motor y Caja' },
-    { key: 'sistemaEscape', label: 'Sistema de Escape (Humo / Roturas)' },
-    { key: 'bateria', label: 'Sistema Eléctrico y Batería (Bornes / Voltaje)' },
-  ];
+  // 🌐 Listado de sistemas mecánicos adaptados por tipo de vehículo
+  const itemsPorModelo = {
+    carro: [
+      { key: 'fugasMotor', label: 'Estanqueidad del Motor (Fugas de Aceite)' },
+      { key: 'fugasRefrigerante', label: 'Sistema de Refrigeración (Fugas / Radiador)' },
+      { key: 'ruidosMotor', label: 'Componentes Internos (Ruidos / Cascabeleo)' },
+      { key: 'correas', label: 'Correas de Accesorios (Estado / Tensión)' },
+      { key: 'soportesMotor', label: 'Soportes de Motor y Caja' },
+      { key: 'sistemaEscape', label: 'Sistema de Escape (Humo / Roturas)' },
+      { key: 'bateria', label: 'Sistema Eléctrico y Batería (Bornes / Voltaje)' },
+    ],
+    moto: [
+      { key: 'fugasMotor', label: 'Estanqueidad del Motor (Fugas de Aceite / Empaques)' },
+      { key: 'ruidosMotor', label: 'Componentes Internos (Ruidos de Válvulas / Cadena de Distribución)' },
+      { key: 'transmisionSecundaria', label: 'Kit de Arrastre (Cadena, Sprocket / Correa)' },
+      { key: 'sistemaEscape', label: 'Sistema de Escape / Mofle' },
+      { key: 'bateria', label: 'Sistema Eléctrico y Batería (Carga / C.G.)' },
+    ],
+    pesado: [
+      { key: 'fugasMotor', label: 'Estanqueidad del Motor (Fugas de Aceite / Turbo)' },
+      { key: 'fugasRefrigerante', label: 'Sistema de Refrigeración (Intercooler / Radiador / Mangueras)' },
+      { key: 'ruidosMotor', label: 'Componentes Internos (Ruidos de Motor / Operación)' },
+      { key: 'correas', label: 'Correas y Tensores' },
+      { key: 'soportesMotor', label: 'Soportes de Motor y Chasis' },
+      { key: 'sistemaEscape', label: 'Sistema de Escape y Freno de Acometida / Motor' },
+      { key: 'bateria', label: 'Sistema Eléctrico y Baterías (24V / Bornes)' },
+    ],
+    motocarro: [
+      { key: 'fugasMotor', label: 'Estanqueidad del Motor y Reversa' },
+      { key: 'fugasRefrigerante', label: 'Sistema de Refrigeración (Si aplica por agua/aire)' },
+      { key: 'ruidosMotor', label: 'Componentes Internos / Embrague Centrífugo' },
+      { key: 'transmisionSecundaria', label: 'Eje de Transmisión / Cardán / Cadena' },
+      { key: 'sistemaEscape', label: 'Sistema de Escape' },
+      { key: 'bateria', label: 'Sistema Eléctrico y Batería' },
+    ]
+  };
+
+  const itemsMecanicos = itemsPorModelo[tipoVehiculo] || itemsPorModelo.carro;
+
+  // 🧮 Definir cantidad de cilindros para la prueba de compresión según el vehículo
+  const getCilindrosConfig = () => {
+    if (tipoVehiculo === 'moto') return [1]; // La gran mayoría son 1 cilindro
+    if (tipoVehiculo === 'motocarro') return [1, 2]; // Monocilíndrico o bicilíndrico común
+    return [1, 2, 3, 4]; // Carros y pesados por defecto (4 cilindros base)
+  };
+
+  const cilindrosActivos = getCilindrosConfig();
 
   return (
     <div className="space-y-6 text-slate-800">
       
-      {/* ⚙️ SECCIÓN 1: ESTADO DE COMPONENTES BAJO EL CAPÓ */}
+      {/* ⚙️ SECCIÓN 1: ESTADO DE COMPONENTES MECÁNICOS */}
       <div className="bg-white border border-slate-200/60 rounded-xl p-6 space-y-4 shadow-sm">
-        <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider border-b border-slate-100 pb-3">
-          Inspección de Componentes Mecánicos
-        </h3>
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider">
+            Inspección de Componentes Mecánicos ({tipoVehiculo.toUpperCase()})
+          </h3>
+          <span className="text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded uppercase">
+            Clase: {tipoVehiculo}
+          </span>
+        </div>
 
         <div className="divide-y divide-slate-100">
           {itemsMecanicos.map((item) => {
@@ -106,7 +148,7 @@ export default function Motor({ data, onChange }) {
         </div>
       </div>
 
-      {/* 📊 SECCIÓN 2: COMPRESIÓN DE CILINDROS Y TRANSMISIÓN */}
+      {/* 📊 SECCIÓN 2: PARÁMETROS DE TRANSMISIÓN Y COMPRESIÓN */}
       <div className="bg-white border border-slate-200/60 rounded-xl p-6 space-y-4 shadow-sm">
         <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider border-b border-slate-100 pb-3">
           Parámetros de Motor y Transmisión
@@ -121,10 +163,20 @@ export default function Motor({ data, onChange }) {
               className={inputStyle}
             >
               <option value="">Seleccione una opción...</option>
-              <option value="mecanica">Mecánica / Manual</option>
-              <option value="automatica">Automática (Convertidor de par)</option>
-              <option value="cvt">Automática (CVT)</option>
-              <option value="dobleEmbrague">Doble Embrague (DCT / DSG)</option>
+              {tipoVehiculo === 'moto' ? (
+                <>
+                  <option value="mecanicaCadena">Mecánica con Embrague Manual</option>
+                  <option value="semiautomatica">Semicetrifuga / Semicautomatica</option>
+                  <option value="automaticaScooter">Automática (CVT / Scooter)</option>
+                </>
+              ) : (
+                <>
+                  <option value="mecanica">Mecánica / Manual</option>
+                  <option value="automatica">Automática (Convertidor de par)</option>
+                  <option value="cvt">Automática (CVT)</option>
+                  <option value="dobleEmbrague">Doble Embrague (DCT / DSG)</option>
+                </>
+              )}
             </select>
           </div>
 
@@ -144,11 +196,11 @@ export default function Motor({ data, onChange }) {
           </div>
         </div>
 
-        {/* Datos técnicos de compresión (Inputs numéricos alineados) */}
+        {/* Datos técnicos de compresión dinámicos según el número de cilindros */}
         <div>
           <label className="block text-xs font-bold uppercase text-slate-500 mb-2 tracking-wide">Lectura de Compresión (PSI)</label>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[1, 2, 3, 4].map((num) => (
+          <div className={`grid grid-cols-2 ${cilindrosActivos.length > 2 ? 'sm:grid-cols-4' : 'sm:grid-cols-2'} gap-3 max-w-2xl`}>
+            {cilindrosActivos.map((num) => (
               <div key={num} className="relative flex items-center">
                 <span className="absolute left-3 text-[10px] font-extrabold text-slate-400 uppercase select-none">
                   Cil {num}
@@ -164,7 +216,7 @@ export default function Motor({ data, onChange }) {
             ))}
           </div>
           <span className="text-[10px] text-slate-400 mt-1.5 block font-medium">
-            * Ingrese los valores obtenidos con el manómetro/compresómetro.
+            * Ingrese los valores obtenidos con el manómetro/compresómetro para el motor de {cilindrosActivos.length} cilindro(s).
           </span>
         </div>
       </div>

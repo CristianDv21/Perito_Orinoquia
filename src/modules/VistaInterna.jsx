@@ -1,6 +1,10 @@
 import { useState } from 'react';
 
-export default function VistaInterna({ data, onChange }) {
+export default function VistaInterna({ peritajeData: data, onChange }) {
+  const safeData = data || {};
+  const tipoVehiculo = safeData.tipoVehiculo || 'carro';
+
+  // 1. PRIMERO declaramos TODOS los Hooks (antes de cualquier "if")
   const [zonaSeleccionada, setZonaSeleccionada] = useState(null);
   
   const [formCabina, setFormCabina] = useState({
@@ -9,21 +13,51 @@ export default function VistaInterna({ data, onChange }) {
     comentario: '',
   });
 
-  const zonasInternas = [
-    { id: 'tapiceria_del', name: 'Silletería / Tapicería Delantera' },
-    { id: 'tapiceria_tras', name: 'Silletería / Tapicería Trasera' },
-    { id: 'tablero', name: 'Tablero de Instrumentos y Testigos' },
-    { id: 'volante', name: 'Volante y Columnas de Dirección' },
-    { id: 'cinturones', name: 'Cinturones de Seguridad y Airbags' },
-    { id: 'cielo', name: 'Cielo raso / Tapizado de techo' },
-    { id: 'alfombras', name: 'Alfombras y Pisos' },
-    { id: 'paneles_puertas', name: 'Paneles y Tapizados de Puertas' },
-  ];
+  // 2. DESPUÉS de los Hooks, ponemos la validación de bloqueo o retorno temprano
+  if (tipoVehiculo === 'moto' || tipoVehiculo === 'motocarro') {
+    return (
+      <div className="bg-white border border-slate-200 rounded-xl p-12 text-center space-y-3">
+        <span className="text-4xl">🏍️</span>
+        <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">
+          Sección No Disponible para {tipoVehiculo.toUpperCase()}
+        </h3>
+        <p className="text-xs text-slate-500 max-w-sm mx-auto">
+          Los vehículos de esta categoría no cuentan con una vista interna detallada de cabina en este formato de peritaje. Puede continuar al siguiente paso.
+        </p>
+      </div>
+    );
+  }
+
+  // Catálogo de zonas adaptado según si es carro o vehículo pesado
+  const zonasPorModelo = {
+    carro: [
+      { id: 'tapiceria_del', name: 'Silletería / Tapicería Delantera' },
+      { id: 'tapiceria_tras', name: 'Silletería / Tapicería Trasera' },
+      { id: 'tablero', name: 'Tablero de Instrumentos y Testigos' },
+      { id: 'volante', name: 'Volante y Columnas de Dirección' },
+      { id: 'cinturones', name: 'Cinturones de Seguridad y Airbags' },
+      { id: 'cielo', name: 'Cielo raso / Tapizado de techo' },
+      { id: 'alfombras', name: 'Alfombras y Pisos' },
+      { id: 'paneles_puertas', name: 'Paneles y Tapizados de Puertas' },
+    ],
+    pesado: [
+      { id: 'silla_conductor', name: 'Asiento Conductor (Neumático/Ergonómico)' },
+      { id: 'silleteria_pasajeros_pesado', name: 'Silletería / Litera de Descanso' },
+      { id: 'tablero_instrumentos_pesado', name: 'Tablero, Relojes y Tacógrafo' },
+      { id: 'volante_columna_pesado', name: 'Volante y Mandos de Cabina' },
+      { id: 'cinturones_seguridad_pesado', name: 'Cinturones y Sistemas de Retención' },
+      { id: 'tapizado_techo_pesado', name: 'Revestimiento y Techo de Cabina' },
+      { id: 'pisos_alfombras_pesado', name: 'Pisos, Pedales y Alfombras de Trabajo' },
+      { id: 'paneles_puertas_pesado', name: 'Paneles de Puertas y Guantera' },
+    ]
+  };
+
+  const zonasInternas = zonasPorModelo[tipoVehiculo] || zonasPorModelo.carro;
 
   const handleSelectZona = (zonaId) => {
     setZonaSeleccionada(zonaId);
-    if (data.danosInternos && data.danosInternos[zonaId]) {
-      setFormCabina(data.danosInternos[zonaId]);
+    if (safeData.danosInternos && safeData.danosInternos[zonaId]) {
+      setFormCabina(safeData.danosInternos[zonaId]);
     } else {
       setFormCabina({ estado: 'Óptimo', desgaste: 'Normal', comentario: '' });
     }
@@ -35,7 +69,7 @@ export default function VistaInterna({ data, onChange }) {
   };
 
   const handleGuardarZona = () => {
-    const nuevosDanos = { ...(data.danosInternos || {}) };
+    const nuevosDanos = { ...(safeData.danosInternos || {}) };
     if (formCabina.estado === 'Óptimo' && !formCabina.comentario) {
       delete nuevosDanos[zonaSeleccionada];
     } else {
@@ -46,7 +80,7 @@ export default function VistaInterna({ data, onChange }) {
   };
 
   const getZonaColorClass = (zonaId) => {
-    const info = data.danosInternos?.[zonaId];
+    const info = safeData.danosInternos?.[zonaId];
     if (!info || info.estado === 'Óptimo') return 'bg-slate-100 hover:bg-blue-100 border-slate-300 text-slate-700';
     if (info.estado === 'Regular') return 'bg-amber-500 text-white border-amber-600';
     if (info.estado === 'Dañado') return 'bg-red-500 text-white border-red-600';
@@ -55,29 +89,35 @@ export default function VistaInterna({ data, onChange }) {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-between">
         <p className="text-xs text-slate-500 font-medium">
-          💡 <strong>Instrucciones:</strong> Selecciona un componente de la cabina en el panel izquierdo para evaluar el estado de conservación, desgaste o anomalías en la electrónica interior.
+          💡 <strong>Instrucciones:</strong> Selecciona un componente de la cabina en el panel izquierdo para evaluar el estado de conservación, desgaste o anomalías.
         </p>
+        <span className="text-[10px] bg-blue-50 text-blue-700 font-bold px-2.5 py-1 rounded-full uppercase tracking-wider flex-shrink-0 ml-2">
+          Clase: {tipoVehiculo}
+        </span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* ZONAS DE CABINA */}
-        <div className="lg:col-span-7 bg-white p-6 border border-slate-200 rounded-xl flex flex-col items-center justify-center">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6 w-full text-left">Distribución Interior de Cabina</h3>
-          
-          <div className="w-full max-w-md space-y-3 font-mono text-[11px] font-bold">
-            <div className="grid grid-cols-2 gap-3">
-              {zonasInternas.map((zona) => (
-                <button
-                  key={zona.id}
-                  type="button"
-                  onClick={() => handleSelectZona(zona.id)}
-                  className={`py-5 px-3 border rounded-xl transition shadow-sm text-center flex items-center justify-center ${getZonaColorClass(zona.id)} ${zonaSeleccionada === zona.id ? 'ring-4 ring-blue-500 border-blue-500' : ''}`}
-                >
-                  {zona.name}
-                </button>
-              ))}
+        <div className="lg:col-span-7 bg-white p-6 border border-slate-200 rounded-xl flex flex-col justify-between">
+          <div>
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6 w-full text-left">
+              Distribución Interior de Cabina ({tipoVehiculo.toUpperCase()})
+            </h3>
+            
+            <div className="w-full max-w-md mx-auto space-y-3 font-mono text-[11px] font-bold">
+              <div className="grid grid-cols-2 gap-3">
+                {zonasInternas.map((zona) => (
+                  <button
+                    key={zona.id}
+                    type="button"
+                    onClick={() => handleSelectZona(zona.id)}
+                    className={`py-5 px-3 border rounded-xl transition shadow-sm text-center flex items-center justify-center ${getZonaColorClass(zona.id)} ${zonaSeleccionada === zona.id ? 'ring-4 ring-blue-500 border-blue-500' : ''}`}
+                  >
+                    {zona.name}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -88,7 +128,6 @@ export default function VistaInterna({ data, onChange }) {
           </div>
         </div>
 
-        {/* FORMULARIO DE EVALUACIÓN INTERNA */}
         <div className="lg:col-span-5">
           {zonaSeleccionada ? (
             <div className="bg-slate-900 text-white p-6 rounded-xl shadow-lg border border-slate-950 space-y-4 sticky top-4">
@@ -114,14 +153,14 @@ export default function VistaInterna({ data, onChange }) {
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Nivel de Desgaste</label>
                 <select name="desgaste" value={formCabina.desgaste} onChange={handleFormChange} className="w-full p-2.5 text-xs font-bold bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500">
                   <option value="Mínimo">Mínimo / Muy Conservado</option>
-                  <option value="Normal">Normal acorde al kilometraje</option>
+                  <option value="Normal">Normal acorde al uso</option>
                   <option value="Acelerado">Acelerado / Maltrato evidente</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Observaciones de Cabina</label>
-                <textarea name="comentario" value={formCabina.comentario} onChange={handleFormChange} rows="3" placeholder="Detalles de roturas, manchas o fallas eléctricas..." className="w-full p-2.5 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white placeholder:text-slate-600 focus:ring-2 focus:ring-blue-500" />
+                <textarea name="comentario" value={formCabina.comentario} onChange={handleFormChange} rows="3" placeholder="Detalles de roturas, manchas o fallas..." className="w-full p-2.5 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white placeholder:text-slate-600 focus:ring-2 focus:ring-blue-500" />
               </div>
 
               <div className="pt-2 flex space-x-2">
@@ -137,6 +176,20 @@ export default function VistaInterna({ data, onChange }) {
             <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-400 flex flex-col items-center justify-center h-full min-h-[300px]">
               <span className="text-3xl mb-2">👈</span>
               <p className="text-xs font-bold uppercase tracking-wide">Selecciona un elemento en el plano interior para registrar su estado.</p>
+              
+              {Object.keys(safeData.danosInternos || {}).length > 0 && (
+                <div className="w-full mt-6 pt-4 border-t border-slate-100 text-left">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Zonas evaluadas ({Object.keys(safeData.danosInternos).length}):</p>
+                  <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+                    {Object.entries(safeData.danosInternos).map(([zonaKey, val]) => (
+                      <div key={zonaKey} className="flex justify-between text-xs py-1 px-2 bg-slate-50 border rounded font-medium">
+                        <span className="text-slate-700 font-bold">{zonasInternas.find(z => z.id === zonaKey)?.name || zonaKey}</span>
+                        <span className="text-slate-500 font-mono">{val.estado}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

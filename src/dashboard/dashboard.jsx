@@ -8,23 +8,19 @@ import Firma from '../modules/Firmas';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import InformePdf from '../modules/informePdf';
+import DetallesTecnicos from '../modules/DetallesTecnicos';
 
 export default function Dashboard({ onLogout }) {
 
-  // --- ESTADOS DE CONTROL DE INTERFAZ ---
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('Bandeja');
   const [isInspecting, setIsInspecting] = useState(false);
-  const [inspectionStep, setInspectionStep] = useState('Documentacion'); // Paso actual del peritaje
+  const [inspectionStep, setInspectionStep] = useState('Documentacion');
   
-  // --- ESTADO PARA SELECCIÓN DE TIPO DE VEHÍCULO ---
   const [showVehicleSelector, setShowVehicleSelector] = useState(false);
 
-  // --- ESTADO GENERAL DE PERITAJE ---
   const [peritajeData, setPeritajeData] = useState({
-    tipoVehiculo: '', // carro, moto, pesado, motocarro
-    
-    // Módulo 1: Datos & RUNT Ampliado
+    tipoVehiculo: '',
     placa: '',
     marca: '',
     linea: '',
@@ -33,43 +29,30 @@ export default function Dashboard({ onLogout }) {
     numChasis: '',
     organismoTransito: '',
     comentariosSiniestros: '',
-    
-    // Control de Documentos Legales y Archivos Binarios
     numeroSoat: '',
     entityEmisoraSoat: '',
     venceSoat: '',
     soatAlDia: true,
     fotoSoat: null, 
-    
     numeroControlRtm: '',
     cdaEmisor: '',
     venceTecnicoMecanica: '',
     tecnicoMecanicaAlDia: true,
     fotoRtm: null, 
-    
     coincidePropietarioRunt: true,
     tieneEmbargosOAlertas: false,
     restriccionBlindaje: 'sin_blindaje',
-
-    // Módulo 2: Accesorios (Se inicializa vacío para que el módulo hijo cargue la lista independiente según el vehículo)
     accesoriosList: [],
-
-    // Módulo 3: Motor
     compresionMotor: '',
     fugasAceite: false,
     estadoBateria: 'Bueno',
     ruidosExtranos: false,
     motorObservaciones: '',
-
-    // Módulo 4: Estructura & Pintura
     danosExternos: {},
     tiempoEstimadoReparacion: '',
-
-    // Módulo 5: Cierre & Reporte
     firmaInspector: null,
     estadoGeneralVehiculo: 'Aceptable',
     conceptoFinal: '',
-
     scoreEstructura: 100,
     scoreCarroceria: 100,
     scoreMecanica: 100,
@@ -77,7 +60,6 @@ export default function Dashboard({ onLogout }) {
     scoreLegal: 100
   });
 
-  // --- DATOS ESTÁTICOS DE NAVEGACIÓN ---
   const mainMenuItems = [
     { id: 'Perfil', label: 'Perfil', icon: '👤' },
     { id: 'Bandeja', label: 'Bandeja de Entrada', icon: '📥' },
@@ -85,14 +67,30 @@ export default function Dashboard({ onLogout }) {
     { id: 'Configuracion', label: 'Configuración', icon: '⚙️' },
   ];
 
-  const inspectionSteps = [
-    { id: 'Documentacion', label: '1. Documentación', icon: '📄' },
-    { id: 'Accesorios y Equipamiento', label: '2. Accesorios y Equipamiento', icon: '🚗' },
-    { id: 'Pintura', label: '3. Vista Externa', icon: '🎨' },
-    { id: 'VistaInterna', label: '4. Vista Interna', icon: '👀' },
-    { id: 'Firma', label: '5. Firma Digital', icon: '🖋️' },
-    { id: 'PDF', label: '6. Reporte & PDF', icon: '📋' },
-  ];
+  // Definición dinámica de pasos: se excluye la Vista Interna para moto y motocarro
+  const getInspectionSteps = (tipo) => {
+    const steps = [
+      { id: 'Documentacion', label: '1. Documentación', icon: '📄' },
+      { id: 'Accesorios y Equipamiento', label: '2. Accesorios y Equipamiento', icon: '🚗' },
+      { id: 'Motor', label: '3. Motor', icon: '🔧' },
+      { id: 'Pintura', label: '3. Vista Externa', icon: '🎨' },
+    ];
+
+    // Solo se agrega Vista Interna si NO es moto y NO es motocarro
+    if (tipo !== 'moto' && tipo !== 'motocarro') {
+      steps.push({ id: 'VistaInterna', label: '4. Vista Interna', icon: '👀' });
+    }
+
+    steps.push(
+      { id: 'Detalles Técnicos', label: '5. Detalles Técnicos', icon: '🛠️' },
+      { id: 'Firma', label: '6. Firma Digital', icon: '🖋️' },
+      { id: 'PDF', label: '7. Reporte & PDF', icon: '📋' }
+    );
+
+    return steps;
+  };
+
+  const inspectionSteps = getInspectionSteps(peritajeData.tipoVehiculo);
 
   const inspecciones = [
     { 
@@ -360,15 +358,13 @@ export default function Dashboard({ onLogout }) {
   return (
     <div className="flex min-h-screen bg-[#f4f6fa] text-slate-800 font-sans relative overflow-x-hidden">
       
-      {/* 1. SOBRECAPA OSCURA MÓVIL */}
       {isSidebarOpen && (
         <div onClick={toggleSidebar} className="fixed inset-0 bg-black/40 z-40 lg:hidden" />
       )}
 
-      {/* MODAL DE SELECCIÓN DE TIPO DE VEHÍCULO */}
       {showVehicleSelector && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200">
+          <div className="bg-white border border-slate-200 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden transform transition-all">
             <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <div>
                 <h3 className="text-base font-bold text-slate-900">Seleccionar Tipo de Vehículo</h3>
@@ -394,7 +390,7 @@ export default function Dashboard({ onLogout }) {
                   onClick={() => {
                     handleDataChange({ 
                       tipoVehiculo: tipo.id,
-                      accesoriosList: [] // Limpiamos accesorios para que el módulo hijo cargue los específicos del vehículo
+                      accesoriosList: []
                     });
                     setShowVehicleSelector(false);
                     setIsInspecting(true);
@@ -421,7 +417,6 @@ export default function Dashboard({ onLogout }) {
         </div>
       )}
 
-      {/* 2. BARRA LATERAL (Sidebar) */}
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-[#080d1a] border-r border-slate-800/50 flex flex-col justify-between shrink-0
         transition-transform duration-300 ease-in-out lg:static lg:translate-x-0
@@ -467,10 +462,8 @@ export default function Dashboard({ onLogout }) {
         </div>
       </aside>
 
-      {/* 3. CONTENIDO PRINCIPAL */}
       <main className="flex-1 flex flex-1 flex-col min-w-0 w-full">
         
-        {/* Topbar */}
         <header className="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-6 lg:px-8 shrink-0">
           <div className="flex items-center space-x-4">
             <button onClick={toggleSidebar} className="lg:hidden text-slate-600 hover:text-slate-900 text-2xl">☰</button>
@@ -479,10 +472,8 @@ export default function Dashboard({ onLogout }) {
           <span className="text-xs font-medium text-slate-500">Yopal, Casanare</span>
         </header>
 
-        {/* Área de Trabajo Dinámica */}
         <div className="p-6 lg:p-8 space-y-8 overflow-y-auto flex-1">
           
-          {/* MODO PERITAJE ACTIVO */}
           {isInspecting ? (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-4">
@@ -504,7 +495,6 @@ export default function Dashboard({ onLogout }) {
                 </div>
               </div>
 
-              {/* Stepper Horizontal */}
               <div className="flex overflow-x-auto pb-2 gap-2 scrollbar-thin">
                 {inspectionSteps.map((step) => (
                   <button
@@ -522,7 +512,6 @@ export default function Dashboard({ onLogout }) {
                 ))}
               </div>
 
-              {/* Contenedor del Formulario del Paso Activo */}
               <div className="bg-white border border-slate-200/80 p-8 rounded-xl shadow-sm min-h-[350px] flex flex-col justify-between">
                 <div>
                   <div className="flex items-center space-x-3 mb-6">
@@ -532,30 +521,33 @@ export default function Dashboard({ onLogout }) {
                     </h2>
                   </div>
                   
-                  {/* RENDERIZADO DINÁMICO DE MÓDULOS ACTIVOS */}
                   <div className="mt-2">
                     {inspectionStep === 'Documentacion' && (
-                      <Documentacion data={peritajeData} onChange={handleDataChange} />
+                      <Documentacion peritajeData={peritajeData} onChange={handleDataChange} />
                     )}
                     
                     {inspectionStep === 'Accesorios y Equipamiento' && (
-                      <Accesorios data={peritajeData} onChange={handleDataChange} />
+                      <Accesorios peritajeData={peritajeData} onChange={handleDataChange} />
                     )}
 
                     {inspectionStep === 'Motor' && (
-                      <Motor data={peritajeData} onChange={handleDataChange} />
+                      <Motor peritajeData={peritajeData} onChange={handleDataChange} />
                     )}
 
                     {inspectionStep === 'Pintura' && (
-                      <VistaExterna data={peritajeData} onChange={handleDataChange} />
+                      <VistaExterna peritajeData={peritajeData} onChange={handleDataChange} />
                     )}
 
                     {inspectionStep === 'VistaInterna' && (
-                      <VistaInterna data={peritajeData} onChange={handleDataChange} />
+                      <VistaInterna peritajeData={peritajeData} onChange={handleDataChange} />
+                    )}
+
+                    {inspectionStep === 'Detalles Técnicos' && (
+                      <DetallesTecnicos peritajeData={peritajeData} onChange={handleDataChange} />
                     )}
 
                     {inspectionStep === 'Firma' && (
-                      <Firma data={peritajeData} onChange={handleDataChange} />
+                      <Firma peritajeData={peritajeData} onChange={handleDataChange} />
                     )}
                     
                     {inspectionStep === 'PDF' && (
@@ -564,13 +556,12 @@ export default function Dashboard({ onLogout }) {
                   </div>
                 </div>
 
-                {/* Navegación inferior */}
                 <div className="flex justify-between items-center pt-6 mt-8 border-t border-slate-100">
                   <button 
-                    disabled={inspectionStep === 'Documentacion'}
+                    disabled={inspectionStep === inspectionSteps[0].id}
                     onClick={() => {
                       const idx = inspectionSteps.findIndex(s => s.id === inspectionStep);
-                      setInspectionStep(inspectionSteps[idx - 1].id);
+                      if (idx > 0) setInspectionStep(inspectionSteps[idx - 1].id);
                     }}
                     className="px-4 py-2 text-xs font-bold uppercase tracking-wider bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 disabled:opacity-40"
                   >
@@ -594,7 +585,6 @@ export default function Dashboard({ onLogout }) {
               </div>
             </div>
           ) : (
-            /* VISTAS GENERALES DEL DASHBOARD (BANDEJA) ACTUALIZADA */
             <>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
@@ -609,7 +599,6 @@ export default function Dashboard({ onLogout }) {
                 </button>
               </div>
 
-              {/* Tarjetas de Métricas */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm">
                   <p className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Inspecciones Hoy</p>
@@ -625,7 +614,6 @@ export default function Dashboard({ onLogout }) {
                 </div>
               </div>
 
-              {/* Tabla de Vehículos Completa */}
               <div className="bg-white border border-slate-200/80 rounded-xl shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
                   <h2 className="text-sm font-bold text-slate-900">HISTORIAL DE INSPECCIONES</h2>

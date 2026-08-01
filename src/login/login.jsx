@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../useAuth';
+import api from '../api/axios';// <-- Importamos nuestra configuración de Axios
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -9,20 +10,30 @@ export default function Login() {
   // Extraemos la función login del contexto global
   const { login } = useAuth();
 
-  const handleSubmit = (e) => {
+  // Convertimos la función a asíncrona (async)
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log({ email, password, rememberMe });
     
-    // Datos simulados del usuario y token (reemplaza esto con la respuesta real de tu API cuando la conectes)
-    const userData = {
-      email: email,
-      name: email.split('@')[0],
-      role: 'Inspector'
-    };
-    const token = 'peritaje_token_seguro_123456';
+    try {
+      // 1. Hacemos la petición REAL a tu backend en Laravel
+      const response = await api.post('/login', { email, password });
+      
+      // 2. Obtenemos los datos que nos responde Laravel
+      // (Asegúrate de que los nombres 'access_token' y 'usuario' coincidan con lo que devuelve tu AuthController)
+      const token = response.data.access_token;
+      const userData = response.data.usuario; 
 
-    // Guardamos en el localStorage y actualizamos el estado global del contexto
-    login(userData, token); 
+      // 3. Guardamos en el localStorage y actualizamos el estado global del contexto
+      // Tu función login del AuthContext debería encargarse de guardar el token en localStorage
+      login(userData, token); 
+      
+      console.log("Login exitoso con la base de datos");
+
+    } catch (error) {
+      // Si el correo o contraseña están mal, o el servidor está apagado, cae aquí
+      console.error("Error al iniciar sesión:", error.response?.data || error.message);
+      alert("Error al iniciar sesión. Revisa tus credenciales.");
+    }
   };
 
   return (

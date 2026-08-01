@@ -10,6 +10,7 @@ import autoTable from 'jspdf-autotable';
 import InformePdf from '../modules/informePdf';
 import DetallesTecnicos from '../modules/DetallesTecnicos';
 
+// ASEGÚRATE DE QUE TENGA "export default"
 export default function Dashboard({ onLogout }) {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -67,7 +68,7 @@ export default function Dashboard({ onLogout }) {
     { id: 'Configuracion', label: 'Configuración', icon: '⚙️' },
   ];
 
-  // Definición dinámica de pasos: se excluye la Vista Interna para moto y motocarro
+  // Excluye la Vista Interna tanto para moto como para motocarro
   const getInspectionSteps = (tipo) => {
     const steps = [
       { id: 'Documentacion', label: '1. Documentación', icon: '📄' },
@@ -76,7 +77,6 @@ export default function Dashboard({ onLogout }) {
       { id: 'Pintura', label: '3. Vista Externa', icon: '🎨' },
     ];
 
-    // Solo se agrega Vista Interna si NO es moto y NO es motocarro
     if (tipo !== 'moto' && tipo !== 'motocarro') {
       steps.push({ id: 'VistaInterna', label: '4. Vista Interna', icon: '👀' });
     }

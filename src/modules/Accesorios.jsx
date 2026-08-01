@@ -116,13 +116,24 @@ export default function Accesorios({ peritajeData: data, onChange }) {
     ]
   };
 
-  // Obtener la lista que corresponde al vehículo actual, o usar carro por defecto
   const listaIdeal = listasPorTipo[tipoVehiculo] || listasPorTipo.carro;
 
-  // Si no hay accesorios guardados o pertenecen a otra categoría, inicializamos con los del vehículo actual
-  const accesoriosActivos = (safeData.accesoriosList && safeData.accesoriosList.length > 0 && safeData.accesoriosList.some(item => listaIdeal.some(l => l.id === item.id)))
-    ? safeData.accesoriosList.filter(item => listaIdeal.some(l => l.id === item.id))
-    : listaIdeal;
+  // Asegurar que si cambian de tipo de vehículo o la lista está vacía, se carguen exclusivamente los ítems correspondientes con sus valores por defecto
+  const accesoriosActivos = (() => {
+    if (!safeData.accesoriosList || safeData.accesoriosList.length === 0) {
+      return listaIdeal;
+    }
+    // Verificamos si los elementos guardados pertenecen a la categoría actual
+    const perteneceAlTipo = safeData.accesoriosList.some(item => listaIdeal.some(l => l.id === item.id));
+    if (!perteneceAlTipo) {
+      return listaIdeal;
+    }
+    // Fusionamos el estado guardado con la lista ideal para mantener valores previos si aplican
+    return listaIdeal.map(idealItem => {
+      const encontrado = safeData.accesoriosList.find(item => item.id === idealItem.id);
+      return encontrado ? { ...idealItem, ...encontrado } : idealItem;
+    });
+  })();
 
   const handleItemChange = (id, campo, valor) => {
     const listaActualizada = accesoriosActivos.map((item) => {
@@ -157,44 +168,59 @@ export default function Accesorios({ peritajeData: data, onChange }) {
               </h4>
 
               <div className="space-y-2 text-xs">
-                <div className="space-y-1.5">
-                  <div className="flex items-center space-x-4">
-                    <label className="flex items-center space-x-1.5 cursor-pointer">
-                      <input 
-                        type="radio" 
-                        name={`estado-${item.id}`}
-                        checked={item.presente === true}
-                        onChange={() => handleItemChange(item.id, 'presente', true)}
-                        className="text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
-                      />
-                      <span className="text-slate-600 font-medium">Sí</span>
-                    </label>
-
-                    <label className="flex items-center space-x-1.5 cursor-pointer">
-                      <input 
-                        type="radio" 
-                        name={`estado-${item.id}`}
-                        checked={item.presente === false}
-                        onChange={() => handleItemChange(item.id, 'presente', false)}
-                        className="text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
-                      />
-                      <span className="text-slate-600 font-medium">No</span>
-                    </label>
+                {item.tipo === 'seleccion_multiple' ? (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">Selección:</label>
+                    <select
+                      value={item.seleccion || item.opciones[0]}
+                      onChange={(e) => handleItemChange(item.id, 'seleccion', e.target.value)}
+                      className="w-full p-1.5 border border-slate-200 rounded text-xs bg-slate-50 text-slate-700 focus:outline-none focus:border-blue-500"
+                    >
+                      {item.opciones.map((op, idx) => (
+                        <option key={idx} value={op}>{op}</option>
+                      ))}
+                    </select>
                   </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center space-x-4">
+                      <label className="flex items-center space-x-1.5 cursor-pointer">
+                        <input 
+                          type="radio" 
+                          name={`estado-${item.id}`}
+                          checked={item.presente === true}
+                          onChange={() => handleItemChange(item.id, 'presente', true)}
+                          className="text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                        />
+                        <span className="text-slate-600 font-medium">Sí</span>
+                      </label>
 
-                  <div className="pt-1 mt-1 border-t border-slate-50">
-                    <label className="flex items-center space-x-1.5 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={item.danado || false}
-                        onChange={(e) => handleItemChange(item.id, 'danado', e.target.checked)}
-                        className="h-3.5 w-3.5 text-red-600 border-slate-300 rounded focus:ring-red-500"
-                      />
-                      <span className={`text-[11px] font-bold ${item.danado ? 'text-red-600' : 'text-slate-400'}`}>
-                        Dañado / Mal Estado
-                      </span>
-                    </label>
+                      <label className="flex items-center space-x-1.5 cursor-pointer">
+                        <input 
+                          type="radio" 
+                          name={`estado-${item.id}`}
+                          checked={item.presente === false}
+                          onChange={() => handleItemChange(item.id, 'presente', false)}
+                          className="text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                        />
+                        <span className="text-slate-600 font-medium">No</span>
+                      </label>
+                    </div>
                   </div>
+                )}
+
+                <div className="pt-2 mt-2 border-t border-slate-50">
+                  <label className="flex items-center space-x-1.5 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={item.danado || false}
+                      onChange={(e) => handleItemChange(item.id, 'danado', e.target.checked)}
+                      className="h-3.5 w-3.5 text-red-600 border-slate-300 rounded focus:ring-red-500"
+                    />
+                    <span className={`text-[11px] font-bold ${item.danado ? 'text-red-600' : 'text-slate-400'}`}>
+                      Dañado / Mal Estado
+                    </span>
+                  </label>
                 </div>
               </div>
             </div>

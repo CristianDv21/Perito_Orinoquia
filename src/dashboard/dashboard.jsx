@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Documentacion from '../modules/Documentacion';
 import Accesorios from '../modules/Accesorios';
 import Motor from '../modules/Motor'; 
@@ -11,7 +11,6 @@ import InformePdf from '../modules/informePdf';
 import DetallesTecnicos from '../modules/DetallesTecnicos';
 import api from '../api/axios';
 
-// ASEGÚRATE DE QUE TENGA "export default"
 export default function Dashboard({ onLogout }) {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -20,6 +19,10 @@ export default function Dashboard({ onLogout }) {
   const [inspectionStep, setInspectionStep] = useState('Documentacion');
   
   const [showVehicleSelector, setShowVehicleSelector] = useState(false);
+  
+  // Estado para almacenar las inspecciones traídas de la base de datos
+  const [inspecciones, setInspecciones] = useState([]);
+  const [loadingInspecciones, setLoadingInspecciones] = useState(false);
 
   const [peritajeData, setPeritajeData] = useState({
     tipoVehiculo: '',
@@ -62,6 +65,60 @@ export default function Dashboard({ onLogout }) {
     scoreLegal: 100
   });
 
+  // 1. Declarar la función PRIMERO
+  const fetchInspecciones = async () => {
+    try {
+      setLoadingInspecciones(true);
+      const token = localStorage.getItem('auth_token');
+      const response = await api.get('peritajes', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+      setInspecciones(response.data.data || response.data || []);
+    } catch (error) {
+      console.error('Error al cargar las inspecciones:', error);
+    } finally {
+      setLoadingInspecciones(false);
+    }
+  };
+
+  // 2. Usar el useEffect DESPUÉS
+  useEffect(() => {
+    let isMounted = true;
+
+    const cargarDatos = async () => {
+      if (activeTab === 'Bandeja') {
+        try {
+          if (isMounted) setLoadingInspecciones(true);
+          const token = localStorage.getItem('auth_token');
+          const response = await api.get('peritajes', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/json'
+            }
+          });
+          if (isMounted) {
+            setInspecciones(response.data.data || response.data || []);
+          }
+        } catch (error) {
+          console.error('Error al cargar las inspecciones:', error);
+        } finally {
+          if (isMounted) {
+            setLoadingInspecciones(false);
+          }
+        }
+      }
+    };
+
+    cargarDatos();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeTab]);
+
   const mainMenuItems = [
     { id: 'Perfil', label: 'Perfil', icon: '👤' },
     { id: 'Bandeja', label: 'Bandeja de Entrada', icon: '📥' },
@@ -69,7 +126,6 @@ export default function Dashboard({ onLogout }) {
     { id: 'Configuracion', label: 'Configuración', icon: '⚙️' },
   ];
 
-  // Excluye la Vista Interna tanto para moto como para motocarro
   const getInspectionSteps = (tipo) => {
     const steps = [
       { id: 'Documentacion', label: '1. Documentación', icon: '📄' },
@@ -93,77 +149,24 @@ export default function Dashboard({ onLogout }) {
 
   const inspectionSteps = getInspectionSteps(peritajeData.tipoVehiculo);
 
-  const inspecciones = [
-    { 
-      id: 'PER-001', 
-      fechaPeritaje: '17/07/26 - 14:15', 
-      marca: 'CHEVROLET', 
-      modelo: 'TRAVERSE', 
-      anioModelo: '2017', 
-      km: '157.700', 
-      placa: 'DOL507', 
-      sucursalVendedor: 'Mg Yopal', 
-      sucursalInspeccion: 'Mg Yopal', 
-      vendedor: 'Cristian Eduardo Castillo Triana', 
-      inspector: 'Kevin Osorio', 
-      costoReparacion: '$1,400,000', 
-      tiempoReparacion: '0 días', 
-      estado: 'Completado' 
-    },
-    { 
-      id: 'PER-002', 
-      fechaPeritaje: '24/07/26 - 16:03', 
-      marca: 'CHEVROLET', 
-      modelo: 'JOY', 
-      anioModelo: '2022', 
-      km: '53.500', 
-      placa: 'KST810', 
-      sucursalVendedor: 'Chevrolet Yopal', 
-      sucursalInspeccion: 'Chevrolet Yopal', 
-      vendedor: 'Yuly Martinez', 
-      inspector: 'Kevin Osorio', 
-      costoReparacion: '$500,000', 
-      tiempoReparacion: '0 días', 
-      estado: 'En Proceso' 
-    },
-    { 
-      id: 'PER-003', 
-      fechaPeritaje: '23/07/26 - 22:07', 
-      marca: 'JAC', 
-      modelo: 'REFINE', 
-      anioModelo: '2013', 
-      km: '275.000', 
-      placa: 'SPD868', 
-      sucursalVendedor: 'Chevrolet Yopal', 
-      sucursalInspeccion: 'Chevrolet Yopal', 
-      vendedor: 'Joiner Requiniva', 
-      inspector: 'Kevin Osorio', 
-      costoReparacion: '$550,000', 
-      tiempoReparacion: '0 días', 
-      estado: 'Completado' 
-    },
-  ];
-
   const guardarPeritajeCompleto = async (formDataDelEstado) => {
     try {
-      const token = localStorage.getItem('auth_token'); // Obtiene el token Sanctum
+      const token = localStorage.getItem('auth_token');
 
       const response = await api.post('peritajes', {
-        tipo_vehiculo_id: formDataDelEstado.tipoVehiculoId,
+        tipo_vehiculo_id: formDataDelEstado.tipoVehiculoId || formDataDelEstado.tipoVehiculo,
         sucursal_vendedor_id: formDataDelEstado.sucursalVendedorId,
         sucursal_inspeccion_id: formDataDelEstado.sucursalInspeccionId,
         vendedor_id: formDataDelEstado.vendedorId,
 
-        // Datos principales del vehículo
         placa: formDataDelEstado.placa,
         marca: formDataDelEstado.marca,
         linea: formDataDelEstado.linea,
-        modelo_anio: Number(formDataDelEstado.modeloAnio),
+        modelo_anio: Number(formDataDelEstado.modeloAnio || formDataDelEstado.modelo),
         num_motor: formDataDelEstado.numMotor,
         num_chasis: formDataDelEstado.numChasis,
-        kilometraje: Number(formDataDelEstado.kilometraje),
+        kilometraje: Number(formDataDelEstado.kilometraje || 0),
 
-        // Arreglos recolectados de los componentes del checklist en React
         accesorios: formDataDelEstado.accesoriosList,
         danos_externos: formDataDelEstado.danosExternosList,
         danos_internos: formDataDelEstado.danosInternosList,
@@ -181,6 +184,7 @@ export default function Dashboard({ onLogout }) {
       console.log('Peritaje guardado exitosamente:', response.data);
       alert('¡Peritaje guardado y sincronizado correctamente!');
       setIsInspecting(false);
+      fetchInspecciones(); 
     } catch (error) {
       console.error('Error al guardar el peritaje:', error);
       alert('Hubo un error al guardar el peritaje en el servidor.');
@@ -231,9 +235,9 @@ export default function Dashboard({ onLogout }) {
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(8);
     doc.setTextColor(colorPrimario[0], colorPrimario[1], colorPrimario[2]);
-    doc.text(`INSPECCIÓN: ${item.id}`, 139, 20);
-    doc.text(`FECHA: ${item.fechaPeritaje}`, 139, 25);
-    doc.text(`ESTADO: ${item.estado.toUpperCase()}`, 139, 30);
+    doc.text(`INSPECCIÓN: ${item.id || item.codigo || 'N/A'}`, 139, 20);
+    doc.text(`FECHA: ${item.fechaPeritaje || item.created_at || 'N/A'}`, 139, 25);
+    doc.text(`ESTADO: ${(item.estado || 'Completado').toUpperCase()}`, 139, 30);
 
     doc.setDrawColor(colorSecundario[0], colorSecundario[1], colorSecundario[2]); 
     doc.setLineWidth(0.8);
@@ -255,7 +259,7 @@ export default function Dashboard({ onLogout }) {
       },
       body: [
         ['Placa:', item.placa || data.placa || 'N/A', 'Marca / Línea:', `${item.marca || data.marca || 'N/A'} ${data.linea || ''}`],
-        ['Modelo / Año:', item.anioModelo || data.modelo || 'N/A', 'N° de Motor:', data.numMotor || 'N/A'],
+        ['Modelo / Año:', item.anioModelo || item.modelo_anio || data.modelo || 'N/A', 'N° de Motor:', data.numMotor || 'N/A'],
         ['N° de Chasis:', data.numChasis || 'N/A', 'Organismo Tránsito:', data.organismoTransito || 'N/A'],
       ],
     });
@@ -323,7 +327,7 @@ export default function Dashboard({ onLogout }) {
     doc.setTextColor(colorSecundario[0], colorSecundario[1], colorSecundario[2]);
     doc.text('4. INVENTARIO DE ACCESORIOS Y EQUIPAMIENTO', 14, 26);
 
-    const filasAccesorios = data.accesoriosList.map(acc => [
+    const filasAccesorios = (data.accesoriosList || []).map(acc => [
       acc.name,
       acc.presente ? 'SÍ' : 'NO',
       acc.danado ? 'MAL ESTADO' : 'OPERATIVO'
@@ -335,7 +339,7 @@ export default function Dashboard({ onLogout }) {
       headStyles: { fillColor: [71, 85, 105], fontStyle: 'bold', fontSize: 8.5 },
       bodyStyles: { fontSize: 8 },
       head: [['ELEMENTO / ACCESORIO', 'PRESENTE', 'ESTADO EVALUADO']],
-      body: filasAccesorios,
+      body: filasAccesorios.length > 0 ? filasAccesorios : [['Sin accesorios registrados', '-', '-']],
       styles: { cellPadding: 1.5 }
     });
 
@@ -362,7 +366,7 @@ export default function Dashboard({ onLogout }) {
     
     doc.setFontSize(10);
     doc.setTextColor(colorExito[0], colorExito[1], colorExito[2]);
-    doc.text(`${data.estadoGeneralVehiculo.toUpperCase()}`, 78, YFinal + 9);
+    doc.text(`${(data.estadoGeneralVehiculo || 'Aceptable').toUpperCase()}`, 78, YFinal + 9);
 
     doc.setFont('Helvetica', 'normal');
     doc.setFontSize(8.5);
@@ -398,6 +402,10 @@ export default function Dashboard({ onLogout }) {
 
     doc.save(`Peritaje_Orinoquia_${item.placa || 'VEHICULO'}.pdf`);
   };
+
+  const totalInspeccionesCount = inspecciones.length;
+  const enProcesoCount = inspecciones.filter(i => (i.estado || '').toLowerCase() === 'en proceso').length;
+  const completadasCount = inspecciones.filter(i => (i.estado || '').toLowerCase() === 'completado').length;
 
   return (
     <div className="flex min-h-screen bg-[#f4f6fa] text-slate-800 font-sans relative overflow-x-hidden">
@@ -506,7 +514,7 @@ export default function Dashboard({ onLogout }) {
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-1 flex-col min-w-0 w-full">
+      <main className="flex-1 flex flex-col min-w-0 w-full">
         
         <header className="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-6 lg:px-8 shrink-0">
           <div className="flex items-center space-x-4">
@@ -611,12 +619,12 @@ export default function Dashboard({ onLogout }) {
                   >
                     Anterior
                   </button>
-              <button 
-                onClick={() => guardarPeritajeCompleto(peritajeData)}
-                className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow"
-              >
-                Finalizar Peritaje
-              </button>
+                  <button 
+                    onClick={() => guardarPeritajeCompleto(peritajeData)}
+                    className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow"
+                  >
+                    Finalizar Peritaje
+                  </button>
                 </div>
               </div>
             </div>
@@ -637,22 +645,23 @@ export default function Dashboard({ onLogout }) {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm">
-                  <p className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Inspecciones Hoy</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-2">3</p>
+                  <p className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Total Registros</p>
+                  <p className="text-2xl font-bold text-slate-900 mt-2">{totalInspeccionesCount}</p>
                 </div>
                 <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm border-l-4 border-l-amber-500">
                   <p className="text-[10px] font-bold uppercase text-amber-600 tracking-wider">En proceso</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-2">1</p>
+                  <p className="text-2xl font-bold text-slate-900 mt-2">{enProcesoCount}</p>
                 </div>
                 <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm border-l-4 border-l-emerald-500">
                   <p className="text-[10px] font-bold uppercase text-emerald-600 tracking-wider">Completadas</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-2">2</p>
+                  <p className="text-2xl font-bold text-slate-900 mt-2">{completadasCount}</p>
                 </div>
               </div>
 
               <div className="bg-white border border-slate-200/80 rounded-xl shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
                   <h2 className="text-sm font-bold text-slate-900">HISTORIAL DE INSPECCIONES</h2>
+                  {loadingInspecciones && <span className="text-xs text-blue-500 animate-pulse">Sincronizando con BD...</span>}
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs text-slate-600 min-w-[1200px]">
@@ -674,45 +683,53 @@ export default function Dashboard({ onLogout }) {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {inspecciones.map((item) => (
-                        <tr key={item.id} className="hover:bg-slate-50/50 transition duration-100">
-                          <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.fechaPeritaje}</td>
-                          <td className="px-4 py-4 whitespace-nowrap font-semibold text-slate-800">{item.marca}</td>
-                          <td className="px-4 py-4 whitespace-nowrap">{item.modelo}</td>
-                          <td className="px-4 py-4 whitespace-nowrap">{item.anioModelo}</td>
-                          <td className="px-4 py-4 whitespace-nowrap font-mono">{item.km}</td>
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <span className="inline-block bg-slate-900 text-white px-2.5 py-1 rounded-md font-mono font-bold text-[11px] shadow-sm">
-                              {item.placa}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.sucursalVendedor}</td>
-                          <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.sucursalInspeccion}</td>
-                          <td className="px-4 py-4 whitespace-nowrap text-slate-700">{item.vendedor}</td>
-                          <td className="px-4 py-4 whitespace-nowrap font-medium text-slate-800">{item.inspector}</td>
-                          <td className="px-4 py-4 whitespace-nowrap font-semibold text-emerald-600">{item.costoReparacion}</td>
-                          <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.tiempoReparacion}</td>
-                          <td className="px-4 py-4 text-right whitespace-nowrap">
-                            {item.estado === "Completado" ? (
-                              <button 
-                                onClick={() => handleDescargarPDF(item)}
-                                className="px-3 py-1.5 bg-slate-900 text-white text-[11px] font-bold uppercase rounded-lg shadow hover:bg-slate-800 transition duration-150"
-                              >
-                                ⬇️ PDF
-                              </button>
-                            ) : (
-                              <button 
-                                onClick={() => {
-                                  setShowVehicleSelector(true);
-                                }}
-                                className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline transition duration-140"
-                              >
-                                Editar
-                              </button>
-                            )}
+                      {inspecciones.length === 0 && !loadingInspecciones ? (
+                        <tr>
+                          <td colSpan="13" className="px-4 py-8 text-center text-slate-400">
+                            No hay peritajes registrados en la base de datos.
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        inspecciones.map((item) => (
+                          <tr key={item.id || item.placa} className="hover:bg-slate-50/50 transition duration-100">
+                            <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.fechaPeritaje || item.created_at || 'N/A'}</td>
+                            <td className="px-4 py-4 whitespace-nowrap font-semibold text-slate-800">{item.marca || 'N/A'}</td>
+                            <td className="px-4 py-4 whitespace-nowrap">{item.modelo || item.linea || 'N/A'}</td>
+                            <td className="px-4 py-4 whitespace-nowrap">{item.anioModelo || item.modelo_anio || 'N/A'}</td>
+                            <td className="px-4 py-4 whitespace-nowrap font-mono">{item.km || item.kilometraje || '0'}</td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <span className="inline-block bg-slate-900 text-white px-2.5 py-1 rounded-md font-mono font-bold text-[11px] shadow-sm">
+                                {item.placa || 'SIN PLACA'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.sucursalVendedor || 'Sede Yopal'}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.sucursalInspeccion || 'Sede Yopal'}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-slate-700">{item.vendedor || 'N/A'}</td>
+                            <td className="px-4 py-4 whitespace-nowrap font-medium text-slate-800">{item.inspector || 'Inspector Activo'}</td>
+                            <td className="px-4 py-4 whitespace-nowrap font-semibold text-emerald-600">{item.costoReparacion || '$0'}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.tiempoReparacion || '0 días'}</td>
+                            <td className="px-4 py-4 text-right whitespace-nowrap">
+                              {(item.estado || 'Completado') === "Completado" ? (
+                                <button 
+                                  onClick={() => handleDescargarPDF(item)}
+                                  className="px-3 py-1.5 bg-slate-900 text-white text-[11px] font-bold uppercase rounded-lg shadow hover:bg-slate-800 transition duration-150"
+                                >
+                                  ⬇️ PDF
+                                </button>
+                              ) : (
+                                <button 
+                                  onClick={() => {
+                                    setShowVehicleSelector(true);
+                                  }}
+                                  className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline transition duration-140"
+                                >
+                                  Editar
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>

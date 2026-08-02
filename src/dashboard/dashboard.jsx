@@ -9,6 +9,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import InformePdf from '../modules/informePdf';
 import DetallesTecnicos from '../modules/DetallesTecnicos';
+import api from '../api/axios';
 
 // ASEGÚRATE DE QUE TENGA "export default"
 export default function Dashboard({ onLogout }) {
@@ -142,6 +143,49 @@ export default function Dashboard({ onLogout }) {
       estado: 'Completado' 
     },
   ];
+
+  const guardarPeritajeCompleto = async (formDataDelEstado) => {
+    try {
+      const token = localStorage.getItem('auth_token'); // Obtiene el token Sanctum
+
+      const response = await api.post('peritajes', {
+        tipo_vehiculo_id: formDataDelEstado.tipoVehiculoId,
+        sucursal_vendedor_id: formDataDelEstado.sucursalVendedorId,
+        sucursal_inspeccion_id: formDataDelEstado.sucursalInspeccionId,
+        vendedor_id: formDataDelEstado.vendedorId,
+
+        // Datos principales del vehículo
+        placa: formDataDelEstado.placa,
+        marca: formDataDelEstado.marca,
+        linea: formDataDelEstado.linea,
+        modelo_anio: Number(formDataDelEstado.modeloAnio),
+        num_motor: formDataDelEstado.numMotor,
+        num_chasis: formDataDelEstado.numChasis,
+        kilometraje: Number(formDataDelEstado.kilometraje),
+
+        // Arreglos recolectados de los componentes del checklist en React
+        accesorios: formDataDelEstado.accesoriosList,
+        danos_externos: formDataDelEstado.danosExternosList,
+        danos_internos: formDataDelEstado.danosInternosList,
+        detalles_tecnicos: formDataDelEstado.detallesTecnicosList,
+        sistemas_mecanicos: formDataDelEstado.sistemasMecanicosList,
+        compresion_cilindros: formDataDelEstado.compresionCilindrosList,
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+
+      console.log('Peritaje guardado exitosamente:', response.data);
+      alert('¡Peritaje guardado y sincronizado correctamente!');
+      setIsInspecting(false);
+    } catch (error) {
+      console.error('Error al guardar el peritaje:', error);
+      alert('Hubo un error al guardar el peritaje en el servidor.');
+    }
+  };
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
@@ -467,7 +511,7 @@ export default function Dashboard({ onLogout }) {
         <header className="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-6 lg:px-8 shrink-0">
           <div className="flex items-center space-x-4">
             <button onClick={toggleSidebar} className="lg:hidden text-slate-600 hover:text-slate-900 text-2xl">☰</button>
-            <span className="text-xs font-semibold text-slate-400">Rol: Inspector Automotriz</span>
+            <span className="text-xs font-semibold text-slate-400">Rol: Inspector de Vehiculos</span>
           </div>
           <span className="text-xs font-medium text-slate-500">Yopal, Casanare</span>
         </header>
@@ -567,20 +611,12 @@ export default function Dashboard({ onLogout }) {
                   >
                     Anterior
                   </button>
-                  <button 
-                    onClick={() => {
-                      const idx = inspectionSteps.findIndex(s => s.id === inspectionStep);
-                      if (idx < inspectionSteps.length - 1) {
-                        setInspectionStep(inspectionSteps[idx + 1].id);
-                      } else {
-                        alert("¡Guardando peritaje y preparando datos de sincronización!");
-                        setIsInspecting(false);
-                      }
-                    }}
-                    className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow"
-                  >
-                    {inspectionStep === 'PDF' ? 'Finalizar' : 'Siguiente Paso'}
-                  </button>
+              <button 
+                onClick={() => guardarPeritajeCompleto(peritajeData)}
+                className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow"
+              >
+                Finalizar Peritaje
+              </button>
                 </div>
               </div>
             </div>

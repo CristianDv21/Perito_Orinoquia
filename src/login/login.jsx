@@ -30,10 +30,10 @@ export default function Login() {
       console.log("Login exitoso con la base de datos");
 
     } catch (error) {
-      // Si el correo o contraseña están mal, o el servidor está apagado, cae aquí
-      console.error("Error al iniciar sesión:", error.response?.data || error.message);
-      alert("Error al iniciar sesión. Revisa tus credenciales.");
-    }
+    // Esto te mostrará el JSON exacto de error que envía Laravel en la consola
+    console.error("Detalle del error 422:", error.response?.data);
+    alert(error.response?.data?.message || "Error al iniciar sesión.");
+}
   };
 
   return (

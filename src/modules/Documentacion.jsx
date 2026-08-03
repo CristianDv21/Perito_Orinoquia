@@ -80,9 +80,16 @@ function FileUploader({ field, acceptedFile, onFileChange }) {
   );
 }
 
-export default function Documentacion({ peritajeData: data, onChange }) {
+export default function Documentacion({ 
+  peritajeData: data, 
+  onChange, 
+  sucursales = [], 
+  vendedores = [],
+  onAgregarSucursal,
+  onAgregarVendedor 
+}) {
   const safeData = data || {};  
-  const tipoVehiculo = safeData.tipoVehiculo || 'carro'; // Heredado globalmente de la inspección
+  const tipoVehiculo = safeData.tipoVehiculo || 'carro';
 
   const handleInputChange = (field, value) => {
     if (onChange) {
@@ -92,13 +99,13 @@ export default function Documentacion({ peritajeData: data, onChange }) {
 
   const inputStyle = "w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-500 transition duration-150";
 
-  // 🌐 Diccionario de ejemplos universales según el tipo de vehículo
   const placeholdersConfig = {
     carro: {
       placa: "Ej. HBS126",
       marca: "Ej. Chevrolet / Mazda",
       linea: "Ej. Spark / Mazda 3",
       modelo: "Ej. 2022",
+      color: "Ej. Blanco Glaciar",
       siniestros: "Ej. Sin reportes / Reclamación menor por aseguradora",
     },
     moto: {
@@ -106,6 +113,7 @@ export default function Documentacion({ peritajeData: data, onChange }) {
       marca: "Ej. Yamaha / Bajaj",
       linea: "Ej. FZ 150 / Pulsar NS",
       modelo: "Ej. 2023",
+      color: "Ej. Negro Mate",
       siniestros: "Ej. Sin siniestros registrados / Caída leve lateral",
     },
     pesado: {
@@ -113,6 +121,7 @@ export default function Documentacion({ peritajeData: data, onChange }) {
       marca: "Ej. Kenworth / International",
       linea: "Ej. T800 / Mack",
       modelo: "Ej. 2018",
+      color: "Ej. Rojo",
       siniestros: "Ej. Sin historial de colisión / Reparación de carrocería en 2024",
     },
     motocarro: {
@@ -120,16 +129,114 @@ export default function Documentacion({ peritajeData: data, onChange }) {
       marca: "Ej. Bajaj / TVS",
       linea: "Ej. RE Maxima / Torito",
       modelo: "Ej. 2021",
+      color: "Ej. Amarillo",
       siniestros: "Ej. Sin novedades / Vuelco menor reparado",
     }
   };
 
-  // Selecciona la configuración actual o recurre a 'carro' por defecto
   const placeholders = placeholdersConfig[tipoVehiculo] || placeholdersConfig.carro;
 
   return (
     <div className="space-y-6 text-slate-800">
       
+      {/* 🏢 SECCIÓN: ASIGNACIÓN DE SUCURSALES Y PERSONAL */}
+      <div className="bg-white border border-slate-200/60 rounded-xl p-6 space-y-4 shadow-sm">
+        <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider border-b border-slate-100 pb-3">
+          Asignación de Operación y Personal
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          
+          {/* Sucursal Vendedor */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-bold uppercase text-slate-500 tracking-wide">Sucursal Vendedor *</label>
+              {onAgregarSucursal && (
+                <button 
+                  type="button" 
+                  onClick={onAgregarSucursal}
+                  className="text-[10px] text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded transition"
+                >
+                  + Agregar
+                </button>
+              )}
+            </div>
+            <select 
+              value={safeData.sucursalVendedorId || ''} 
+              onChange={(e) => handleInputChange('sucursalVendedorId', e.target.value)}
+              className={inputStyle}
+              required
+            >
+              <option value="">Seleccione sucursal...</option>
+              {sucursales.map((suc) => (
+                <option key={suc.id} value={suc.id}>
+                  {suc.nombre} {suc.ciudad ? `(${suc.ciudad})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sucursal Inspección */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-bold uppercase text-slate-500 tracking-wide">Sucursal Inspección *</label>
+              {onAgregarSucursal && (
+                <button 
+                  type="button" 
+                  onClick={onAgregarSucursal}
+                  className="text-[10px] text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded transition"
+                >
+                  + Agregar
+                </button>
+              )}
+            </div>
+            <select 
+              value={safeData.sucursalInspeccionId || ''} 
+              onChange={(e) => handleInputChange('sucursalInspeccionId', e.target.value)}
+              className={inputStyle}
+              required
+            >
+              <option value="">Seleccione sucursal...</option>
+              {sucursales.map((suc) => (
+                <option key={suc.id} value={suc.id}>
+                  {suc.nombre} {suc.ciudad ? `(${suc.ciudad})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Vendedor / Asesor */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-bold uppercase text-slate-500 tracking-wide">Vendedor / Asesor *</label>
+              {onAgregarVendedor && (
+                <button 
+                  type="button" 
+                  onClick={onAgregarVendedor}
+                  className="text-[10px] text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded transition"
+                >
+                  + Agregar
+                </button>
+              )}
+            </div>
+            <select 
+              value={safeData.vendedorId || ''} 
+              onChange={(e) => handleInputChange('vendedorId', e.target.value)}
+              className={inputStyle}
+              required
+            >
+              <option value="">Seleccione vendedor...</option>
+              {vendedores.map((vend) => (
+                <option key={vend.id} value={vend.id}>
+                  {vend.nombre} {vend.apellido || ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+        </div>
+      </div>
+
       {/* 🚗 SECCIÓN 1: IDENTIFICACIÓN DEL VEHÍCULO */}
       <div className="bg-white border border-slate-200/60 rounded-xl p-6 space-y-4 shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -141,7 +248,7 @@ export default function Documentacion({ peritajeData: data, onChange }) {
           </span>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Placa *</label>
             <input 
@@ -173,6 +280,18 @@ export default function Documentacion({ peritajeData: data, onChange }) {
               placeholder={placeholders.linea}
               value={safeData.linea || ''} 
               onChange={(e) => handleInputChange('linea', e.target.value)}
+              className={inputStyle}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Color *</label>
+            <input 
+              type="text" 
+              placeholder={placeholders.color}
+              value={safeData.color || ''} 
+              onChange={(e) => handleInputChange('color', e.target.value)}
               className={inputStyle}
               required
             />
@@ -217,7 +336,18 @@ export default function Documentacion({ peritajeData: data, onChange }) {
           </div>
         </div>
 
-        {/* Adaptación exclusiva si es Pesado */}
+        {/* CAMPO DE SINIESTROS */}
+        <div>
+          <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Historial de Siniestros / Antecedentes</label>
+          <textarea 
+            rows="2"
+            placeholder={placeholders.siniestros}
+            value={safeData.siniestros || ''}
+            onChange={(e) => handleInputChange('siniestros', e.target.value)}
+            className={inputStyle}
+          />
+        </div>
+
         {tipoVehiculo === 'pesado' && (
           <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
             <p className="text-xs font-bold text-amber-800 uppercase">⚠️ Requisitos Especiales para Vehículo Pesado</p>
@@ -234,7 +364,6 @@ export default function Documentacion({ peritajeData: data, onChange }) {
           </div>
         )}
 
-        {/* Adaptación exclusiva si es Moto */}
         {tipoVehiculo === 'moto' && (
           <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
             <p className="text-xs font-bold text-blue-800 uppercase">🏍️ Protocolo de Motocicleta Activo</p>
@@ -243,62 +372,109 @@ export default function Documentacion({ peritajeData: data, onChange }) {
         )}
       </div>
 
-      {/* 📄 SECCIÓN 2: DOCUMENTOS LEGALES */}
+     {/* 📄 SECCIÓN 2: DOCUMENTOS LEGALES Y CLIENTE */}
       <div className="bg-white border border-slate-200/60 rounded-xl p-6 space-y-4 shadow-sm">
         <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider border-b border-slate-100 pb-3">
-          Verificación de Documentación Legal
+          Verificación de Documentación Legal y Propietario
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="p-4 bg-white border border-slate-200 rounded-xl flex flex-col justify-between shadow-sm">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between pb-1">
-                <span className="text-xs font-bold text-slate-700">¿SOAT Vigente?</span>
-                <input type="checkbox" checked={!!safeData.soatAlDia} onChange={(e) => handleInputChange('soatAlDia', e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer border-slate-300" />
-              </div>
-              {safeData.soatAlDia && (
-                <div className="animate-fadeIn">
-                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1.5 tracking-wide">Fecha de Vencimiento SOAT</label>
-                  <input type="date" value={safeData.venceSoat || ''} onChange={(e) => handleInputChange('venceSoat', e.target.value)} className={`${inputStyle} font-mono font-bold text-slate-600`} />
-                </div>
-              )}
+        {/* DATOS DEL CLIENTE / PROPIETARIO */}
+        <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl space-y-3">
+          <h4 className="text-[11px] font-bold uppercase text-slate-600 tracking-wider">Información del Propietario / Cliente</h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Nombre Completo *</label>
+              <input 
+                type="text" 
+                placeholder="Nombre del cliente..." 
+                value={safeData.clienteNombre || ''} 
+                onChange={(e) => handleInputChange('clienteNombre', e.target.value)} 
+                className={inputStyle} 
+              />
             </div>
-            {safeData.soatAlDia && <FileUploader field="archivoSoat" acceptedFile={safeData.archivoSoat} onFileChange={handleInputChange} />}
-          </div>
-
-          <div className="p-4 bg-white border border-slate-200 rounded-xl flex flex-col justify-between shadow-sm">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between pb-1">
-                <span className="text-xs font-bold text-slate-700">¿Técnico Mecánica Vigente?</span>
-                <input type="checkbox" checked={!!safeData.tecnicoMecanicaAlDia} onChange={(e) => handleInputChange('tecnicoMecanicaAlDia', e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer border-slate-300" />
-              </div>
-              {safeData.tecnicoMecanicaAlDia && (
-                <div className="animate-fadeIn">
-                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1.5 tracking-wide">Fecha de Vencimiento RTM</label>
-                  <input type="date" value={safeData.venceTecnicoMecanica || ''} onChange={(e) => handleInputChange('venceTecnicoMecanica', e.target.value)} className={`${inputStyle} font-mono font-bold text-slate-600`} />
-                </div>
-              )}
+            <div>
+              <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Documento de Identidad *</label>
+              <input 
+                type="text" 
+                placeholder="Cédula o NIT..." 
+                value={safeData.clienteDocumento || ''} 
+                onChange={(e) => handleInputChange('clienteDocumento', e.target.value)} 
+                className={`${inputStyle} font-mono`} 
+              />
             </div>
-            {safeData.tecnicoMecanicaAlDia && <FileUploader field="archivoTecnicoMecanica" acceptedFile={safeData.archivoTecnicoMecanica} onFileChange={handleInputChange} />}
+            <div>
+              <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Teléfono / Contacto</label>
+              <input 
+                type="text" 
+                placeholder="Teléfono..." 
+                value={safeData.clienteTelefono || ''} 
+                onChange={(e) => handleInputChange('clienteTelefono', e.target.value)} 
+                className={`${inputStyle} font-mono`} 
+              />
+            </div>
           </div>
         </div>
 
-        {/* 📋 CAMPO UNIVERSAL DE SINIESTROS AL FINAL DEL MÓDULO */}
-        <div className="mt-6 pt-4 border-t border-slate-100">
-          <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">
-            Comentarios de Siniestros / Historial
-          </label>
-          <textarea 
-            rows="3"
-            placeholder={placeholders.siniestros}
-            value={safeData.comentariosSiniestros || ''}
-            onChange={(e) => handleInputChange('comentariosSiniestros', e.target.value)}
-            className={inputStyle}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+          
+          {/* SOAT */}
+          <div className="p-4 bg-white border border-slate-200 rounded-xl flex flex-col justify-between shadow-sm space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between pb-1">
+                <span className="text-xs font-bold text-slate-700">¿SOAT Vigente?</span>
+                <input 
+                  type="checkbox" 
+                  checked={!!safeData.soatAlDia} 
+                  onChange={(e) => handleInputChange('soatAlDia', e.target.checked)} 
+                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer border-slate-300" 
+                />
+              </div>
+              
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1.5 tracking-wide">Fecha de Vencimiento SOAT</label>
+                <input 
+                  type="date" 
+                  value={safeData.venceSoat || ''} 
+                  onChange={(e) => handleInputChange('venceSoat', e.target.value)} 
+                  className={`${inputStyle} font-mono font-bold text-slate-600`} 
+                />
+              </div>
+            </div>
+            
+            <FileUploader field="archivoSoat" acceptedFile={safeData.archivoSoat} onFileChange={handleInputChange} />
+          </div>
+
+          {/* Técnico Mecánica */}
+          <div className="p-4 bg-white border border-slate-200 rounded-xl flex flex-col justify-between shadow-sm space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between pb-1">
+                <span className="text-xs font-bold text-slate-700">¿Técnico Mecánica Vigente?</span>
+                <input 
+                  type="checkbox" 
+                  checked={!!safeData.tecnicoMecanicaAlDia} 
+                  onChange={(e) => handleInputChange('tecnicoMecanicaAlDia', e.target.checked)} 
+                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer border-slate-300" 
+                />
+              </div>
+              
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1.5 tracking-wide">Fecha de Vencimiento RTM</label>
+                <input 
+                  type="date" 
+                  value={safeData.venceTecnicoMecanica || ''} 
+                  onChange={(e) => handleInputChange('venceTecnicoMecanica', e.target.value)} 
+                  className={`${inputStyle} font-mono font-bold text-slate-600`} 
+                />
+              </div>
+            </div>
+            
+            <FileUploader field="archivoTecnicoMecanica" acceptedFile={safeData.archivoTecnicoMecanica} onFileChange={handleInputChange} />
+          </div>
+
         </div>
 
       </div>
 
     </div>
   );
-}
+} 

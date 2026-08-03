@@ -13,14 +13,13 @@ import api from '../api/axios';
 
 export default function Dashboard({ onLogout }) {
 
+const [modalActivo, setModalActivo] = useState(null); // 'sucursal' o 'vendedor'
+const [nombreInput, setNombreInput] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('Bandeja');
   const [isInspecting, setIsInspecting] = useState(false);
   const [inspectionStep, setInspectionStep] = useState('Documentacion');
-  
   const [showVehicleSelector, setShowVehicleSelector] = useState(false);
-  
-  // Estado para almacenar las inspecciones traídas de la base de datos
   const [inspecciones, setInspecciones] = useState([]);
   const [loadingInspecciones, setLoadingInspecciones] = useState(false);
 
@@ -83,7 +82,6 @@ export default function Dashboard({ onLogout }) {
       setLoadingInspecciones(false);
     }
   };
-
   // 2. Usar el useEffect DESPUÉS
   useEffect(() => {
     let isMounted = true;
@@ -138,34 +136,81 @@ export default function Dashboard({ onLogout }) {
       steps.push({ id: 'VistaInterna', label: '4. Vista Interna', icon: '👀' });
     }
 
+    // Los detalles técnicos solo se agregan si el vehículo NO es una moto
+    if (tipo !== 'moto') {
+      steps.push({ id: 'Detalles Técnicos', label: '5. Detalles Técnicos', icon: '🛠️' });
+    }
+
     steps.push(
-      { id: 'Detalles Técnicos', label: '5. Detalles Técnicos', icon: '🛠️' },
       { id: 'Firma', label: '6. Firma Digital', icon: '🖋️' },
       { id: 'PDF', label: '7. Reporte & PDF', icon: '📋' }
     );
 
     return steps;
   };
-
   const inspectionSteps = getInspectionSteps(peritajeData.tipoVehiculo);
 
-  const guardarPeritajeCompleto = async (formDataDelEstado) => {
+ const guardarPeritajeCompleto = async (formDataDelEstado) => {
     try {
       const token = localStorage.getItem('auth_token');
 
-      const response = await api.post('peritajes', {
-        tipo_vehiculo_id: formDataDelEstado.tipoVehiculoId || formDataDelEstado.tipoVehiculo || 1,
-        sucursal_vendedor_id: formDataDelEstado.sucursalVendedorId || 1,
-        sucursal_inspeccion_id: formDataDelEstado.sucursalInspeccionId || 1,
-        vendedor_id: formDataDelEstado.vendedorId || 1,
+      const esEdicion = Boolean(formDataDelEstado.id);
+      const endpoint = esEdicion ? `peritajes/${formDataDelEstado.id}` : 'peritajes';
+      const metodo = esEdicion ? 'patch' : 'post';
+
+      const response = await api[metodo](endpoint, {
+        // Relaciones y IDs principales
+        tipo_vehiculo_id: formDataDelEstado.tipoVehiculoId || formDataDelEstado.tipoVehiculo || null,
+        sucursal_vendedor_id: (formDataDelEstado.sucursalVendedorId && !formDataDelEstado.sucursalVendedorId.includes('AQUI')) ? formDataDelEstado.sucursalVendedorId : null,
+        sucursal_inspeccion_id: (formDataDelEstado.sucursalInspeccionId && !formDataDelEstado.sucursalInspeccionId.includes('AQUI')) ? formDataDelEstado.sucursalInspeccionId : null,
+        vendedor_id: (formDataDelEstado.vendedorId && !formDataDelEstado.vendedorId.includes('AQUI')) ? formDataDelEstado.vendedorId : null,
+
+        // Información General del Vehículo
         placa: formDataDelEstado.placa || '',
         marca: formDataDelEstado.marca || '',
         linea: formDataDelEstado.linea || '',
-        modelo_anio: Number(formDataDelEstado.modeloAnio || formDataDelEstado.modelo || 2024),
+        modelo_anio: Number(formDataDelEstado.modeloAnio || formDataDelEstado.modelo || 2026),
         num_motor: formDataDelEstado.numMotor || '',
         num_chasis: formDataDelEstado.numChasis || '',
         kilometraje: Number(formDataDelEstado.kilometraje || 0),
+        organismo_transito: formDataDelEstado.organismoTransito || '',
 
+        // Documentación y SOAT / RTM
+        numero_soat: formDataDelEstado.numeroSoat || '',
+        entidad_emisora_soat: formDataDelEstado.entityEmisoraSoat || '',
+        vence_soat: formDataDelEstado.venceSoat || null,
+        soat_al_dia: Boolean(formDataDelEstado.soatAlDia),
+        
+        numero_control_rtm: formDataDelEstado.numeroControlRtm || '',
+        cda_emisor: formDataDelEstado.cdaEmisor || '',
+        vence_tecnico_mecanica: formDataDelEstado.venceTecnicoMecanica || null,
+        tecnico_mecanica_al_dia: Boolean(formDataDelEstado.tecnicoMecanicaAlDia),
+
+        // Restricciones y Alertas Legales (RUNT)
+        coincide_propietario_runt: Boolean(formDataDelEstado.coincidePropietarioRunt),
+        tiene_embargos_o_alertas: Boolean(formDataDelEstado.tieneEmbargosOAlertas),
+        restriccion_blindaje: formDataDelEstado.restriccionBlindaje || 'sin_blindaje',
+
+        // Motor y Diagnósticos
+        compresion_motor: formDataDelEstado.compresionMotor || '',
+        fugas_aceite: Boolean(formDataDelEstado.fugasAceite),
+        estado_bateria: formDataDelEstado.estadoBateria || '',
+        ruidos_extranos: Boolean(formDataDelEstado.ruidosExtranos),
+        comentarios_motor: formDataDelEstado.motorObservaciones || '',
+
+        // Resultados y Concepto Final
+        estado_general_vehiculo: formDataDelEstado.estadoGeneralVehiculo || 'Aceptable',
+        concepto_final: formDataDelEstado.conceptoFinal || '',
+        tiempo_estimado_reparacion: formDataDelEstado.tiempoEstimadoReparacion || '',
+
+        // Scores / Puntuaciones
+        score_estructura: Number(formDataDelEstado.scoreEstructura || 100),
+        score_carroceria: Number(formDataDelEstado.scoreCarroceria || 100),
+        score_mecanica: Number(formDataDelEstado.scoreMecanica || 100),
+        score_electrico: Number(formDataDelEstado.scoreElectrico || 100),
+        score_legal: Number(formDataDelEstado.scoreLegal || 100),
+
+        // Listas y Arrays Relacionados
         accesorios: formDataDelEstado.accesoriosList || [],
         danos_externos: formDataDelEstado.danosExternosList || [],
         danos_internos: formDataDelEstado.danosInternosList || [],
@@ -180,20 +225,17 @@ export default function Dashboard({ onLogout }) {
         }
       });
 
-      console.log('Peritaje guardado exitosamente:', response.data);
-      alert('¡Peritaje guardado y sincronizado correctamente!');
+      console.log(esEdicion ? 'Peritaje actualizado exitosamente:' : 'Peritaje guardado exitosamente:', response.data);
+      alert(esEdicion ? '¡Peritaje actualizado y sincronizado correctamente!' : '¡Peritaje guardado y sincronizado correctamente!');
       setIsInspecting(false);
       fetchInspecciones(); 
     } catch (error) {
       console.error('Error al guardar el peritaje:', error);
-      // Esto te mostrará el detalle exacto que envía Laravel si vuelve a fallar
       console.error('Detalle del servidor:', error.response?.data);
+      console.error('Errores detallados de validación:', error.response?.data?.errors);
       alert(error.response?.data?.message || 'Hubo un error al guardar el peritaje en el servidor.');
     }
   };
-
-    const token = localStorage.getItem('auth_token');
-      console.log("Token actual:", token); // <-- Revisa la consola del navegador
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
@@ -204,6 +246,51 @@ export default function Dashboard({ onLogout }) {
     }));
   };
 
+  // 1. Agrega estos estados al inicio de tu componente Dashboard
+const [sucursales, setSucursales] = useState([]);
+const [vendedores, setVendedores] = useState([]);
+
+useEffect(() => {
+    let isMounted = true;
+
+    const cargarDatosYCatalogos = async () => {
+      if (activeTab === 'Bandeja') {
+        try {
+          if (isMounted) setLoadingInspecciones(true);
+          const token = localStorage.getItem('auth_token');
+          const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          };
+
+          // Hacemos todas las peticiones en paralelo de forma limpia
+          const [resPeritajes, resSucursales, resVendedores] = await Promise.all([
+            api.get('peritajes', { headers }),
+            api.get('sucursales', { headers }).catch(() => ({ data: [] })),
+            api.get('vendedores', { headers }).catch(() => ({ data: [] }))
+          ]);
+
+          if (isMounted) {
+            setInspecciones(resPeritajes.data.data || resPeritajes.data || []);
+            setSucursales(resSucursales.data.data || resSucursales.data || []);
+            setVendedores(resVendedores.data.data || resVendedores.data || []);
+          }
+        } catch (error) {
+          console.error('Error al cargar los datos:', error);
+        } finally {
+          if (isMounted) {
+            setLoadingInspecciones(false);
+          }
+        }
+      }
+    };
+
+    cargarDatosYCatalogos();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeTab]);
   const handleDescargarPDF = (item) => {
     const data = peritajeData; 
 
@@ -212,6 +299,12 @@ export default function Dashboard({ onLogout }) {
       unit: 'mm',
       format: 'a4'
     });
+    const fechaOriginal = item.fechaPeritaje || item.created_at;
+    const fechaFormateada = fechaOriginal 
+    ? new Date(fechaOriginal).toLocaleDateString('es-CO') 
+    : 'N/A';
+
+doc.text(`FECHA: ${fechaFormateada}`, 139, 25);
 
     const colorPrimario = [8, 13, 26]; 
     const colorSecundario = [37, 99, 235]; 
@@ -240,7 +333,7 @@ export default function Dashboard({ onLogout }) {
     doc.setFontSize(8);
     doc.setTextColor(colorPrimario[0], colorPrimario[1], colorPrimario[2]);
     doc.text(`INSPECCIÓN: ${item.id || item.codigo || 'N/A'}`, 139, 20);
-    doc.text(`FECHA: ${item.fechaPeritaje || item.created_at || 'N/A'}`, 139, 25);
+    doc.text(`FECHA: ${fechaFormateada}`, 139, 25);
     doc.text(`ESTADO: ${(item.estado || 'Completado').toUpperCase()}`, 139, 30);
 
     doc.setDrawColor(colorSecundario[0], colorSecundario[1], colorSecundario[2]); 
@@ -468,6 +561,8 @@ export default function Dashboard({ onLogout }) {
                           accesoriosList: []
                         });
 
+                        
+
                         setShowVehicleSelector(false);
                         setIsInspecting(true);
                         setInspectionStep('Documentacion');
@@ -603,7 +698,20 @@ export default function Dashboard({ onLogout }) {
                   
                   <div className="mt-2">
                     {inspectionStep === 'Documentacion' && (
-                      <Documentacion peritajeData={peritajeData} onChange={handleDataChange} />
+                      <Documentacion 
+                        peritajeData={peritajeData} 
+                        onChange={handleDataChange} 
+                        sucursales={sucursales}
+                        vendedores={vendedores}
+                        onAgregarSucursal={() => {
+                        setNombreInput('');
+                        setModalActivo('sucursal'); 
+                      }}
+                      onAgregarVendedor={() => {
+                        setNombreInput('');
+                        setModalActivo('vendedor');
+                      }}
+                      />
                     )}
                     
                     {inspectionStep === 'Accesorios y Equipamiento' && (
@@ -709,9 +817,10 @@ export default function Dashboard({ onLogout }) {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs text-slate-600 min-w-[1200px]">
+                    {/* 1. EL ENCABEZADO (<thead>) SOLO DEBE LLEVAR TH, SIN 'item' */}
                     <thead className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
                       <tr>
-                        <th className="px-4 py-3">Fecha de Peritaje</th>
+                        <th className="px-4 py-3">Fecha</th>
                         <th className="px-4 py-3">Marca</th>
                         <th className="px-4 py-3">Modelo</th>
                         <th className="px-4 py-3">Año del modelo</th>
@@ -726,6 +835,8 @@ export default function Dashboard({ onLogout }) {
                         <th className="px-4 py-3 text-right">Acciones</th>
                       </tr>
                     </thead>
+                    
+                    {/* 2. EL CUERPO (<tbody>) MAPEA CADA 'item' CORRECTAMENTE */}
                     <tbody className="divide-y divide-slate-100">
                       {inspecciones.length === 0 && !loadingInspecciones ? (
                         <tr>
@@ -736,7 +847,12 @@ export default function Dashboard({ onLogout }) {
                       ) : (
                         inspecciones.map((item) => (
                           <tr key={item.id || item.placa} className="hover:bg-slate-50/50 transition duration-100">
-                            <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.fechaPeritaje || item.created_at || 'N/A'}</td>
+                            {/* Aquí usamos 'item' de forma válida gracias al .map() */}
+                            <td className="px-4 py-4 whitespace-nowrap text-slate-500">
+                              {item.fechaPeritaje || item.created_at 
+                                ? new Date(item.fechaPeritaje || item.created_at).toLocaleDateString('es-CO') 
+                                : 'N/A'}
+                            </td>
                             <td className="px-4 py-4 whitespace-nowrap font-semibold text-slate-800">{item.marca || 'N/A'}</td>
                             <td className="px-4 py-4 whitespace-nowrap">{item.modelo || item.linea || 'N/A'}</td>
                             <td className="px-4 py-4 whitespace-nowrap">{item.anioModelo || item.modelo_anio || 'N/A'}</td>
@@ -746,16 +862,18 @@ export default function Dashboard({ onLogout }) {
                                 {item.placa || 'SIN PLACA'}
                               </span>
                             </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.sucursalVendedor || 'Sede Yopal'}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.sucursalInspeccion || 'Sede Yopal'}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-slate-700">{item.vendedor || 'N/A'}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.sucursal_vendedor?.nombre || item.sucursalVendedor?.nombre || 'Sin sucursal'}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.sucursal_inspeccion?.nombre || item.sucursalInspeccion?.nombre || 'Sin sucursal'}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-slate-700">
+                              {item.vendedor?.nombre || item.vendedor || 'Sin vendedor'}
+                            </td>
                             <td className="px-4 py-4 whitespace-nowrap font-medium text-slate-800">
-                                {item.inspector?.name || 'Inspector Activo'}
+                              {item.inspector?.name || 'Inspector Activo'}
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap font-semibold text-emerald-600">{item.costoReparacion || '$0'}</td>
                             <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.tiempoReparacion || '0 días'}</td>
                             <td className="px-4 py-4 text-right whitespace-nowrap">
-                              {(item.estado || 'Completado') === "Completado" ? (
+                              {item.estado === "completado" ? (
                                 <button 
                                   onClick={() => handleDescargarPDF(item)}
                                   className="px-3 py-1.5 bg-slate-900 text-white text-[11px] font-bold uppercase rounded-lg shadow hover:bg-slate-800 transition duration-150"
@@ -765,7 +883,38 @@ export default function Dashboard({ onLogout }) {
                               ) : (
                                 <button 
                                   onClick={() => {
-                                    setShowVehicleSelector(true);
+                                    let tipoTexto = 'carro';
+                                    const tipoIdBD = item.tipo_vehiculo_id || item.tipoVehiculoId;
+
+                                    if (tipoIdBD === '7c68a26d-372b-42dc-be00-92c4ed2ee6ce' || item.tipoVehiculo === 'moto') {
+                                      tipoTexto = 'moto';
+                                    } else if (tipoIdBD === 'd5017832-04ac-4ead-8f57-efbe8af78860' || item.tipoVehiculo === 'pesado') {
+                                      tipoTexto = 'pesado';
+                                    } else if (tipoIdBD === 'e8ca5ff6-fe17-4916-b949-c13cac3a706e' || item.tipoVehiculo === 'motocarro') {
+                                      tipoTexto = 'motocarro';
+                                    }
+
+                                    setPeritajeData({
+                                      ...peritajeData,
+                                      id: item.id,
+                                      tipoVehiculo: tipoTexto,
+                                      tipoVehiculoId: tipoIdBD || '1c9740ed-b045-4643-9fe6-cfb2c412854f',
+                                      placa: item.placa || '',
+                                      marca: item.marca || '',
+                                      linea: item.linea || item.modelo || '',
+                                      modeloAnio: item.modelo_anio || item.anioModelo || '',
+                                      numMotor: item.num_motor || '',
+                                      numChasis: item.num_chasis || '',
+                                      kilometraje: item.kilometraje || item.km || 0,
+                                      accesoriosList: item.accesorios || [],
+                                      danosExternosList: item.danos_externos || [],
+                                      danosInternosList: item.danos_internos || [],
+                                      detallesTecnicosList: item.detalles_tecnicos || [],
+                                      sistemasMecanicosList: item.sistemas_mecanicos || [],
+                                      compresionCilindrosList: item.compresion_cilindros || [],
+                                    });
+                                    setIsInspecting(true);
+                                    setInspectionStep('Documentacion');
                                   }}
                                   className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline transition duration-140"
                                 >
@@ -773,7 +922,7 @@ export default function Dashboard({ onLogout }) {
                                 </button>
                               )}
                             </td>
-                          </tr>
+                          </tr> 
                         ))
                       )}
                     </tbody>
@@ -782,7 +931,65 @@ export default function Dashboard({ onLogout }) {
               </div>
             </>
           )}
+              {modalActivo && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-xs">
+                  <div className="bg-white rounded-lg p-6 w-96 shadow-2xl border border-gray-100">
+                    <h3 className="text-lg font-bold mb-4 text-gray-800">
+                      {modalActivo === 'sucursal' ? 'Nueva Sucursal' : 'Nuevo Vendedor / Asesor'}
+                    </h3>
+                    
+                    <input 
+                      type="text" 
+                      className="w-full border border-gray-300 rounded p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder={`Ingrese el nombre de la ${modalActivo}...`}
+                      value={nombreInput}
+                      onChange={(e) => setNombreInput(e.target.value)}
+                      autoFocus
+                    />
 
+                    <div className="flex justify-end space-x-2">
+                      <button 
+                        onClick={() => setModalActivo(null)}
+                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
+                      >
+                        Cancelar
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          if (!nombreInput || !nombreInput.trim()) return;
+                          try {
+                            const token = localStorage.getItem('auth_token');
+                            const endpoint = modalActivo === 'sucursal' ? 'sucursales' : 'vendedores';
+                            
+                            const response = await api.post(endpoint, { nombre: nombreInput }, {
+                              headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                            });
+
+                            // Obtenemos el registro recién creado que devuelve Laravel
+                            const nuevoRegistro = response.data.data || response.data;
+
+                            // Actualizamos el estado local según corresponda para que se vea de inmediato
+                            if (modalActivo === 'sucursal') {
+                              setSucursales(prev => [...prev, nuevoRegistro]);
+                            } else {
+                              setVendedores(prev => [...prev, nuevoRegistro]);
+                            }
+
+                            setModalActivo(null);
+                            setNombreInput('');
+                          } catch (error) {
+                            console.error(error);
+                            alert(error.response?.data?.message || "Ocurrió un error al guardar.");
+                          }
+                        }}
+                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                      >
+                        Guardar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
         </div>
       </main>
     </div>

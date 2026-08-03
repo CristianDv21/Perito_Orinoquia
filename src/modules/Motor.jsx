@@ -148,13 +148,30 @@ export default function Motor({ peritajeData: data, onChange }) {
         </div>
       </div>
 
-      {/* 📊 SECCIÓN 2: PARÁMETROS DE TRANSMISIÓN Y COMPRESIÓN */}
+      {/* 📊 SECCIÓN 2: PARÁMETROS DE TRANSMISIÓN, TRACCIÓN, KILOMETRAJE Y COMPRESIÓN */}
       <div className="bg-white border border-slate-200/60 rounded-xl p-6 space-y-4 shadow-sm">
         <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider border-b border-slate-100 pb-3">
-          Parámetros de Motor y Transmisión
+          Parámetros de Motor, Transmisión y Tracción
         </h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* 🛞 LECTURA DE KILOMETRAJE */}
+        <div className="pb-4 border-b border-slate-100">
+          <div className="max-w-xs">
+            <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Lectura Actual del Odómetro (KM)</label>
+            <input 
+              type="number" 
+              placeholder="Ej. 15000"
+              value={safeData.kilometraje || ''} 
+              onChange={(e) => handleInputChange('kilometraje', e.target.value)}
+              className={`${inputStyle} font-mono font-bold text-blue-600`}
+            />
+          </div>
+        </div>
+
+        {/* ⚙️ CAMPOS NUEVOS Y EXISTENTES DE TRANSMISIÓN Y TRACCIÓN */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+          
+          {/* Tipo de Transmisión */}
           <div>
             <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Tipo de Transmisión</label>
             <select 
@@ -162,11 +179,11 @@ export default function Motor({ peritajeData: data, onChange }) {
               onChange={(e) => handleInputChange('tipoTransmision', e.target.value)}
               className={inputStyle}
             >
-              <option value="">Seleccione una opción...</option>
+              <option value="">Seleccione opción...</option>
               {tipoVehiculo === 'moto' ? (
                 <>
                   <option value="mecanicaCadena">Mecánica con Embrague Manual</option>
-                  <option value="semiautomatica">Semicetrifuga / Semicautomatica</option>
+                  <option value="semiautomatica">Semicentrifuga / Semicautomática</option>
                   <option value="automaticaScooter">Automática (CVT / Scooter)</option>
                 </>
               ) : (
@@ -180,24 +197,53 @@ export default function Motor({ peritajeData: data, onChange }) {
             </select>
           </div>
 
+          {/* Tipo de Tracción */}
           <div>
-            <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Estado del Embrague / Caja de Cambios</label>
+            <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Tipo de Tracción</label>
+            <select 
+              value={safeData.traccion || ''} 
+              onChange={(e) => handleInputChange('traccion', e.target.value)}
+              className={inputStyle}
+            >
+              <option value="">Seleccione opción...</option>
+              {tipoVehiculo === 'moto' ? (
+                <>
+                  <option value="cadena">Transmisión por Cadena</option>
+                  <option value="correa">Transmisión por Correa</option>
+                  <option value="cardan">Transmisión por Cardán</option>
+                </>
+              ) : (
+                <>
+                  <option value="FWD">Delantera (FWD)</option>
+                  <option value="RWD">Trasera (RWD)</option>
+                  <option value="AWD">Integral Inteligente (AWD)</option>
+                  <option value="4WD">Doble Tracción 4x4 (4WD)</option>
+                  <option value="4x2">Tracción Simple (4x2)</option>
+                </>
+              )}
+            </select>
+          </div>
+
+          {/* Estado del Embrague / Caja / Transmisión */}
+          <div>
+            <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Estado del Conjunto / Caja</label>
             <select 
               value={safeData.estadoTransmision || ''} 
               onChange={(e) => handleInputChange('estadoTransmision', e.target.value)}
               className={inputStyle}
             >
-              <option value="">Seleccione una opción...</option>
+              <option value="">Seleccione opción...</option>
               <option value="operativo">Operación Suave y Correcta</option>
-              <option value="patina">Embrague Desgastado (Patina)</option>
+              <option value="patina">Desgastado / Patina</option>
               <option value="golpeteo">Golpeteo / Tirones al cambiar</option>
               <option value="ruidoRodamiento">Ruido de rodamiento interno</option>
             </select>
           </div>
+
         </div>
 
         {/* Datos técnicos de compresión dinámicos según el número de cilindros */}
-        <div>
+        <div className="pt-4 border-t border-slate-100">
           <label className="block text-xs font-bold uppercase text-slate-500 mb-2 tracking-wide">Lectura de Compresión (PSI)</label>
           <div className={`grid grid-cols-2 ${cilindrosActivos.length > 2 ? 'sm:grid-cols-4' : 'sm:grid-cols-2'} gap-3 max-w-2xl`}>
             {cilindrosActivos.map((num) => (

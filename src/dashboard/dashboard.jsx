@@ -154,25 +154,24 @@ export default function Dashboard({ onLogout }) {
       const token = localStorage.getItem('auth_token');
 
       const response = await api.post('peritajes', {
-        tipo_vehiculo_id: formDataDelEstado.tipoVehiculoId || formDataDelEstado.tipoVehiculo,
-        sucursal_vendedor_id: formDataDelEstado.sucursalVendedorId,
-        sucursal_inspeccion_id: formDataDelEstado.sucursalInspeccionId,
-        vendedor_id: formDataDelEstado.vendedorId,
-
-        placa: formDataDelEstado.placa,
-        marca: formDataDelEstado.marca,
-        linea: formDataDelEstado.linea,
-        modelo_anio: Number(formDataDelEstado.modeloAnio || formDataDelEstado.modelo),
-        num_motor: formDataDelEstado.numMotor,
-        num_chasis: formDataDelEstado.numChasis,
+        tipo_vehiculo_id: formDataDelEstado.tipoVehiculoId || formDataDelEstado.tipoVehiculo || 1,
+        sucursal_vendedor_id: formDataDelEstado.sucursalVendedorId || 1,
+        sucursal_inspeccion_id: formDataDelEstado.sucursalInspeccionId || 1,
+        vendedor_id: formDataDelEstado.vendedorId || 1,
+        placa: formDataDelEstado.placa || '',
+        marca: formDataDelEstado.marca || '',
+        linea: formDataDelEstado.linea || '',
+        modelo_anio: Number(formDataDelEstado.modeloAnio || formDataDelEstado.modelo || 2024),
+        num_motor: formDataDelEstado.numMotor || '',
+        num_chasis: formDataDelEstado.numChasis || '',
         kilometraje: Number(formDataDelEstado.kilometraje || 0),
 
-        accesorios: formDataDelEstado.accesoriosList,
-        danos_externos: formDataDelEstado.danosExternosList,
-        danos_internos: formDataDelEstado.danosInternosList,
-        detalles_tecnicos: formDataDelEstado.detallesTecnicosList,
-        sistemas_mecanicos: formDataDelEstado.sistemasMecanicosList,
-        compresion_cilindros: formDataDelEstado.compresionCilindrosList,
+        accesorios: formDataDelEstado.accesoriosList || [],
+        danos_externos: formDataDelEstado.danosExternosList || [],
+        danos_internos: formDataDelEstado.danosInternosList || [],
+        detalles_tecnicos: formDataDelEstado.detallesTecnicosList || [],
+        sistemas_mecanicos: formDataDelEstado.sistemasMecanicosList || [],
+        compresion_cilindros: formDataDelEstado.compresionCilindrosList || [],
       }, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -187,9 +186,14 @@ export default function Dashboard({ onLogout }) {
       fetchInspecciones(); 
     } catch (error) {
       console.error('Error al guardar el peritaje:', error);
-      alert('Hubo un error al guardar el peritaje en el servidor.');
+      // Esto te mostrará el detalle exacto que envía Laravel si vuelve a fallar
+      console.error('Detalle del servidor:', error.response?.data);
+      alert(error.response?.data?.message || 'Hubo un error al guardar el peritaje en el servidor.');
     }
   };
+
+    const token = localStorage.getItem('auth_token');
+      console.log("Token actual:", token); // <-- Revisa la consola del navegador
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
@@ -432,29 +436,53 @@ export default function Dashboard({ onLogout }) {
             
             <div className="p-6 grid grid-cols-2 gap-4">
               {[
-                { id: 'carro', label: 'Carro / Automóvil', icon: '🚗', desc: 'Livianos, Sedán, SUV, Camperos' },
-                { id: 'moto', label: 'Moto', icon: '🏍️', desc: 'Motocicletas de cilindrada variada' },
-                { id: 'pesado', label: 'Vehículo Pesado', icon: '🚛', desc: 'Camiones, Tractocamiones, Buses' },
-                { id: 'motocarro', label: 'Motocarro', icon: '🛺', desc: 'Tricimotos de carga o pasajeros' },
-              ].map((tipo) => (
-                <button
-                  key={tipo.id}
-                  onClick={() => {
-                    handleDataChange({ 
-                      tipoVehiculo: tipo.id,
-                      accesoriosList: []
-                    });
-                    setShowVehicleSelector(false);
-                    setIsInspecting(true);
-                    setInspectionStep('Documentacion');
-                  }}
-                  className="flex flex-col text-left p-5 border border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 rounded-xl transition group relative shadow-sm hover:shadow"
-                >
-                  <span className="text-3xl mb-3 group-hover:scale-110 transition transform origin-left">{tipo.icon}</span>
-                  <span className="text-sm font-bold text-slate-900 group-hover:text-blue-600">{tipo.label}</span>
-                  <span className="text-[11px] text-slate-500 mt-1 leading-relaxed">{tipo.desc}</span>
-                </button>
-              ))}
+                  { id: 'carro', label: 'Carro / Automóvil', icon: '🚗', desc: 'Livianos, Sedán, SUV, Camperos', tipoId: '1c9740ed-b045-4643-9fe6-cfb2c412854f' },
+                  { id: 'moto', label: 'Moto', icon: '🏍️', desc: 'Motocicletas de cilindrada variada', tipoId: '7c68a26d-372b-42dc-be00-92c4ed2ee6ce' },
+                  { id: 'pesado', label: 'Vehículo Pesado', icon: '🚛', desc: 'Camiones, Tractocamiones, Buses', tipoId: 'd5017832-04ac-4ead-8f57-efbe8af78860' },
+                  { id: 'motocarro', label: 'Motocarro', icon: '🛺', desc: 'Tricimotos de carga o pasajeros', tipoId: 'e8ca5ff6-fe17-4916-b949-c13cac3a706e' },
+                ].map((tipo) => (
+                  <button
+                    key={tipo.id}
+                    onClick={async () => {
+                      try {
+                        const token = localStorage.getItem('auth_token');
+                        console.log("ID numérico que se envía:", tipo.tipoId); // <-- Usamos tipoId
+
+                        const response = await api.post('/peritajes', {
+                          tipo_vehiculo_id: tipo.tipoId, 
+                          placa: 'SIN-PLACA', // <-- Agregamos una placa temporal para satisfacer la base de datos
+                          estado: 'borrador'
+                        }, {
+                          headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                          }
+                        });
+
+                        const peritajeCreado = response.data.data || response.data;
+                        
+                        handleDataChange({ 
+                          id: peritajeCreado.id,
+                          tipoVehiculo: tipo.id,
+                          tipoVehiculoId: tipo.tipoId,
+                          accesoriosList: []
+                        });
+
+                        setShowVehicleSelector(false);
+                        setIsInspecting(true);
+                        setInspectionStep('Documentacion');
+                      } catch (error) {
+                        console.error('Error detallado:', error.response?.data);
+                        alert('Error del servidor: ' + (error.response?.data?.message || error.message));
+                      }
+                    }}
+                    className="flex flex-col text-left p-5 border border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 rounded-xl transition group relative shadow-sm hover:shadow"
+                  >
+                    <span className="text-3xl mb-3 group-hover:scale-110 transition transform origin-left">{tipo.icon}</span>
+                    <span className="text-sm font-bold text-slate-900 group-hover:text-blue-600">{tipo.label}</span>
+                    <span className="text-[11px] text-slate-500 mt-1 leading-relaxed">{tipo.desc}</span>
+                  </button>
+                ))}
             </div>
 
             <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
@@ -619,12 +647,28 @@ export default function Dashboard({ onLogout }) {
                   >
                     Anterior
                   </button>
-                  <button 
-                    onClick={() => guardarPeritajeCompleto(peritajeData)}
-                    className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow"
-                  >
-                    Finalizar Peritaje
-                  </button>
+
+                  {/* Lógica dinámica para el botón derecho */}
+                  {inspectionStep !== inspectionSteps[inspectionSteps.length - 1].id ? (
+                    <button 
+                      onClick={() => {
+                        const idx = inspectionSteps.findIndex(s => s.id === inspectionStep);
+                        if (idx < inspectionSteps.length - 1) {
+                          setInspectionStep(inspectionSteps[idx + 1].id);
+                        }
+                      }}
+                      className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow"
+                    >
+                      Siguiente
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => guardarPeritajeCompleto(peritajeData)}
+                      className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow"
+                    >
+                      Finalizar Peritaje
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -705,7 +749,9 @@ export default function Dashboard({ onLogout }) {
                             <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.sucursalVendedor || 'Sede Yopal'}</td>
                             <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.sucursalInspeccion || 'Sede Yopal'}</td>
                             <td className="px-4 py-4 whitespace-nowrap text-slate-700">{item.vendedor || 'N/A'}</td>
-                            <td className="px-4 py-4 whitespace-nowrap font-medium text-slate-800">{item.inspector || 'Inspector Activo'}</td>
+                            <td className="px-4 py-4 whitespace-nowrap font-medium text-slate-800">
+                                {item.inspector?.name || 'Inspector Activo'}
+                            </td>
                             <td className="px-4 py-4 whitespace-nowrap font-semibold text-emerald-600">{item.costoReparacion || '$0'}</td>
                             <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.tiempoReparacion || '0 días'}</td>
                             <td className="px-4 py-4 text-right whitespace-nowrap">

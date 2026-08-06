@@ -3,6 +3,20 @@ import { useRef } from "react";
 function FileUploader({ field, acceptedFile, onFileChange }) {
   const fileInputRef = useRef(null);
 
+  const esUrlBackend = typeof acceptedFile === 'string' && acceptedFile.trim() !== '';
+
+  const urlVisualizacion = esUrlBackend 
+    ? (acceptedFile.startsWith('http') ? acceptedFile : `http://127.0.0.1:8000/storage/${acceptedFile}`)
+    : (acceptedFile?.previewUrl || null);
+
+  const nombreArchivo = esUrlBackend 
+    ? "Documento registrado en BD" 
+    : (acceptedFile?.name || "Documento adjunto");
+
+  const tipoArchivoTexto = esUrlBackend 
+    ? "archivo" 
+    : (acceptedFile?.type ? acceptedFile.type.split('/')[1] : '');
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -13,14 +27,11 @@ function FileUploader({ field, acceptedFile, onFileChange }) {
       return;
     }
 
-    // Igual que en los demás módulos, convertimos el archivo a Data URL (base64)
-    // de inmediato: es la única forma en que jsPDF puede dibujar la imagen luego
-    // dentro del reporte (una blob URL no sirve porque no persiste ni es legible
-    // de forma síncrona por jsPDF).
     if (file.type.startsWith('image/')) {
       const lector = new FileReader();
       lector.onload = (evento) => {
         onFileChange(field, {
+          file: file, 
           name: file.name,
           type: file.type,
           previewUrl: evento.target.result,
@@ -29,8 +40,8 @@ function FileUploader({ field, acceptedFile, onFileChange }) {
       };
       lector.readAsDataURL(file);
     } else {
-      // Los PDF no se pueden previsualizar/incrustar como imagen; solo guardamos el nombre.
       onFileChange(field, {
+        file: file, 
         name: file.name,
         type: file.type,
         previewUrl: null,
@@ -49,8 +60,8 @@ function FileUploader({ field, acceptedFile, onFileChange }) {
       <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1.5 tracking-wider">
         Documento Adjunto (PDF o Imagen)
       </label>
-      
-      <input 
+
+      <input
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
@@ -59,7 +70,7 @@ function FileUploader({ field, acceptedFile, onFileChange }) {
       />
 
       {!acceptedFile ? (
-        <div 
+        <div
           onClick={() => fileInputRef.current?.click()}
           className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 hover:border-blue-500 rounded-xl p-4 bg-slate-50 hover:bg-blue-50/30 cursor-pointer transition duration-150 group"
         >
@@ -73,38 +84,51 @@ function FileUploader({ field, acceptedFile, onFileChange }) {
       ) : (
         <div className="relative flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-xl shadow-sm">
           <div className="flex items-center space-x-3 overflow-hidden mr-2">
-            {acceptedFile.previewUrl ? (
-              <img src={acceptedFile.previewUrl} alt="Vista previa" className="w-10 h-10 object-cover rounded-lg border border-slate-100 flex-shrink-0" />
+            {esUrlBackend || acceptedFile?.previewUrl ? (
+              <img src={urlVisualizacion} alt="Vista previa" className="w-10 h-10 object-cover rounded-lg border border-slate-100 flex-shrink-0" />
             ) : (
               <div className="w-10 h-10 bg-red-50 border border-red-100 text-red-500 flex items-center justify-center rounded-lg flex-shrink-0">
                 <span className="text-[10px] font-extrabold uppercase">PDF</span>
               </div>
             )}
             <div className="flex flex-col min-w-0">
-              <span className="text-xs font-bold text-slate-700 truncate pr-4">{acceptedFile.name}</span>
-              <span className="text-[9px] text-slate-400 uppercase font-mono font-bold">{acceptedFile.type.split('/')[1]}</span>
+              <span className="text-xs font-bold text-slate-700 truncate pr-4">{nombreArchivo}</span>
+              <span className="text-[9px] text-slate-400 uppercase font-mono font-bold">{tipoArchivoTexto}</span>
             </div>
           </div>
-          <button type="button" onClick={removeFile} className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition flex-shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </button>
+
+          <div className="flex items-center gap-2">
+            {esUrlBackend && (
+              <a 
+                href={urlVisualizacion} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition"
+              >
+                Ver
+              </a>
+            )}
+            <button type="button" onClick={removeFile} className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-export default function Documentacion({ 
-  peritajeData: data, 
-  onChange, 
-  sucursales = [], 
+export default function Documentacion({
+  peritajeData: data,
+  onChange,
+  sucursales = [],
   vendedores = [],
   onAgregarSucursal,
-  onAgregarVendedor 
+  onAgregarVendedor
 }) {
-  const safeData = data || {};  
+  const safeData = data || {};
   const tipoVehiculo = safeData.tipoVehiculo || 'carro';
 
   const handleInputChange = (field, value) => {
@@ -154,22 +178,19 @@ export default function Documentacion({
 
   return (
     <div className="space-y-6 text-slate-800">
-      
-      {/* 🏢 SECCIÓN: ASIGNACIÓN DE SUCURSALES Y PERSONAL */}
+
       <div className="bg-white border border-slate-200/60 rounded-xl p-6 space-y-4 shadow-sm">
         <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider border-b border-slate-100 pb-3">
           Asignación de Operación y Personal
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          
-          {/* Sucursal Vendedor */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-bold uppercase text-slate-500 tracking-wide">Sucursal Vendedor *</label>
               {onAgregarSucursal && (
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={onAgregarSucursal}
                   className="text-[10px] text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded transition"
                 >
@@ -177,8 +198,8 @@ export default function Documentacion({
                 </button>
               )}
             </div>
-            <select 
-              value={safeData.sucursalVendedorId || ''} 
+            <select
+              value={safeData.sucursalVendedorId || ''}
               onChange={(e) => handleInputChange('sucursalVendedorId', e.target.value)}
               className={inputStyle}
               required
@@ -192,13 +213,12 @@ export default function Documentacion({
             </select>
           </div>
 
-          {/* Sucursal Inspección */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-bold uppercase text-slate-500 tracking-wide">Sucursal Inspección *</label>
               {onAgregarSucursal && (
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={onAgregarSucursal}
                   className="text-[10px] text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded transition"
                 >
@@ -206,8 +226,8 @@ export default function Documentacion({
                 </button>
               )}
             </div>
-            <select 
-              value={safeData.sucursalInspeccionId || ''} 
+            <select
+              value={safeData.sucursalInspeccionId || ''}
               onChange={(e) => handleInputChange('sucursalInspeccionId', e.target.value)}
               className={inputStyle}
               required
@@ -221,13 +241,12 @@ export default function Documentacion({
             </select>
           </div>
 
-          {/* Vendedor / Asesor */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-bold uppercase text-slate-500 tracking-wide">Vendedor / Asesor *</label>
               {onAgregarVendedor && (
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={onAgregarVendedor}
                   className="text-[10px] text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded transition"
                 >
@@ -235,8 +254,8 @@ export default function Documentacion({
                 </button>
               )}
             </div>
-            <select 
-              value={safeData.vendedorId || ''} 
+            <select
+              value={safeData.vendedorId || ''}
               onChange={(e) => handleInputChange('vendedorId', e.target.value)}
               className={inputStyle}
               required
@@ -249,11 +268,10 @@ export default function Documentacion({
               ))}
             </select>
           </div>
-
         </div>
       </div>
 
-      {/* 🚗 SECCIÓN 1: IDENTIFICACIÓN DEL VEHÍCULO */}
+
       <div className="bg-white border border-slate-200/60 rounded-xl p-6 space-y-4 shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider">
@@ -263,14 +281,14 @@ export default function Documentacion({
             Clase: {tipoVehiculo}
           </span>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Placa *</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder={placeholders.placa}
-              value={safeData.placa || ''} 
+              value={safeData.placa || ''}
               onChange={(e) => handleInputChange('placa', e.target.value.toUpperCase())}
               className={`${inputStyle} font-mono font-bold tracking-wider uppercase`}
               required
@@ -279,10 +297,10 @@ export default function Documentacion({
 
           <div>
             <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Marca *</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder={placeholders.marca}
-              value={safeData.marca || ''} 
+              value={safeData.marca || ''}
               onChange={(e) => handleInputChange('marca', e.target.value)}
               className={inputStyle}
               required
@@ -291,10 +309,10 @@ export default function Documentacion({
 
           <div>
             <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Línea *</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder={placeholders.linea}
-              value={safeData.linea || ''} 
+              value={safeData.linea || ''}
               onChange={(e) => handleInputChange('linea', e.target.value)}
               className={inputStyle}
               required
@@ -303,10 +321,10 @@ export default function Documentacion({
 
           <div>
             <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Color *</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder={placeholders.color}
-              value={safeData.color || ''} 
+              value={safeData.color || ''}
               onChange={(e) => handleInputChange('color', e.target.value)}
               className={inputStyle}
               required
@@ -317,10 +335,10 @@ export default function Documentacion({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Modelo (Año) *</label>
-            <input 
-              type="number" 
+            <input
+              type="number"
               placeholder={placeholders.modelo}
-              value={safeData.modelo || ''} 
+              value={safeData.modelo || ''}
               onChange={(e) => handleInputChange('modelo', e.target.value)}
               className={`${inputStyle} font-mono font-bold`}
               required
@@ -329,10 +347,10 @@ export default function Documentacion({
 
           <div>
             <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Número de Motor *</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="Registro motor..."
-              value={safeData.numMotor || ''} 
+              value={safeData.numMotor || ''}
               onChange={(e) => handleInputChange('numMotor', e.target.value.toUpperCase())}
               className={`${inputStyle} font-mono tracking-wide uppercase`}
               required
@@ -341,10 +359,10 @@ export default function Documentacion({
 
           <div>
             <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Número de Chasis *</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="Registro chasis..."
-              value={safeData.numChasis || ''} 
+              value={safeData.numChasis || ''}
               onChange={(e) => handleInputChange('numChasis', e.target.value.toUpperCase())}
               className={`${inputStyle} font-mono tracking-wide uppercase`}
               required
@@ -352,10 +370,9 @@ export default function Documentacion({
           </div>
         </div>
 
-        {/* CAMPO DE SINIESTROS */}
         <div>
           <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Historial de Siniestros / Antecedentes</label>
-          <textarea 
+          <textarea
             rows="2"
             placeholder={placeholders.siniestros}
             value={safeData.siniestros || ''}
@@ -363,127 +380,103 @@ export default function Documentacion({
             className={inputStyle}
           />
         </div>
-
-        {tipoVehiculo === 'pesado' && (
-          <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
-            <p className="text-xs font-bold text-amber-800 uppercase">⚠️ Requisitos Especiales para Vehículo Pesado</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[10px] font-bold uppercase text-amber-900 mb-1">N° de Tarjeta de Operación</label>
-                <input type="text" value={safeData.tarjetaOperacion || ''} onChange={(e) => handleInputChange('tarjetaOperacion', e.target.value)} placeholder="Número..." className={inputStyle} />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold uppercase text-amber-900 mb-1">Configuración de Ejes</label>
-                <input type="text" value={safeData.configuracionEjes || ''} onChange={(e) => handleInputChange('configuracionEjes', e.target.value)} placeholder="Ej: 2 Ejes" className={inputStyle} />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {tipoVehiculo === 'moto' && (
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-            <p className="text-xs font-bold text-blue-800 uppercase">🏍️ Protocolo de Motocicleta Activo</p>
-            <p className="text-[11px] text-slate-600 mt-1">Recuerde verificar la originalidad de la cuna de dirección y marcación de chasis/motor sin regrabados.</p>
-          </div>
-        )}
       </div>
 
-     {/* 📄 SECCIÓN 2: DOCUMENTOS LEGALES Y CLIENTE */}
+      {/* 📄 SECCIÓN 2: DOCUMENTOS LEGALES Y CLIENTE */}
       <div className="bg-white border border-slate-200/60 rounded-xl p-6 space-y-4 shadow-sm">
         <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider border-b border-slate-100 pb-3">
           Verificación de Documentación Legal y Propietario
         </h3>
 
-        {/* DATOS DEL CLIENTE / PROPIETARIO */}
         <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl space-y-3">
           <h4 className="text-[11px] font-bold uppercase text-slate-600 tracking-wider">Información del Propietario / Cliente</h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Nombre Completo *</label>
-              <input 
-                type="text" 
-                placeholder="Nombre del cliente..." 
-                value={safeData.clienteNombre || ''} 
-                onChange={(e) => handleInputChange('clienteNombre', e.target.value)} 
-                className={inputStyle} 
+              <input
+                type="text"
+                placeholder="Nombre del cliente..."
+                value={safeData.clienteNombre || ''}
+                onChange={(e) => handleInputChange('clienteNombre', e.target.value)}
+                className={inputStyle}
               />
             </div>
             <div>
               <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Documento de Identidad *</label>
-              <input 
-                type="text" 
-                placeholder="Cédula o NIT..." 
-                value={safeData.clienteDocumento || ''} 
-                onChange={(e) => handleInputChange('clienteDocumento', e.target.value)} 
-                className={`${inputStyle} font-mono`} 
+              <input
+                type="text"
+                placeholder="Cédula o NIT..."
+                value={safeData.clienteDocumento || ''}
+                onChange={(e) => handleInputChange('clienteDocumento', e.target.value)}
+                className={`${inputStyle} font-mono`}
               />
             </div>
             <div>
               <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Teléfono / Contacto</label>
-              <input 
-                type="text" 
-                placeholder="Teléfono..." 
-                value={safeData.clienteTelefono || ''} 
-                onChange={(e) => handleInputChange('clienteTelefono', e.target.value)} 
-                className={`${inputStyle} font-mono`} 
+              <input
+                type="text"
+                placeholder="Teléfono..."
+                value={safeData.clienteTelefono || ''}
+                onChange={(e) => handleInputChange('clienteTelefono', e.target.value)}
+                className={`${inputStyle} font-mono`}
               />
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-          
+
           {/* SOAT */}
           <div className="p-4 bg-white border border-slate-200 rounded-xl flex flex-col justify-between shadow-sm space-y-4">
             <div className="space-y-3">
               <div className="flex items-center justify-between pb-1">
                 <span className="text-xs font-bold text-slate-700">¿SOAT Vigente?</span>
-                <input 
-                  type="checkbox" 
-                  checked={!!safeData.soatAlDia} 
-                  onChange={(e) => handleInputChange('soatAlDia', e.target.checked)} 
-                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer border-slate-300" 
+                <input
+                  type="checkbox"
+                  checked={!!safeData.soatAlDia}
+                  onChange={(e) => handleInputChange('soatAlDia', e.target.checked)}
+                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer border-slate-300"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1.5 tracking-wide">Fecha de Vencimiento SOAT</label>
-                <input 
-                  type="date" 
-                  value={safeData.venceSoat || ''} 
-                  onChange={(e) => handleInputChange('venceSoat', e.target.value)} 
-                  className={`${inputStyle} font-mono font-bold text-slate-600`} 
+                <input
+                  type="date"
+                  value={safeData.venceSoat || ''}
+                  onChange={(e) => handleInputChange('venceSoat', e.target.value)}
+                  className={`${inputStyle} font-mono font-bold text-slate-600`}
                 />
               </div>
             </div>
-            
+
             <FileUploader field="archivoSoat" acceptedFile={safeData.archivoSoat} onFileChange={handleInputChange} />
           </div>
 
-          {/* Técnico Mecánica */}
+          {/* Técnico Mecánica (RTM) */}
           <div className="p-4 bg-white border border-slate-200 rounded-xl flex flex-col justify-between shadow-sm space-y-4">
             <div className="space-y-3">
               <div className="flex items-center justify-between pb-1">
                 <span className="text-xs font-bold text-slate-700">¿Técnico Mecánica Vigente?</span>
-                <input 
-                  type="checkbox" 
-                  checked={!!safeData.tecnicoMecanicaAlDia} 
-                  onChange={(e) => handleInputChange('tecnicoMecanicaAlDia', e.target.checked)} 
-                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer border-slate-300" 
+                <input
+                  type="checkbox"
+                  checked={!!safeData.tecnicoMecanicaAlDia}
+                  onChange={(e) => handleInputChange('tecnicoMecanicaAlDia', e.target.checked)}
+                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer border-slate-300"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1.5 tracking-wide">Fecha de Vencimiento RTM</label>
-                <input 
-                  type="date" 
-                  value={safeData.venceTecnicoMecanica || ''} 
-                  onChange={(e) => handleInputChange('venceTecnicoMecanica', e.target.value)} 
-                  className={`${inputStyle} font-mono font-bold text-slate-600`} 
+                <input
+                  type="date"
+                  value={safeData.venceTecnicoMecanica || ''}
+                  onChange={(e) => handleInputChange('venceTecnicoMecanica', e.target.value)}
+                  className={`${inputStyle} font-mono font-bold text-slate-600`}
                 />
               </div>
             </div>
-            
+
             <FileUploader field="archivoTecnicoMecanica" acceptedFile={safeData.archivoTecnicoMecanica} onFileChange={handleInputChange} />
           </div>
 
@@ -493,4 +486,4 @@ export default function Documentacion({
 
     </div>
   );
-} 
+}

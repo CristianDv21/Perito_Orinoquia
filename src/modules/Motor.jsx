@@ -15,7 +15,7 @@ export default function Motor({ peritajeData: data, onChange }) {
     const updatedItems = {
       ...currentItems,
       [itemKey]: {
-        ...(currentItems[itemKey] || { estado: 'BUENO', observaciones: '' }),
+        ...(currentItems[itemKey] || { estado: '', observaciones: '' }),
         [field]: value
       }
     };
@@ -92,7 +92,8 @@ export default function Motor({ peritajeData: data, onChange }) {
 
         <div className="divide-y divide-slate-100">
           {itemsMecanicos.map((item) => {
-            const itemState = safeData.sistemasMecanicos?.[item.key] || { estado: 'BUENO', observaciones: '' };
+            // Se inicializa en '' para que ningún botón esté seleccionado por defecto
+            const itemState = safeData.sistemasMecanicos?.[item.key] || { estado: '', observaciones: '' };
             
             return (
               <div key={item.key} className="py-4 first:pt-0 last:pb-0 flex flex-col lg:flex-row lg:items-center justify-between gap-4 animate-fadeIn">
@@ -264,6 +265,7 @@ export default function Motor({ peritajeData: data, onChange }) {
           <span className="text-[10px] text-slate-400 mt-1.5 block font-medium">
             * Ingrese los valores obtenidos con el manómetro/compresómetro para el motor de {cilindrosActivos.length} cilindro(s).
           </span>
+
         </div>
       </div>
 

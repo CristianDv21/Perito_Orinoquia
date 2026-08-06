@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import Documentacion from '../modules/Documentacion';
 import Accesorios from '../modules/Accesorios';
-import Motor from '../modules/Motor'; 
-import VistaExterna from '../modules/VistaExterna'; 
+import Motor from '../modules/Motor';
+import VistaExterna from '../modules/VistaExterna';
 import VistaInterna from '../modules/VistaInterna';
 import Firma from '../modules/Firmas';
 import InformePdf from '../modules/informePdf';
@@ -16,15 +16,14 @@ import {
   LayoutDashboard,
   BarChart3,
   Settings,
+  Users,
 } from "lucide-react";
 
-
 export default function Dashboard({ onLogout }) {
-
   const { user } = useAuth();
 
-const [modalActivo, setModalActivo] = useState(null); // 'sucursal' o 'vendedor'
-const [nombreInput, setNombreInput] = useState('');
+  const [modalActivo, setModalActivo] = useState(null);
+  const [nombreInput, setNombreInput] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('Bandeja');
   const [isInspecting, setIsInspecting] = useState(false);
@@ -32,6 +31,28 @@ const [nombreInput, setNombreInput] = useState('');
   const [showVehicleSelector, setShowVehicleSelector] = useState(false);
   const [inspecciones, setInspecciones] = useState([]);
   const [loadingInspecciones, setLoadingInspecciones] = useState(false);
+
+  // Estado para controlar el modal de peritajes realizados del perfil
+  const [showMisPeritajesModal, setShowMisPeritajesModal] = useState(false);
+
+  // Estados para la gestión de usuarios (Admin)
+  const [usuariosList, setUsuariosList] = useState([]);
+  const [loadingUsuarios, setLoadingUsuarios] = useState(false);
+  const [showCrearUsuarioModal, setShowCrearUsuarioModal] = useState(false);
+  const [nuevoUsuarioData, setNuevoUsuarioData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    rol: 'tecnico',
+    sucursal_id: '',
+    activo: true
+  });
+
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
 
   const [peritajeData, setPeritajeData] = useState({
     tipoVehiculo: '',
@@ -47,12 +68,12 @@ const [nombreInput, setNombreInput] = useState('');
     entityEmisoraSoat: '',
     venceSoat: '',
     soatAlDia: true,
-    fotoSoat: null, 
+    fotoSoat: null,
     numeroControlRtm: '',
     cdaEmisor: '',
     venceTecnicoMecanica: '',
     tecnicoMecanicaAlDia: true,
-    fotoRtm: null, 
+    fotoRtm: null,
     coincidePropietarioRunt: true,
     tieneEmbargosOAlertas: false,
     restriccionBlindaje: 'sin_blindaje',
@@ -74,6 +95,16 @@ const [nombreInput, setNombreInput] = useState('');
     scoreLegal: 100
   });
 
+  const [profileData, setProfileData] = useState({
+    name: user?.name || user?.nombre || '',
+    email: user?.email || '',
+    rol: user?.rol || user?.cargo || '',
+    ubicacion: user?.ubicacion || ''
+  });
+
+  // Validar si el usuario actual es Administrador
+  const esAdmin = (profileData.rol || '').toLowerCase().includes('admin');
+
   const usuario = JSON.parse(localStorage.getItem("peritaje_user"));
 
   const fetchInspecciones = async () => {
@@ -93,23 +124,49 @@ const [nombreInput, setNombreInput] = useState('');
       setLoadingInspecciones(false);
     }
   };
-  // 2. Usar el useEffect DESPUÉS
+
+  const fetchUsuarios = async () => {
+    try {
+      setLoadingUsuarios(true);
+      const token = localStorage.getItem('auth_token');
+      const response = await api.get('users', {
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+      });
+      setUsuariosList(response.data.data || response.data || []);
+    } catch (error) {
+      console.error('Error al cargar usuarios:', error);
+    } finally {
+      setLoadingUsuarios(false);
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const obtenerUsuarios = async () => {
+      if (activeTab === 'Usuarios' && esAdmin) {
+        await fetchUsuarios(isMounted);
+      }
+    };
+
+    obtenerUsuarios();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeTab, esAdmin]);
+
   useEffect(() => {
     let isMounted = true;
 
     const cargarDatos = async () => {
-      if (activeTab === 'Bandeja') {
+      if (activeTab === 'Bandeja' || activeTab === 'Perfil') {
         try {
           if (isMounted) setLoadingInspecciones(true);
-          
-          // Verificamos que el token exista antes de hacer la petición
-          const token = localStorage.getItem('auth_token');
-          if (!token) {
-            console.warn("No hay token de autenticación en el localStorage.");
-            return;
-          }
 
-          // Nota la barra '/' al inicio para asegurar que tome la ruta absoluta de la API
+          const token = localStorage.getItem('auth_token');
+          if (!token) return;
+
           const response = await api.get('/peritajes', {
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -123,43 +180,56 @@ const [nombreInput, setNombreInput] = useState('');
         } catch (error) {
           console.error('Error al cargar las inspecciones:', error);
         } finally {
-          if (isMounted) {
-            setLoadingInspecciones(false);
-          }
+          if (isMounted) setLoadingInspecciones(false);
         }
       }
     };
 
     cargarDatos();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [activeTab]);
 
+  const handleUpdateProfile = async () => {
+    try {
+      await api.put('user/profile', profileData);
+      alert("Perfil actualizado correctamente");
+    } catch (error) {
+      console.error("Error al actualizar:", error);
+      alert(error.response?.data?.message || "Error al actualizar el perfil");
+    }
+  };
 
+  const handleCrearUsuario = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('auth_token');
+      await api.post('users', nuevoUsuarioData, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+      });
 
- const mainMenuItems = [
-    {
-      id: "Perfil",
-      label: "Perfil",
-      icon: User, // <-- Sin < />
-    },
-    {
-      id: "Bandeja",
-      label: "Bandeja de Entrada",
-      icon: LayoutDashboard, // <-- Sin < />
-    },
-    {
-      id: "Estadisticas",
-      label: "Estadísticas",
-      icon: BarChart3, // <-- Sin < />
-    },
-    {
-      id: "Configuracion",
-      label: "Configuración",
-      icon: Settings, // <-- Sin < />
-    },
+      alert('¡Usuario creado exitosamente!');
+      setShowCrearUsuarioModal(false);
+      setNuevoUsuarioData({
+        name: '',
+        email: '',
+        password: '',
+        rol: 'tecnico',
+        sucursal_id: '',
+        activo: true
+      });
+      fetchUsuarios();
+    } catch (error) {
+      console.error('Error al crear usuario:', error);
+      alert(error.response?.data?.message || 'Error al crear el usuario en el servidor.');
+    }
+  };
+
+  const mainMenuItems = [
+    { id: "Perfil", label: "Perfil", icon: User },
+    { id: "Bandeja", label: "Bandeja de Entrada", icon: LayoutDashboard },
+    { id: "Estadisticas", label: "Estadísticas", icon: BarChart3 },
+    ...(esAdmin ? [{ id: "Usuarios", label: "Gestión de Usuarios", icon: Users }] : []),
+    { id: "Configuracion", label: "Configuración", icon: Settings },
   ];
 
   const getInspectionSteps = (tipo) => {
@@ -174,7 +244,6 @@ const [nombreInput, setNombreInput] = useState('');
       steps.push({ id: 'VistaInterna', label: '4. Vista Interna', icon: '👀' });
     }
 
-    // Los detalles técnicos solo se agregan si el vehículo NO es una moto
     if (tipo !== 'moto') {
       steps.push({ id: 'Detalles Técnicos', label: '5. Detalles Técnicos', icon: '🛠️' });
     }
@@ -185,131 +254,184 @@ const [nombreInput, setNombreInput] = useState('');
     );
 
     return steps;
-
   };
 
-  const inspectionSteps = getInspectionSteps(peritajeData.tipoVehiculo);
+  const misPeritajesList = inspecciones?.filter(item => {
+    const inspectorNombre = item.inspector?.name || item.inspector || '';
+    const userName = profileData.name || user?.name || user?.nombre || '';
+    return inspectorNombre.toLowerCase().includes(userName.toLowerCase());
+  }) || [];
 
- const guardarPeritajeCompleto = async (formDataDelEstado) => {
+  const totalPeritajes = misPeritajesList.length;
+
+  const handleActualizarPassword = async () => {
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      alert("Por favor completa todos los campos de contraseña.");
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      alert("Las nuevas contraseñas no coinciden.");
+      return;
+    }
+
     try {
       const token = localStorage.getItem('auth_token');
-
-      const esEdicion = Boolean(formDataDelEstado.id);
-      const endpoint = esEdicion ? `peritajes/${formDataDelEstado.id}` : 'peritajes';
-      const metodo = esEdicion ? 'patch' : 'post';
-
-      const response = await api[metodo](endpoint, {
-        // FORZAMOS EL ESTADO A COMPLETADO AQUÍ:
-        estado: 'completado',
-
-        // Relaciones y IDs principales
-        tipo_vehiculo_id: formDataDelEstado.tipoVehiculoId || formDataDelEstado.tipoVehiculo || null,
-        sucursal_vendedor_id: (formDataDelEstado.sucursalVendedorId && !formDataDelEstado.sucursalVendedorId.includes('AQUI')) ? formDataDelEstado.sucursalVendedorId : null,
-        sucursal_inspeccion_id: (formDataDelEstado.sucursalInspeccionId && !formDataDelEstado.sucursalInspeccionId.includes('AQUI')) ? formDataDelEstado.sucursalInspeccionId : null,
-        vendedor_id: (formDataDelEstado.vendedorId && !formDataDelEstado.vendedorId.includes('AQUI')) ? formDataDelEstado.vendedorId : null,
-
-        // Información General del Vehículo
-        // Información General del Vehículo
-        placa: formDataDelEstado.placa ? String(formDataDelEstado.placa) : '',
-        marca: formDataDelEstado.marca || '',
-        linea: formDataDelEstado.linea || '',
-        modelo_anio: Number(formDataDelEstado.modeloAnio || formDataDelEstado.modelo || 2026),
-        num_motor: formDataDelEstado.numMotor || '',
-        num_chasis: formDataDelEstado.numChasis || '',
-        kilometraje: Number(formDataDelEstado.kilometraje || 0),
-        organismo_transito: formDataDelEstado.organismoTransito || '',
-
-        // Documentación y SOAT / RTM
-        numero_soat: formDataDelEstado.numeroSoat || '',
-        entidad_emisora_soat: formDataDelEstado.entityEmisoraSoat || '',
-        vence_soat: formDataDelEstado.venceSoat || null,
-        soat_al_dia: Boolean(formDataDelEstado.soatAlDia),
-        
-        numero_control_rtm: formDataDelEstado.numeroControlRtm || '',
-        cda_emisor: formDataDelEstado.cdaEmisor || '',
-        vence_tecnico_mecanica: formDataDelEstado.venceTecnicoMecanica || null,
-        tecnico_mecanica_al_dia: Boolean(formDataDelEstado.tecnicoMecanicaAlDia),
-
-        // Restricciones y Alertas Legales (RUNT)
-        coincide_propietario_runt: Boolean(formDataDelEstado.coincidePropietarioRunt),
-        tiene_embargos_o_alertas: Boolean(formDataDelEstado.tieneEmbargosOAlertas),
-        restriccion_blindaje: formDataDelEstado.restriccionBlindaje || 'sin_blindaje',
-
-        // Motor y Diagnósticos
-        compresion_motor: formDataDelEstado.compresionMotor || '',
-        fugas_aceite: Boolean(formDataDelEstado.fugasAceite),
-        estado_bateria: formDataDelEstado.estadoBateria || '',
-        ruidos_extranos: Boolean(formDataDelEstado.ruidosExtranos),
-        comentarios_motor: formDataDelEstado.motorObservaciones || '',
-
-        // Resultados y Concepto Final
-        estado_general_vehiculo: formDataDelEstado.estadoGeneralVehiculo || 'Aceptable',
-        concepto_final: formDataDelEstado.conceptoFinal || '',
-        tiempo_estimado_reparacion: formDataDelEstado.tiempoEstimadoReparacion || '',
-
-        // Scores / Puntuaciones
-        score_estructura: Number(formDataDelEstado.scoreEstructura || 100),
-        score_carroceria: Number(formDataDelEstado.scoreCarroceria || 100),
-        score_mecanica: Number(formDataDelEstado.scoreMecanica || 100),
-        score_electrico: Number(formDataDelEstado.scoreElectrico || 100),
-        score_legal: Number(formDataDelEstado.scoreLegal || 100),
-
-        // Listas y Arrays Relacionados
-        accesorios: formDataDelEstado.accesoriosList || [],
-        danos_externos: formDataDelEstado.danosExternosList || [],
-        danos_internos: formDataDelEstado.danosInternosList || [],
-        detalles_tecnicos: formDataDelEstado.detallesTecnicosList || [],
-        sistemas_mecanicos: formDataDelEstado.sistemasMecanicosList || [],
-        compresion_cilindros: formDataDelEstado.compresionCilindrosList || [],
+      await api.put('user/password', {
+        current_password: passwordData.currentPassword,
+        new_password: passwordData.newPassword,
+        new_password_confirmation: passwordData.confirmPassword
       }, {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
           'Accept': 'application/json'
         }
       });
 
-      console.log('Peritaje finalizado con éxito:', response.data);
+      alert("¡Contraseña actualizada exitosamente!");
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error) {
+      console.error("Error al actualizar la contraseña:", error);
+      alert(error.response?.data?.message || "Ocurrió un error al actualizar la contraseña.");
+    }
+  };
+
+  const [modalConfig, setModalConfig] = useState({
+    isOpen: false,
+    tipo: 'confirm',
+    titulo: '',
+    mensaje: '',
+    onConfirm: null,
+  });
+
+  const inspectionSteps = getInspectionSteps(peritajeData.tipoVehiculo);
+
+  const guardarPeritajeCompleto = async (formDataDelEstado) => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const esEdicion = Boolean(formDataDelEstado.id);
+      const endpoint = esEdicion ? `peritajes/${formDataDelEstado.id}` : 'peritajes';
+      const dataToSend = new FormData();
+
+      if (esEdicion) dataToSend.append('_method', 'PATCH');
+
+      dataToSend.append('estado', 'completado');
+      dataToSend.append('tipo_vehiculo_id', formDataDelEstado.tipoVehiculoId || formDataDelEstado.tipoVehiculo || '');
+
+      if (formDataDelEstado.sucursalVendedorId && !formDataDelEstado.sucursalVendedorId.includes('AQUI')) {
+        dataToSend.append('sucursal_vendedor_id', formDataDelEstado.sucursalVendedorId);
+      }
+      if (formDataDelEstado.sucursalInspeccionId && !formDataDelEstado.sucursalInspeccionId.includes('AQUI')) {
+        dataToSend.append('sucursal_inspeccion_id', formDataDelEstado.sucursalInspeccionId);
+      }
+      if (formDataDelEstado.vendedorId && !formDataDelEstado.vendedorId.includes('AQUI')) {
+        dataToSend.append('vendedor_id', formDataDelEstado.vendedorId);
+      }
+
+      dataToSend.append('placa', formDataDelEstado.placa ? String(formDataDelEstado.placa).trim() : '');
+      dataToSend.append('marca', formDataDelEstado.marca || '');
+      dataToSend.append('linea', formDataDelEstado.linea || '');
+      dataToSend.append('color', formDataDelEstado.color || '');
+
+      let anioModelo = Number(formDataDelEstado.modeloAnio || formDataDelEstado.modelo);
+      if (!anioModelo || isNaN(anioModelo) || anioModelo > 2050 || anioModelo < 1900) {
+        anioModelo = 2026;
+      }
+      dataToSend.append('modelo_anio', anioModelo);
+
+      dataToSend.append('num_motor', formDataDelEstado.numMotor || '');
+      dataToSend.append('num_chasis', formDataDelEstado.numChasis || '');
+      dataToSend.append('kilometraje', Number(formDataDelEstado.kilometraje || 0));
+      dataToSend.append('organismo_transito', formDataDelEstado.organismoTransito || '');
+      dataToSend.append('siniestros', formDataDelEstado.siniestros || formDataDelEstado.comentariosSiniestros || '');
+      dataToSend.append('numero_soat', formDataDelEstado.numeroSoat || '');
+      dataToSend.append('entidad_emisora_soat', formDataDelEstado.entityEmisoraSoat || '');
+      if (formDataDelEstado.venceSoat) dataToSend.append('vence_soat', formDataDelEstado.venceSoat);
+      dataToSend.append('soat_al_dia', formDataDelEstado.soatAlDia ? '1' : '0');
+
+      if (formDataDelEstado.fotoSoat instanceof File) dataToSend.append('foto_soat', formDataDelEstado.fotoSoat);
+      if (formDataDelEstado.fotoRtm instanceof File) dataToSend.append('foto_rtm', formDataDelEstado.fotoRtm);
+
+      dataToSend.append('numero_control_rtm', formDataDelEstado.numeroControlRtm || '');
+      dataToSend.append('cda_emisor', formDataDelEstado.cdaEmisor || '');
+      if (formDataDelEstado.venceTecnicoMecanica) dataToSend.append('vence_tecnico_mecanica', formDataDelEstado.venceTecnicoMecanica);
+      dataToSend.append('tecnico_mecanica_al_dia', formDataDelEstado.tecnicoMecanicaAlDia ? '1' : '0');
+      dataToSend.append('coincide_propietario_runt', formDataDelEstado.coincidePropietarioRunt ? '1' : '0');
+      dataToSend.append('tiene_embargos_o_alertas', formDataDelEstado.tieneEmbargosOAlertas ? '1' : '0');
+      dataToSend.append('restriccion_blindaje', formDataDelEstado.restriccionBlindaje || 'sin_blindaje');
+      dataToSend.append('compresion_motor', formDataDelEstado.compresionMotor || '');
+      dataToSend.append('fugas_aceite', formDataDelEstado.fugasAceite ? '1' : '0');
+      dataToSend.append('estado_bateria', formDataDelEstado.estadoBateria || 'Bueno');
+      dataToSend.append('ruidos_extranos', formDataDelEstado.ruidosExtranos ? '1' : '0');
+      dataToSend.append('comentarios_motor', formDataDelEstado.motorObservaciones || '');
+      dataToSend.append('estado_general_vehiculo', formDataDelEstado.estadoGeneralVehiculo || 'Aceptable');
+      dataToSend.append('concepto_final', formDataDelEstado.conceptoFinal || '');
+      dataToSend.append('tiempo_estimado_reparacion', formDataDelEstado.tiempoEstimadoReparacion || '');
+      dataToSend.append('score_estructura', Number(formDataDelEstado.scoreEstructura ?? 100));
+      dataToSend.append('score_carroceria', Number(formDataDelEstado.scoreCarroceria ?? 100));
+      dataToSend.append('score_mecanica', Number(formDataDelEstado.scoreMecanica ?? 100));
+      dataToSend.append('score_electrico', Number(formDataDelEstado.scoreElectrico ?? 100));
+      dataToSend.append('score_legal', Number(formDataDelEstado.scoreLegal ?? 100));
+
+      const normalizarLista = (lista) => {
+        if (!lista) return [];
+        if (Array.isArray(lista)) return lista;
+        if (typeof lista === 'object') return Object.values(lista);
+        return [];
+      };
+
+      dataToSend.append('accesorios', JSON.stringify(normalizarLista(formDataDelEstado.accesoriosList)));
+      dataToSend.append('danos_externos', JSON.stringify(normalizarLista(formDataDelEstado.danosExternosList || formDataDelEstado.danosExternos)));
+      dataToSend.append('danos_internos', JSON.stringify(normalizarLista(formDataDelEstado.danosInternosList)));
+      dataToSend.append('detalles_tecnicos', JSON.stringify(normalizarLista(formDataDelEstado.detallesTecnicosList)));
+      dataToSend.append('sistemas_mecanicos', JSON.stringify(normalizarLista(formDataDelEstado.sistemasMecanicosList)));
+      dataToSend.append('compresion_cilindros', JSON.stringify(normalizarLista(formDataDelEstado.compresionCilindrosList)));
+
+      await api.post(endpoint, dataToSend, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+          'Accept': 'application/json'
+        }
+      });
+
       alert('¡Peritaje finalizado correctamente!');
       setIsInspecting(false);
-      fetchInspecciones(); 
+      fetchInspecciones();
     } catch (error) {
       console.error('Error al guardar el peritaje:', error);
       alert(error.response?.data?.message || 'Hubo un error al guardar el peritaje en el servidor.');
     }
   };
 
-
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   const handleDataChange = (updatedFields) => {
-    setPeritajeData((prev) => ({
-      ...prev,
-      ...updatedFields
-    }));
+    if (updatedFields.modelo && typeof updatedFields.modelo === 'string' && isNaN(updatedFields.modelo)) {
+      delete updatedFields.modelo;
+    }
+    setPeritajeData((prev) => ({ ...prev, ...updatedFields }));
   };
 
-  
-
-const construirDatosParaPdf = (datos) => {
-  const buscarSucursal = (id) => sucursales.find((s) => s.id === id)?.nombre || null;
-  const buscarVendedor = (id) => {
-    const v = vendedores.find((v) => v.id === id);
-    return v ? [v.nombre, v.apellido].filter(Boolean).join(' ') : null;
+  const construirDatosParaPdf = (datos) => {
+    const buscarSucursal = (id) => sucursales.find((s) => s.id === id)?.nombre || null;
+    const buscarVendedor = (id) => {
+      const v = vendedores.find((v) => v.id === id);
+      return v ? [v.nombre, v.apellido].filter(Boolean).join(' ') : null;
+    };
+    return {
+      ...datos,
+      sucursalVendedorNombre: buscarSucursal(datos.sucursalVendedorId),
+      sucursalInspeccionNombre: buscarSucursal(datos.sucursalInspeccionId),
+      vendedorNombre: buscarVendedor(datos.vendedorId),
+      inspectorNombre: profileData.name || user?.name || user?.nombre || null,
+    };
   };
-  return {
-    ...datos,
-    sucursalVendedorNombre: buscarSucursal(datos.sucursalVendedorId),
-    sucursalInspeccionNombre: buscarSucursal(datos.sucursalInspeccionId),
-    vendedorNombre: buscarVendedor(datos.vendedorId),
-    inspectorNombre: user?.name || user?.nombre || null,
-  };
-};
 
-const [sucursales, setSucursales] = useState([]);
-const [vendedores, setVendedores] = useState([]);
+  const [sucursales, setSucursales] = useState([]);
+  const [vendedores, setVendedores] = useState([]);
 
-useEffect(() => {
+  useEffect(() => {
     let isMounted = true;
 
     const cargarDatosYCatalogos = async () => {
@@ -317,12 +439,8 @@ useEffect(() => {
         try {
           if (isMounted) setLoadingInspecciones(true);
           const token = localStorage.getItem('auth_token');
-          const headers = {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          };
+          const headers = { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' };
 
-          // Hacemos todas las peticiones en paralelo de forma limpia
           const [resPeritajes, resSucursales, resVendedores] = await Promise.all([
             api.get('peritajes', { headers }),
             api.get('sucursales', { headers }).catch(() => ({ data: [] })),
@@ -330,25 +448,33 @@ useEffect(() => {
           ]);
 
           if (isMounted) {
-            setInspecciones(resPeritajes.data.data || resPeritajes.data || []);
+            const peritajesMapeados = (resPeritajes.data.data || resPeritajes.data || []).map(p => ({
+              ...p,
+              modelo: p.modelo !== undefined && p.modelo !== null && p.modelo !== "" ? p.modelo : p.modelo_anio,
+              siniestros: p.siniestros || p.comentarios_siniestros || '',
+              comentarios_siniestros: p.comentarios_siniestros || p.siniestros || '',
+              archivoSoat: p.archivoSoat || p.archivo_soat || p.foto_soat || null,
+              archivoRtm: p.archivoRtm || p.archivo_rtm || p.foto_rtm || null,
+              soatAlDia: p.soatAlDia !== undefined ? p.soatAlDia : p.soat_al_dia,
+              tecnicoMecanicaAlDia: p.tecnicoMecanicaAlDia !== undefined ? p.tecnicoMecanicaAlDia : p.tecnico_mecanica_al_dia,
+              venceSoat: p.venceSoat || p.vence_soat || '',
+              venceTecnicoMecanica: p.venceTecnicoMecanica || p.vence_tecnico_mecanica || '',
+            }));
+
+            setInspecciones(peritajesMapeados);
             setSucursales(resSucursales.data.data || resSucursales.data || []);
             setVendedores(resVendedores.data.data || resVendedores.data || []);
           }
         } catch (error) {
           console.error('Error al cargar los datos:', error);
         } finally {
-          if (isMounted) {
-            setLoadingInspecciones(false);
-          }
+          if (isMounted) setLoadingInspecciones(false);
         }
       }
     };
 
     cargarDatosYCatalogos();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [activeTab]);
 
   const resolverTipoVehiculo = (item) => {
@@ -357,7 +483,6 @@ useEffect(() => {
     if (tipoIdBD === 'd5017832-04ac-4ead-8f57-efbe8af78860') return 'pesado';
     if (tipoIdBD === 'e8ca5ff6-fe17-4916-b949-c13cac3a706e') return 'motocarro';
     if (tipoIdBD === '1c9740ed-b045-4643-9fe6-cfb2c412854f') return 'carro';
-    // Si no reconocemos el ID, intentamos con el texto que venga del backend antes de asumir 'carro'
     const tipoTexto = (item.tipoVehiculo || item.tipo_vehiculo?.nombre || item.tipo_vehiculo || '').toString().toLowerCase();
     if (['carro', 'moto', 'pesado', 'motocarro'].includes(tipoTexto)) return tipoTexto;
     return 'carro';
@@ -374,7 +499,7 @@ useEffect(() => {
       ...item,
       tipoVehiculo: resolverTipoVehiculo(item),
       tipoVehiculoId: item.tipo_vehiculo_id || item.tipoVehiculoId || '',
-      modelo: item.modelo || item.linea || '',
+      modelo: item.modelo_anio || item.modelo || '',
       version: item.version || '',
       cilindrada: item.cilindrada || '',
       tipoTransmision: item.tipo_transmision || item.tipoTransmision || '',
@@ -384,38 +509,26 @@ useEffect(() => {
       numChasis: item.num_chasis || item.numChasis || '',
       kilometraje: item.kilometraje || item.km || 0,
       ...compresionCilFields,
-
-      // Documentación SOAT / RTM
       venceSoat: item.vence_soat || item.venceSoat || '',
       soatAlDia: item.soat_al_dia ?? item.soatAlDia ?? true,
-      archivoSoat: item.archivo_soat || item.archivoSoat || null,
+      archivoSoat: item.archivo_soat || item.archivoSoat || item.foto_soat || null,
       venceTecnicoMecanica: item.vence_tecnico_mecanica || item.venceTecnicoMecanica || '',
       tecnicoMecanicaAlDia: item.tecnico_mecanica_al_dia ?? item.tecnicoMecanicaAlDia ?? true,
-      archivoTecnicoMecanica: item.archivo_tecnico_mecanica || item.archivoTecnicoMecanica || null,
-      siniestros: item.siniestros || '',
+      archivoTecnicoMecanica: item.archivo_tecnico_mecanica || item.archivoTecnicoMecanica || item.archivoRtm || item.foto_rtm || null,
+      siniestros: item.siniestros || item.comentarios_siniestros || '',
       tarjetaOperacion: item.tarjeta_operacion || item.tarjetaOperacion || '',
       configuracionEjes: item.configuracion_ejes || item.configuracionEjes || '',
-
-      // Cliente
       clienteNombre: item.cliente_nombre || item.cliente?.nombre || item.clienteNombre || '',
       clienteDocumento: item.cliente_documento || item.cliente?.documento || item.clienteDocumento || '',
       clienteTelefono: item.cliente_telefono || item.cliente?.telefono || item.clienteTelefono || '',
-
-      // Motor / mecánica
       sistemasMecanicos: item.sistemas_mecanicos || item.sistemasMecanicos || {},
       comentariosMotor: item.comentarios_motor || item.comentariosMotor || '',
-
-      // Daños y detalles técnicos (nombres SIN sufijo "List", así los busca Pdf.jsx)
       danosExternos: item.danos_externos || item.danosExternos || {},
       danosInternos: item.danos_internos || item.danosInternos || {},
       detallesTecnicos: item.detalles_tecnicos || item.detallesTecnicos || {},
       accesoriosList: item.accesorios || item.accesoriosList || [],
-
-      // Firma / metadatos finales
       firmaInspector: item.firma_inspector || item.firmaInspector || null,
       tiempoCompletitud: item.tiempo_completitud || item.tiempoCompletitud || '',
-
-      // Relaciones / nombres para mostrar
       sucursalVendedorNombre: item.sucursal_vendedor?.nombre || item.sucursalVendedor?.nombre || null,
       sucursalInspeccionNombre: item.sucursal_inspeccion?.nombre || item.sucursalInspeccion?.nombre || null,
       vendedorNombre: item.vendedor?.nombre || (typeof item.vendedor === 'string' ? item.vendedor : null),
@@ -428,58 +541,86 @@ useEffect(() => {
     generarPdfEstiloCliente(mapearPeritajeDeBackend(item));
   };
 
-const handleEditarPeritaje = (item) => {
-  // 1. Mapeamos los datos del backend
-  const itemMapeado = mapearPeritajeDeBackend(item);
-  const tipoTexto = resolverTipoVehiculo(item);
-  const tipoIdBD = item.tipo_vehiculo_id || item.tipoVehiculoId;
+  const handleEliminarPeritaje = (idPeritaje) => {
+    if (!idPeritaje) return;
 
-  // 2. Seteamos el estado del peritaje con la información existente
-  setPeritajeData({
-    ...peritajeData,
-    id: itemMapeado.id,
-    tipoVehiculo: tipoTexto,
-    tipoVehiculoId: tipoIdBD || '1c9740ed-b045-4643-9fe6-cfb2c412854f',
-    placa: itemMapeado.placa || '',
-    marca: itemMapeado.marca || '',
-    linea: itemMapeado.linea || '',
-    modelo: itemMapeado.modeloAnio || itemMapeado.modelo || item.modelo_anio || '',
-    color: itemMapeado.color || '',
-    numMotor: itemMapeado.numMotor || '',
-    numChasis: itemMapeado.numChasis || '',
-    kilometraje: itemMapeado.kilometraje || 0,
-    siniestros: itemMapeado.siniestros || item.comentarios_siniestros || '',
-    sucursalVendedorId: item.sucursal_vendedor_id || item.sucursalVendedorId || '',
-    sucursalInspeccionId: item.sucursal_inspeccion_id || item.sucursalInspeccionId || '',
-    vendedorId: item.vendedor_id || item.vendedorId || '',
-    clienteNombre: itemMapeado.clienteNombre || '',
-    clienteDocumento: itemMapeado.clienteDocumento || '',
-    clienteTelefono: itemMapeado.clienteTelefono || '',
-    soatAlDia: itemMapeado.soatAlDia ?? true,
-    venceSoat: itemMapeado.venceSoat ? itemMapeado.venceSoat.split('T')[0] : '',
-    tecnicoMecanicaAlDia: itemMapeado.tecnicoMecanicaAlDia ?? true,
-    venceTecnicoMecanica: itemMapeado.venceTecnicoMecanica ? itemMapeado.venceTecnicoMecanica.split('T')[0] : '',
-    accesoriosList: itemMapeado.accesoriosList || item.accesorios || [],
-    danosExternosList: itemMapeado.danosExternos || item.danos_externos || {},
-    danosInternosList: itemMapeado.danosInternos || item.danos_internos || {},
-    detallesTecnicosList: itemMapeado.detallesTecnicos || item.detalles_tecnicos || {},
-    sistemasMecanicosList: itemMapeado.sistemasMecanicos || item.sistemas_mecanicos || {},
-    compresionCilindrosList: itemMapeado.compresionCilindros || item.compresion_cilindros || [],
-  });
+    setModalConfig({
+      isOpen: true,
+      mensaje: '¿Estás seguro de que deseas eliminar este peritaje?',
+      onConfirm: async () => {
+        setModalConfig({ isOpen: false, mensaje: '', onConfirm: null });
+        const token = localStorage.getItem('auth_token');
 
-  // 3. Cambiamos las vistas para abrir el formulario de inspección
-  setIsInspecting(true);
-  setInspectionStep('Documentacion');
-};
+        try {
+          const response = await fetch(`http://127.0.0.1:8000/api/peritajes/${idPeritaje}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (!response.ok) throw new Error('No se pudo eliminar el peritaje en el servidor.');
+
+          setInspecciones(prevLista => prevLista.filter(item => item.id !== idPeritaje));
+          alert('Peritaje eliminado correctamente.');
+        } catch (error) {
+          console.error("Error al eliminar:", error);
+          alert('Hubo un error al intentar eliminar el peritaje.');
+        }
+      }
+    });
+  };
+
+  const handleEditarPeritaje = (artículo) => {
+    const itemMapeado = mapearPeritajeDeBackend(artículo);
+    const tipoTexto = resolverTipoVehiculo(artículo);
+    const tipoIdBD = artículo.tipo_vehiculo_id || artículo.tipoVehiculoId;
+
+    setPeritajeData({
+      ...peritajeData,
+      id: artículo.id,
+      tipoVehiculo: tipoTexto,
+      tipoVehiculoId: tipoIdBD || '1c9740ed-b045-4643-9fe6-cfb2c412854f',
+      placa: itemMapeado.placa || '',
+      marca: itemMapeado.marca || '',
+      linea: itemMapeado.linea || '',
+      modelo: itemMapeado.modeloAnio || itemMapeado.modelo || artículo.modelo_anio || '',
+      color: itemMapeado.color || '',
+      numMotor: itemMapeado.numMotor || '',
+      numChasis: itemMapeado.numChasis || '',
+      kilometraje: itemMapeado.kilometraje || 0,
+      siniestros: itemMapeado.siniestros || artículo.comentarios_siniestros || '',
+      sucursalVendedorId: artículo.sucursal_vendedor_id || artículo.sucursalVendedorId || '',
+      sucursalInspeccionId: artículo.sucursal_inspeccion_id || artículo.sucursalInspeccionId || '',
+      vendedorId: artículo.vendedor_id || artículo.vendedorId || '',
+      clienteNombre: itemMapeado.clienteNombre || '',
+      clienteDocumento: itemMapeado.clienteDocumento || '',
+      clienteTelefono: itemMapeado.clienteTelefono || '',
+      soatAlDia: itemMapeado.soatAlDia ?? true,
+      venceSoat: itemMapeado.venceSoat ? itemMapeado.venceSoat.split('T')[0] : '',
+      tecnicoMecanicaAlDia: itemMapeado.tecnicoMecanicaAlDia ?? true,
+      venceTecnicoMecanica: itemMapeado.venceTecnicoMecanica ? itemMapeado.venceTecnicoMecanica.split('T')[0] : '',
+      accesoriosList: itemMapeado.accesoriosList || artículo.accesorios || [],
+      danosExternos: itemMapeado.danosExternos || artículo.danos_externos || {},
+      danosInternos: itemMapeado.danosInternos || artículo.danos_internos || {},
+      detallesTecnicosList: itemMapeado.detallesTecnicos || artículo.detalles_técnicos || {},
+      sistemasMecanicos: itemMapeado.sistemasMecanicos || artículo.sistemas_mecánicos || {},
+      compresionCilindrosList: itemMapeado.compresionCilindros || artículo.cilindros_de_compresión || [],
+    });
+
+    setIsInspecting(true);
+    setInspectionStep('Documentacion');
+  };
 
   const totalInspeccionesCount = inspecciones.length;
   const enProcesoCount = inspecciones.filter(i => ['en proceso', 'borrador'].includes((i.estado || '').toLowerCase())).length;
   const completadasCount = inspecciones.filter(i => (i.estado || '').toLowerCase() === 'completado').length;
-  
 
   return (
     <div className="flex min-h-screen bg-[#f4f6fa] text-slate-800 font-sans relative overflow-x-hidden">
-      
+
       {isSidebarOpen && (
         <div onClick={toggleSidebar} className="fixed inset-0 bg-black/40 z-40 lg:hidden" />
       )}
@@ -492,63 +633,57 @@ const handleEditarPeritaje = (item) => {
                 <h3 className="text-base font-bold text-slate-900">Seleccionar Tipo de Vehículo</h3>
                 <p className="text-xs text-slate-500 mt-0.5">Elige la categoría para iniciar el protocolo de peritaje</p>
               </div>
-              <button 
+              <button
                 onClick={() => setShowVehicleSelector(false)}
                 className="text-slate-400 hover:text-slate-700 text-lg font-bold p-1 rounded-lg hover:bg-slate-200/50 transition"
               >
                 ✕
               </button>
             </div>
-            
+
             <div className="p-6 grid grid-cols-2 gap-4">
               {[
-                  { id: 'carro', label: 'Carro / Automóvil', icon: '🚗', desc: 'Livianos, Sedán, SUV, Camperos', tipoId: '1c9740ed-b045-4643-9fe6-cfb2c412854f' },
-                  { id: 'moto', label: 'Moto', icon: '🏍️', desc: 'Motocicletas de cilindrada variada', tipoId: '7c68a26d-372b-42dc-be00-92c4ed2ee6ce' },
-                  { id: 'pesado', label: 'Vehículo Pesado', icon: '🚛', desc: 'Camiones, Tractocamiones, Buses', tipoId: 'd5017832-04ac-4ead-8f57-efbe8af78860' },
-                  { id: 'motocarro', label: 'Motocarro', icon: '🛺', desc: 'Tricimotos de carga o pasajeros', tipoId: 'e8ca5ff6-fe17-4916-b949-c13cac3a706e' },
-                ].map((tipo) => (
-                  <button
-                    key={tipo.id}
-                    onClick={async () => {
-                      try {
-                        // Obtenemos el token directamente aquí para asegurarnos de que no sea nulo
-                        const token = localStorage.getItem('auth_token');
+                { id: 'carro', label: 'Carro / Automóvil', icon: '🚗', desc: 'Livianos, Sedán, SUV, Camperos', tipoId: '1c9740ed-b045-4643-9fe6-cfb2c412854f' },
+                { id: 'moto', label: 'Moto', icon: '🏍️', desc: 'Motocicletas de cilindrada variada', tipoId: '7c68a26d-372b-42dc-be00-92c4ed2ee6ce' },
+                { id: 'pesado', label: 'Vehículo Pesado', icon: '🚛', desc: 'Camiones, Tractocamiones, Buses', tipoId: 'd5017832-04ac-4ead-8f57-efbe8af78860' },
+                { id: 'motocarro', label: 'Motocarro', icon: '🛺', desc: 'Tricimotos de carga o pasajeros', tipoId: 'e8ca5ff6-fe17-4916-b949-c13cac3a706e' },
+              ].map((tipo) => (
+                <button
+                  key={tipo.id}
+                  onClick={async () => {
+                    try {
+                      const token = localStorage.getItem('auth_token');
+                      const response = await api.post('/peritajes', {
+                        tipo_vehiculo_id: tipo.tipoId,
+                        placa: 'SIN-PLACA',
+                        estado: 'borrador'
+                      }, {
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                      });
 
-                        const response = await api.post('/peritajes', {
-                          tipo_vehiculo_id: tipo.tipoId, 
-                          placa: 'SIN-PLACA', 
-                          estado: 'borrador'
-                        }, {
-                          headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Accept': 'application/json'
-                          }
-                        });
-                        
-                        const peritajeCreado = response.data.data || response.data;
-                        
-                        handleDataChange({ 
-                          id: peritajeCreado.id,
-                          tipoVehiculo: tipo.id,
-                          tipoVehiculoId: tipo.tipoId,
-                          accesoriosList: []
-                        });
+                      const peritajeCreado = response.data.data || response.data;
+                      handleDataChange({
+                        id: peritajeCreado.id,
+                        tipoVehiculo: tipo.id,
+                        tipoVehiculoId: tipo.tipoId,
+                        accesoriosList: []
+                      });
 
-                        setShowVehicleSelector(false);
-                        setIsInspecting(true);
-                        setInspectionStep('Documentacion');
-                      } catch (error) {
-                        console.error('Error detallado:', error.response?.data);
-                        alert('Error del servidor: ' + (error.response?.data?.message || error.message));
-                      }
-                    }}
-                    className="flex flex-col text-left p-5 border border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 rounded-xl transition group relative shadow-sm hover:shadow"
-                  >
-                    <span className="text-3xl mb-3 group-hover:scale-110 transition transform origin-left">{tipo.icon}</span>
-                    <span className="text-sm font-bold text-slate-900 group-hover:text-blue-600">{tipo.label}</span>
-                    <span className="text-[11px] text-slate-500 mt-1 leading-relaxed">{tipo.desc}</span>
-                  </button>
-                ))}
+                      setShowVehicleSelector(false);
+                      setIsInspecting(true);
+                      setInspectionStep('Documentacion');
+                    } catch (error) {
+                      console.error('Error detallado:', error.response?.data);
+                      alert('Error del servidor: ' + (error.response?.data?.message || error.message));
+                    }
+                  }}
+                  className="flex flex-col text-left p-5 border border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 rounded-xl transition group relative shadow-sm hover:shadow"
+                >
+                  <span className="text-3xl mb-3 group-hover:scale-110 transition transform origin-left">{tipo.icon}</span>
+                  <span className="text-sm font-bold text-slate-900 group-hover:text-blue-600">{tipo.label}</span>
+                  <span className="text-[11px] text-slate-500 mt-1 leading-relaxed">{tipo.desc}</span>
+                </button>
+              ))}
             </div>
 
             <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
@@ -563,80 +698,165 @@ const handleEditarPeritaje = (item) => {
         </div>
       )}
 
+      {/* Modal para Crear Usuario */}
+      {showCrearUsuarioModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Registrar Nuevo Usuario</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Asigna credenciales y rol en el sistema</p>
+              </div>
+              <button
+                onClick={() => setShowCrearUsuarioModal(false)}
+                className="text-slate-400 hover:text-slate-700 text-lg font-bold p-1 rounded-lg hover:bg-slate-200/50 transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCrearUsuario} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Nombre Completo *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Juan Pérez"
+                  value={nuevoUsuarioData.name}
+                  onChange={(e) => setNuevoUsuarioData({ ...nuevoUsuarioData, name: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Correo Electrónico *</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="correo@servicentro.com"
+                  value={nuevoUsuarioData.email}
+                  onChange={(e) => setNuevoUsuarioData({ ...nuevoUsuarioData, email: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Contraseña *</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  value={nuevoUsuarioData.password}
+                  onChange={(e) => setNuevoUsuarioData({ ...nuevoUsuarioData, password: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Rol *</label>
+                  <select
+                    value={nuevoUsuarioData.rol}
+                    onChange={(e) => setNuevoUsuarioData({ ...nuevoUsuarioData, rol: e.target.value })}
+                    className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="tecnico">Técnico</option>
+                    <option value="admin">Administrador</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Estado</label>
+                  <select
+                    value={nuevoUsuarioData.activo ? '1' : '0'}
+                    onChange={(e) => setNuevoUsuarioData({ ...nuevoUsuarioData, activo: e.target.value === '1' })}
+                    className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="1">Activo</option>
+                    <option value="0">Inactivo</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Sucursal Asignada</label>
+                <select
+                  value={nuevoUsuarioData.sucursal_id}
+                  onChange={(e) => setNuevoUsuarioData({ ...nuevoUsuarioData, sucursal_id: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Sin sucursal fija --</option>
+                  {sucursales.map((suc) => (
+                    <option key={suc.id} value={suc.id}>{suc.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowCrearUsuarioModal(false)}
+                  className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-slate-900 bg-slate-100 rounded-xl transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow transition"
+                >
+                  Guardar Usuario
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-[#080d1a] border-r border-slate-800/50 flex flex-col justify-between shrink-0
         transition-transform duration-300 ease-in-out lg:static lg:translate-x-0
         ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
       `}>
         <div className="flex flex-col h-full">
+          <div className="relative flex items-center justify-center h-24 border-b border-slate-800/60">
+            <button
+              onClick={() => {
+                setActiveTab("Bandeja");
+                setIsInspecting(false);
+                setIsSidebarOpen(false);
+              }}
+              className="transition duration-500 hover:scale-105"
+            >
+              <img src="/Logo1.png" alt="Servi-Centro CDA" className="w-500 object-contain" draggable={false} />
+            </button>
+            <button onClick={toggleSidebar} className="absolute right-4 top-4 lg:hidden text-slate-400 hover:text-white">✕</button>
+          </div>
 
-  <div className="relative flex items-center justify-center h-24 border-b border-slate-800/60">
-
-    <button
-      onClick={() => {
-        setActiveTab("Bandeja");
-        setIsInspecting(false);
-        setIsSidebarOpen(false);
-      }}
-      className="transition duration-500 hover:scale-105"
-    >
-      <img
-        src="/Logo1.png"
-        alt="Servi-Centro CDA"
-        className="w-500 object-contain"
-        draggable={false}
-      />
-    </button>
-
-    <button
-      onClick={toggleSidebar}
-      className="absolute right-4 top-4 lg:hidden text-slate-400 hover:text-white"
-    >
-      ✕
-    </button>
-
-  </div>
-
-  <nav className="flex-1 px-3 py-4">
-
-    <div className="space-y-1">
-
-      {mainMenuItems.map((item) => {
-    const Icon = item.icon; // Asignamos la referencia a una constante con mayúscula
-
-    return (
-      <button
-        key={item.id}
-        onClick={() => {
-          setActiveTab(item.id);
-          setIsInspecting(false);
-          setIsSidebarOpen(false);
-        }}
-        className={`group relative w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
-          activeTab === item.id && !isInspecting
-            ? "bg-blue-600 text-white shadow-lg"
-            : "text-slate-400 hover:bg-slate-800 hover:text-white"
-        }`}
-      >
-        <Icon
-          size={18}
-          strokeWidth={2}
-          className={
-            activeTab === item.id && !isInspecting
-              ? "text-white"
-              : "text-slate-400 group-hover:text-white"
-          }
-        />
-        <span>{item.label}</span>
-      </button>
-    );
-  })}
-
+          <nav className="flex-1 px-3 py-4">
+            <div className="space-y-1">
+              {mainMenuItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setIsInspecting(false);
+                      setIsSidebarOpen(false);
+                    }}
+                    className={`group relative w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${activeTab === item.id && !isInspecting
+                      ? "bg-blue-600 text-white shadow-lg"
+                      : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                      }`}
+                  >
+                    <Icon size={18} strokeWidth={2} className={activeTab === item.id && !isInspecting ? "text-white" : "text-slate-400 group-hover:text-white"} />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
         </div>
-
-      </nav>
-
-    </div>
 
         <div className="p-4 border-t border-slate-800/60">
           <button onClick={onLogout} className="w-full px-4 py-2 text-xs font-bold uppercase tracking-wider text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20 rounded-lg">
@@ -646,24 +866,22 @@ const handleEditarPeritaje = (item) => {
       </aside>
 
       <main className="flex-1 flex flex-col min-w-0 w-full">
-        
         <header className="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-6 lg:px-8 shrink-0">
           <div className="flex items-center space-x-4">
             <button onClick={toggleSidebar} className="lg:hidden text-slate-600 hover:text-slate-900 text-2xl">☰</button>
-          <span className="text-xs font-semibold text-slate-400">
-            {usuario ? `${usuario.nombre} • ${usuario.rol}` : "Usuario"}
-          </span>
+            <span className="text-xs font-semibold text-slate-400">
+              {usuario ? `${usuario.nombre} • ${usuario.rol}` : "Usuario"}
+            </span>
           </div>
           <span className="text-xs font-medium text-slate-500">Yopal, Casanare</span>
         </header>
 
         <div className="p-6 lg:p-8 space-y-8 overflow-y-auto flex-1">
-          
           {isInspecting ? (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-4">
                 <div>
-                  <button 
+                  <button
                     onClick={() => setIsInspecting(false)}
                     className="text-xs font-bold text-blue-600 hover:text-blue-800 mb-1 flex items-center space-x-1"
                   >
@@ -685,11 +903,10 @@ const handleEditarPeritaje = (item) => {
                   <button
                     key={step.id}
                     onClick={() => setInspectionStep(step.id)}
-                    className={`px-4 py-2.5 text-xs font-bold rounded-lg border whitespace-nowrap transition flex items-center space-x-2 ${
-                      inspectionStep === step.id
-                        ? "bg-slate-900 text-white border-slate-950 shadow-sm"
-                        : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                    }`}
+                    className={`px-4 py-2.5 text-xs font-bold rounded-lg border whitespace-nowrap transition flex items-center space-x-2 ${inspectionStep === step.id
+                      ? "bg-slate-900 text-white border-slate-950 shadow-sm"
+                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                      }`}
                   >
                     <span>{step.icon}</span>
                     <span>{step.label}</span>
@@ -705,57 +922,30 @@ const handleEditarPeritaje = (item) => {
                       {inspectionSteps.find(s => s.id === inspectionStep)?.label}
                     </h2>
                   </div>
-                  
+
                   <div className="mt-2">
                     {inspectionStep === 'Documentacion' && (
-                      <Documentacion 
-                        peritajeData={peritajeData} 
-                        onChange={handleDataChange} 
+                      <Documentacion
+                        peritajeData={peritajeData}
+                        onChange={handleDataChange}
                         sucursales={sucursales}
                         vendedores={vendedores}
-                        onAgregarSucursal={() => {
-                        setNombreInput('');
-                        setModalActivo('sucursal'); 
-                      }}
-                      onAgregarVendedor={() => {
-                        setNombreInput('');
-                        setModalActivo('vendedor');
-                      }}
+                        onAgregarSucursal={() => { setNombreInput(''); setModalActivo('sucursal'); }}
+                        onAgregarVendedor={() => { setNombreInput(''); setModalActivo('vendedor'); }}
                       />
                     )}
-                    
-                    {inspectionStep === 'Accesorios y Equipamiento' && (
-                      <Accesorios peritajeData={peritajeData} onChange={handleDataChange} />
-                    )}
-
-                    {inspectionStep === 'Motor' && (
-                      <Motor peritajeData={peritajeData} onChange={handleDataChange} />
-                    )}
-
-                    {inspectionStep === 'Pintura' && (
-                      <VistaExterna peritajeData={peritajeData} onChange={handleDataChange} />
-                    )}
-
-                    {inspectionStep === 'VistaInterna' && (
-                      <VistaInterna peritajeData={peritajeData} onChange={handleDataChange} />
-                    )}
-
-                    {inspectionStep === 'Detalles Técnicos' && (
-                      <DetallesTecnicos peritajeData={peritajeData} onChange={handleDataChange} />
-                    )}
-
-                    {inspectionStep === 'Firma' && (
-                      <Firma peritajeData={peritajeData} onChange={handleDataChange} />
-                    )}
-                    
-                    {inspectionStep === 'PDF' && (
-                      <InformePdf peritajeData={construirDatosParaPdf(peritajeData)} onChange={handleDataChange} />
-                    )}
+                    {inspectionStep === 'Accesorios y Equipamiento' && <Accesorios peritajeData={peritajeData} onChange={handleDataChange} />}
+                    {inspectionStep === 'Motor' && <Motor peritajeData={peritajeData} onChange={handleDataChange} />}
+                    {inspectionStep === 'Pintura' && <VistaExterna peritajeData={peritajeData} onChange={handleDataChange} />}
+                    {inspectionStep === 'VistaInterna' && <VistaInterna peritajeData={peritajeData} onChange={handleDataChange} />}
+                    {inspectionStep === 'Detalles Técnicos' && <DetallesTecnicos peritajeData={peritajeData} onChange={handleDataChange} />}
+                    {inspectionStep === 'Firma' && <Firma peritajeData={peritajeData} onChange={handleDataChange} />}
+                    {inspectionStep === 'PDF' && <InformePdf peritajeData={construirDatosParaPdf(peritajeData)} onChange={handleDataChange} />}
                   </div>
                 </div>
 
                 <div className="flex justify-between items-center pt-6 mt-8 border-t border-slate-100">
-                  <button 
+                  <button
                     disabled={inspectionStep === inspectionSteps[0].id}
                     onClick={() => {
                       const idx = inspectionSteps.findIndex(s => s.id === inspectionStep);
@@ -766,216 +956,475 @@ const handleEditarPeritaje = (item) => {
                     Anterior
                   </button>
 
-                  {/* Lógica dinámica para el botón derecho */}
                   {inspectionStep !== inspectionSteps[inspectionSteps.length - 1].id ? (
-                    <button 
+                    <button
                       onClick={() => {
                         const idx = inspectionSteps.findIndex(s => s.id === inspectionStep);
-                        if (idx < inspectionSteps.length - 1) {
-                          setInspectionStep(inspectionSteps[idx + 1].id);
-                        }
+                        if (idx < inspectionSteps.length - 1) setInspectionStep(inspectionSteps[idx + 1].id);
                       }}
                       className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow"
                     >
                       Siguiente
                     </button>
                   ) : (
-                    <button 
-                      onClick={() => {
-                        // Imprimimos el JSON exacto que se va a enviar a Laravel en la consola
-                        console.log("JSON enviado al servidor:", JSON.stringify(peritajeData, null, 2));
-
-                        // Ejecutamos la función de guardado
-                        guardarPeritajeCompleto(peritajeData);
-                      }}
+                    <button
+                      onClick={() => guardarPeritajeCompleto(peritajeData)}
                       className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow"
                     >
-                    Finalizar Peritaje
-                  </button>
+                      Finalizar Peritaje
+                    </button>
                   )}
                 </div>
               </div>
             </div>
           ) : (
             <>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-slate-900">Bandeja de Entrada</h1>
-                  <p className="text-slate-500 mt-1 text-sm">Monitoreo y registro de peritajes en tiempo real.</p>
-                </div>
-                <button 
-                  onClick={() => setShowVehicleSelector(true)}
-                  className="bg-blue-600 hover:bg-blue-700 px-5 py-3 text-xs font-bold uppercase tracking-wider text-white rounded-lg shadow-md transition duration-150 self-start sm:self-auto"
-                >
-                  Nueva Inspección +
-                </button>
-              </div>
+              {activeTab === 'Bandeja' && (
+                <div className="space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                      <h1 className="text-2xl font-bold tracking-tight text-slate-900">Bandeja de Entrada</h1>
+                      <p className="text-slate-500 mt-1 text-sm">Monitoreo y registro de peritajes en tiempo real.</p>
+                    </div>
+                    <button
+                      onClick={() => setShowVehicleSelector(true)}
+                      className="bg-blue-600 hover:bg-blue-700 px-5 py-3 text-xs font-bold uppercase tracking-wider text-white rounded-lg shadow-md transition duration-150 self-start sm:self-auto"
+                    >
+                      Nueva Inspección +
+                    </button>
+                  </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm">
-                  <p className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Total Registros</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-2">{totalInspeccionesCount}</p>
-                </div>
-                <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm border-l-4 border-l-amber-500">
-                  <p className="text-[10px] font-bold uppercase text-amber-600 tracking-wider">En proceso</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-2">{enProcesoCount}</p>
-                </div>
-                <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm border-l-4 border-l-emerald-500">
-                  <p className="text-[10px] font-bold uppercase text-emerald-600 tracking-wider">Completadas</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-2">{completadasCount}</p>
-                </div>
-              </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm">
+                      <p className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Total Registros</p>
+                      <p className="text-2xl font-bold text-slate-900 mt-2">{totalInspeccionesCount}</p>
+                    </div>
+                    <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm border-l-4 border-l-amber-500">
+                      <p className="text-[10px] font-bold uppercase text-amber-600 tracking-wider">En proceso</p>
+                      <p className="text-2xl font-bold text-slate-900 mt-2">{enProcesoCount}</p>
+                    </div>
+                    <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm border-l-4 border-l-emerald-500">
+                      <p className="text-[10px] font-bold uppercase text-emerald-600 tracking-wider">Completadas</p>
+                      <p className="text-2xl font-bold text-slate-900 mt-2">{completadasCount}</p>
+                    </div>
+                  </div>
 
-              <div className="bg-white border border-slate-200/80 rounded-xl shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-                  <h2 className="text-sm font-bold text-slate-900">HISTORIAL DE INSPECCIONES</h2>
-                  {loadingInspecciones && <span className="text-xs text-blue-500 animate-pulse">Sincronizando con BD...</span>}
+                  <div className="bg-white border border-slate-200/80 rounded-xl shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                      <h2 className="text-sm font-bold text-slate-900">HISTORIAL DE INSPECCIONES</h2>
+                      {loadingInspecciones && <span className="text-xs text-blue-500 animate-pulse">Sincronizando con BD...</span>}
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs text-slate-600 min-w-[1200px]">
+                        <thead className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
+                          <tr>
+                            <th className="px-4 py-3">Fecha</th>
+                            <th className="px-4 py-3">Marca</th>
+                            <th className="px-4 py-3">Modelo</th>
+                            <th className="px-4 py-3">Año del modelo</th>
+                            <th className="px-4 py-3">Km</th>
+                            <th className="px-4 py-3">Placa</th>
+                            <th className="px-4 py-3">Sucursal Vendedor</th>
+                            <th className="px-4 py-3">Sucursal Inspección</th>
+                            <th className="px-4 py-3">Vendedor</th>
+                            <th className="px-4 py-3">Inspector</th>
+                            <th className="px-4 py-3">Costo reparación</th>
+                            <th className="px-4 py-3">Tiempo de reparación</th>
+                            <th className="px-4 py-3 text-right">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {inspecciones.length === 0 && !loadingInspecciones ? (
+                            <tr>
+                              <td colSpan="13" className="px-4 py-8 text-center text-slate-400">
+                                No hay peritajes registrados en la base de datos.
+                              </td>
+                            </tr>
+                          ) : (
+                            inspecciones.map((item) => (
+                              <tr key={item.id || item.placa} className="hover:bg-slate-50/50 transition duration-100">
+                                <td className="px-4 py-4 whitespace-nowrap text-slate-500">
+                                  {item.fechaPeritaje || item.created_at
+                                    ? new Date(item.fechaPeritaje || item.created_at).toLocaleDateString('es-CO')
+                                    : 'N/A'}
+                                </td>
+                                <td className="px-4 py-4 whitespace-nowrap font-semibold text-slate-800">{item.marca || 'N/A'}</td>
+                                <td className="px-4 py-4 whitespace-nowrap">{item.modelo || item.linea || 'N/A'}</td>
+                                <td className="px-4 py-4 whitespace-nowrap">{item.anioModelo || item.modelo_anio || 'N/A'}</td>
+                                <td className="px-4 py-4 whitespace-nowrap font-mono">{item.km || item.kilometraje || '0'}</td>
+                                <td className="px-4 py-4 whitespace-nowrap">
+                                  <span className="inline-block bg-slate-900 text-white px-2.5 py-1 rounded-md font-mono font-bold text-[11px] shadow-sm">
+                                    {item.placa || 'SIN PLACA'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.sucursal_vendedor?.nombre || item.sucursalVendedor?.nombre || 'Sin sucursal'}</td>
+                                <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.sucursal_inspeccion?.nombre || item.sucursalInspeccion?.nombre || 'Sin sucursal'}</td>
+                                <td className="px-4 py-4 whitespace-nowrap text-slate-700">
+                                  {item.vendedor?.nombre || item.vendedor || 'Sin vendedor'}
+                                </td>
+                                <td className="px-4 py-4 whitespace-nowrap font-medium text-slate-800">
+                                  {item.inspector?.name || item.inspector || 'Inspector Activo'}
+                                </td>
+                                <td className="px-4 py-4 whitespace-nowrap font-semibold text-emerald-600">{item.costoReparacion || '$0'}</td>
+                                <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.tiempoReparacion || '0 días'}</td>
+                                <td className="px-4 py-4 text-right whitespace-nowrap">
+                                  <div className="flex items-center justify-end gap-3">
+                                    {item.estado === "completado" && (
+                                      <button
+                                        onClick={() => handleDescargarPDF(item)}
+                                        className="px-3 py-1.5 bg-slate-900 text-white text-[11px] font-bold uppercase rounded-lg shadow hover:bg-slate-800 transition duration-150"
+                                      >
+                                        ⬇️ PDF
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => handleEditarPeritaje(item)}
+                                      className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline transition duration-140"
+                                    >
+                                      Editar
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEliminarPeritaje(item.id);
+                                      }}
+                                      className="text-[11px] font-semibold text-red-600 hover:text-red-800 hover:underline transition duration-140"
+                                    >
+                                      Eliminar
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-slate-600 min-w-[1200px]">
-                    
-                    <thead className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
-                      <tr>
-                        <th className="px-4 py-3">Fecha</th>
-                        <th className="px-4 py-3">Marca</th>
-                        <th className="px-4 py-3">Modelo</th>
-                        <th className="px-4 py-3">Año del modelo</th>
-                        <th className="px-4 py-3">Km</th>
-                        <th className="px-4 py-3">Placa</th>
-                        <th className="px-4 py-3">Sucursal Vendedor</th>
-                        <th className="px-4 py-3">Sucursal Inspección</th>
-                        <th className="px-4 py-3">Vendedor</th>
-                        <th className="px-4 py-3">Inspector</th>
-                        <th className="px-4 py-3">Costo reparación</th>
-                        <th className="px-4 py-3">Tiempo de reparación</th>
-                        <th className="px-4 py-3 text-right">Acciones</th>
-                      </tr>
-                    </thead>
-                    
-                    {/* 2. EL CUERPO (<tbody>) MAPEA CADA 'item' CORRECTAMENTE */}
-                    <tbody className="divide-y divide-slate-100">
-                      {inspecciones.length === 0 && !loadingInspecciones ? (
-                        <tr>
-                          <td colSpan="13" className="px-4 py-8 text-center text-slate-400">
-                            No hay peritajes registrados en la base de datos.
-                          </td>
-                        </tr>
-                      ) : (
-                        inspecciones.map((item) => (
-                          <tr key={item.id || item.placa} className="hover:bg-slate-50/50 transition duration-100">
-                            {/* Aquí usamos 'item' de forma válida gracias al .map() */}
-                            <td className="px-4 py-4 whitespace-nowrap text-slate-500">
-                              {item.fechaPeritaje || item.created_at 
-                                ? new Date(item.fechaPeritaje || item.created_at).toLocaleDateString('es-CO') 
-                                : 'N/A'}
-                            </td>
-                            <td className="px-4 py-4 whitespace-nowrap font-semibold text-slate-800">{item.marca || 'N/A'}</td>
-                            <td className="px-4 py-4 whitespace-nowrap">{item.modelo || item.linea || 'N/A'}</td>
-                            <td className="px-4 py-4 whitespace-nowrap">{item.anioModelo || item.modelo_anio || 'N/A'}</td>
-                            <td className="px-4 py-4 whitespace-nowrap font-mono">{item.km || item.kilometraje || '0'}</td>
-                            <td className="px-4 py-4 whitespace-nowrap">
-                              <span className="inline-block bg-slate-900 text-white px-2.5 py-1 rounded-md font-mono font-bold text-[11px] shadow-sm">
-                                {item.placa || 'SIN PLACA'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.sucursal_vendedor?.nombre || item.sucursalVendedor?.nombre || 'Sin sucursal'}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.sucursal_inspeccion?.nombre || item.sucursalInspeccion?.nombre || 'Sin sucursal'}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-slate-700">
-                              {item.vendedor?.nombre || item.vendedor || 'Sin vendedor'}
-                            </td>
-                            <td className="px-4 py-4 whitespace-nowrap font-medium text-slate-800">
-                              {item.inspector?.name || 'Inspector Activo'}
-                            </td>
-                            <td className="px-4 py-4 whitespace-nowrap font-semibold text-emerald-600">{item.costoReparacion || '$0'}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.tiempoReparacion || '0 días'}</td>
-                            <td className="px-4 py-4 text-right whitespace-nowrap">
-                              <div className="flex items-center justify-end gap-3">
-                                {item.estado === "completado" && (
-                                  <button 
-                                    onClick={() => handleDescargarPDF(item)}
-                                    className="px-3 py-1.5 bg-slate-900 text-white text-[11px] font-bold uppercase rounded-lg shadow hover:bg-slate-800 transition duration-150"
-                                  >
-                                    ⬇️ PDF
-                                  </button>
-                                )}
-                                <button 
-                                  onClick={() => handleEditarPeritaje(item)}
-                                  className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline transition duration-140"
-                                >
-                                  Editar
-                                </button>
-                              </div>
-                            </td>
-                          </tr> 
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </>
-          )}
-              {modalActivo && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-xs">
-                  <div className="bg-white rounded-lg p-6 w-96 shadow-2xl border border-gray-100">
-                    <h3 className="text-lg font-bold mb-4 text-gray-800">
-                      {modalActivo === 'sucursal' ? 'Nueva Sucursal' : 'Nuevo Vendedor / Asesor'}
+              )}
+
+              {activeTab === 'Perfil' && (
+                <div key={user?.id || 'loading'} className="space-y-6 max-w-4xl mx-auto">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-4">
+                    <div>
+                      <h1 className="text-2xl font-bold tracking-tight text-slate-900">Perfil de Técnico</h1>
+                      <p className="text-slate-500 mt-1 text-sm">Gestiona tu información personal y estadísticas de trabajo.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm text-center space-y-6 md:col-span-1 flex flex-col items-center justify-between">
+                      <div className="space-y-4 flex flex-col items-center">
+                        <div className="w-24 h-24 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-full flex items-center justify-center text-3xl font-extrabold shadow-lg shadow-blue-500/20">
+                          <span>{profileData.name ? profileData.name.charAt(0).toUpperCase() : 'C'}</span>
+                        </div>
+                        <div>
+                          <h2 className="text-base font-bold text-slate-900">{profileData.name}</h2>
+                          <span className="inline-block mt-1 text-[11px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-100">
+                            {profileData.rol || 'Técnico / Inspector'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div
+                        onClick={() => setShowMisPeritajesModal(true)}
+                        className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 text-center cursor-pointer hover:bg-blue-50/40 hover:border-blue-200 transition group"
+                        title="Haz clic para ver la lista de tus peritajes"
+                      >
+                        <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-blue-600 mb-1">
+                          Peritajes Realizados 🔍
+                        </span>
+                        <span className="text-3xl font-black text-blue-600">
+                          {totalPeritajes}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm space-y-6 md:col-span-2 flex flex-col justify-between">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-3 mb-4">
+                          Información Personal y Profesional
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Nombre Completo</label>
+                            <input
+                              type="text"
+                              value={profileData.name}
+                              onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                              className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-xs text-slate-700 font-medium focus:ring-2 focus:ring-blue-500 outline-none transition"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Correo Electrónico</label>
+                            <input
+                              type="email"
+                              value={profileData.email}
+                              onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                              className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-xs text-slate-700 font-medium focus:ring-2 focus:ring-blue-500 outline-none transition"
+                            />
+                          </div>
+                          <div className="sm:col-span-2">
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Rol / Ocupación</label>
+                            <input
+                              type="text"
+                              value={profileData.rol}
+                              disabled
+                              className="w-full bg-slate-100 border border-slate-300 rounded-lg p-2.5 text-xs text-slate-500 font-medium cursor-not-allowed outline-none transition"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end pt-4 border-t border-slate-100">
+                        <button onClick={handleUpdateProfile} className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md transition">
+                          Guardar Cambios
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm space-y-6">
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-3">
+                      Seguridad y Contraseña
                     </h3>
-                    
-                    <input 
-                      type="text" 
-                      className="w-full border border-gray-300 rounded p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder={`Ingrese el nombre de la ${modalActivo}...`}
-                      value={nombreInput}
-                      onChange={(e) => setNombreInput(e.target.value)}
-                      autoFocus
-                    />
-
-                    <div className="flex justify-end space-x-2">
-                      <button 
-                        onClick={() => setModalActivo(null)}
-                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
-                      >
-                        Cancelar
-                      </button>
-                      <button 
-                        onClick={async () => {
-                          if (!nombreInput || !nombreInput.trim()) return;
-                          try {
-                            const token = localStorage.getItem('auth_token');
-                            const endpoint = modalActivo === 'sucursal' ? 'sucursales' : 'vendedores';
-                            
-                            const response = await api.post(endpoint, { nombre: nombreInput }, {
-                              headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-                            });
-
-                            // Obtenemos el registro recién creado que devuelve Laravel
-                            const nuevoRegistro = response.data.data || response.data;
-
-                            // Actualizamos el estado local según corresponda para que se vea de inmediato
-                            if (modalActivo === 'sucursal') {
-                              setSucursales(prev => [...prev, nuevoRegistro]);
-                            } else {
-                              setVendedores(prev => [...prev, nuevoRegistro]);
-                            }
-
-                            setModalActivo(null);
-                            setNombreInput('');
-                          } catch (error) {
-                            console.error(error);
-                            alert(error.response?.data?.message || "Ocurrió un error al guardar.");
-                          }
-                        }}
-                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-                      >
-                        Guardar
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Contraseña Actual</label>
+                        <input type="password" placeholder="••••••••" value={passwordData.currentPassword} onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Nueva Contraseña</label>
+                        <input type="password" placeholder="••••••••" value={passwordData.newPassword} onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Confirmar Contraseña</label>
+                        <input type="password" placeholder="••••••••" value={passwordData.confirmPassword} onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                    </div>
+                    <div className="flex justify-end pt-4 border-t border-slate-100">
+                      <button onClick={handleActualizarPassword} className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-slate-900 hover:bg-slate-800 text-white rounded-lg shadow transition">
+                        Actualizar Contraseña
                       </button>
                     </div>
                   </div>
                 </div>
               )}
+
+              {activeTab === 'Usuarios' && esAdmin && (
+                <div className="space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-4">
+                    <div>
+                      <h1 className="text-2xl font-bold tracking-tight text-slate-900">Gestión de Usuarios</h1>
+                      <p className="text-slate-500 mt-1 text-sm">Panel exclusivo de administración para dar de alta nuevos usuarios y técnicos.</p>
+                    </div>
+                    <button
+                      onClick={() => setShowCrearUsuarioModal(true)}
+                      className="px-5 py-2.5 bg-blue-600 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow hover:bg-blue-700 transition self-start sm:self-auto"
+                    >
+                      + Crear Nuevo Usuario
+                    </button>
+                  </div>
+
+                  <div className="bg-white border border-slate-200/85 rounded-xl shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                      <h2 className="text-sm font-bold text-slate-900">LISTADO DE USUARIOS REGISTRADOS</h2>
+                      {loadingUsuarios && <span className="text-xs text-blue-500 animate-pulse">Cargando usuarios...</span>}
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs text-slate-600">
+                        <thead className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
+                          <tr>
+                            <th className="px-6 py-3">Nombre</th>
+                            <th className="px-6 py-3">Correo Electrónico</th>
+                            <th className="px-6 py-3">Rol</th>
+                            <th className="px-6 py-3">Sucursal Asignada</th>
+                            <th className="px-6 py-3">Estado</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {usuariosList.length === 0 && !loadingUsuarios ? (
+                            <tr>
+                              <td colSpan="5" className="px-6 py-8 text-center text-slate-400">
+                                No se encontraron usuarios registrados.
+                              </td>
+                            </tr>
+                          ) : (
+                            usuariosList.map((usr) => (
+                              <tr key={usr.id} className="hover:bg-slate-50/50 transition">
+                                <td className="px-6 py-4 font-semibold text-slate-800">{usr.name}</td>
+                                <td className="px-6 py-4 text-slate-500">{usr.email}</td>
+                                <td className="px-6 py-4">
+                                  <span className="inline-block bg-blue-50 text-blue-700 font-bold px-2.5 py-1 rounded-md text-[10px] uppercase border border-blue-100">
+                                    {usr.rol || 'tecnico'}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-slate-500">
+                                  {sucursales.find(s => s.id === usr.sucursal_id)?.nombre || 'Sin sucursal fija'}
+                                </td>
+                                <td className="px-6 py-4">
+                                  <span className={`inline-block px-2.5 py-1 rounded-md text-[10px] font-bold uppercase ${usr.activo !== false ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                                    {usr.activo !== false ? 'Activo' : 'Inactivo'}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {showMisPeritajesModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+              <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+                <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Mis Peritajes Realizados</h3>
+                    <p className="text-xs text-slate-500">Listado de inspecciones asociadas a tu cuenta ({misPeritajesList.length})</p>
+                  </div>
+                  <button
+                    onClick={() => setShowMisPeritajesModal(false)}
+                    className="text-slate-400 hover:text-slate-700 font-bold p-1 rounded-lg hover:bg-slate-200/50 transition"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="p-6 max-h-[60vh] overflow-y-auto">
+                  {misPeritajesList.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400 text-xs">
+                      No tienes peritajes registrados a tu nombre actualmente.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {misPeritajesList.map((item) => (
+                        <div key={item.id || item.placa} className="flex items-center justify-between p-3.5 border border-slate-100 rounded-xl bg-slate-50/50 hover:bg-slate-50 transition">
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <span className="bg-slate-900 text-white px-2 py-0.5 rounded font-mono text-[10px] font-bold">
+                                {item.placa || 'SIN PLACA'}
+                              </span>
+                              <span className="text-xs font-bold text-slate-800">{item.marca} {item.modelo || item.linea || ''}</span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 mt-1">
+                              Fecha: {item.fechaPeritaje || item.created_at ? new Date(item.fechaPeritaje || item.created_at).toLocaleDateString('es-CO') : 'N/A'}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            {item.estado === "completado" && (
+                              <button
+                                onClick={() => handleDescargarPDF(item)}
+                                className="px-2.5 py-1.5 bg-slate-900 text-white text-[10px] font-bold uppercase rounded-lg hover:bg-slate-800 transition shadow-xs"
+                              >
+                                PDF
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                setShowMisPeritajesModal(false);
+                                handleEditarPeritaje(item);
+                              }}
+                              className="px-2.5 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-bold uppercase rounded-lg transition font-medium"
+                            >
+                              Ver / Editar
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+                  <button
+                    onClick={() => setShowMisPeritajesModal(false)}
+                    className="px-4 py-2 text-xs font-bold uppercase tracking-wider bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {modalActivo && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-xs">
+              <div className="bg-white rounded-lg p-6 w-96 shadow-2xl border border-gray-100">
+                <h3 className="text-lg font-bold mb-4 text-gray-800">
+                  {modalActivo === 'sucursal' ? 'Nueva Sucursal' : 'Nuevo Vendedor / Asesor'}
+                </h3>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder={`Ingrese el nombre de la ${modalActivo}...`}
+                  value={nombreInput}
+                  onChange={(e) => setNombreInput(e.target.value)}
+                  autoFocus
+                />
+                <div className="flex justify-end space-x-2">
+                  <button onClick={() => setModalActivo(null)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition">Cancelar</button>
+                  <button
+                    onClick={async () => {
+                      if (!nombreInput || !nombreInput.trim()) return;
+                      try {
+                        const token = localStorage.getItem('auth_token');
+                        const endpoint = modalActivo === 'sucursal' ? 'sucursales' : 'vendedores';
+                        const response = await api.post(endpoint, { nombre: nombreInput }, {
+                          headers: { 'Authorization': `Bearer ` + token, 'Accept': 'application/json' }
+                        });
+                        const nuevoRegistro = response.data.data || response.data;
+                        if (modalActivo === 'sucursal') setSucursales(prev => [...prev, nuevoRegistro]);
+                        else setVendedores(prev => [...prev, nuevoRegistro]);
+                        setModalActivo(null);
+                        setNombreInput('');
+                      } catch (error) {
+                        console.error(error);
+                        alert(error.response?.data?.message || "Ocurrió un error al guardar.");
+                      }
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                  >
+                    Guardar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </main>
+
+      {modalConfig.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-2xl p-6 shadow-2xl max-w-sm w-full mx-4 transform transition-all scale-100">
+            <h3 className="text-lg font-bold text-gray-800 mb-2">Confirmar acción</h3>
+            <p className="text-gray-600 text-sm mb-6">{modalConfig.mensaje}</p>
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setModalConfig({ isOpen: false, mensaje: '', onConfirm: null })}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={modalConfig.onConfirm}
+                className="px-4 py-2 text-sm font-medium text-white bg-[#7B3F2E] hover:bg-[#633224] rounded-xl shadow-md transition"
+              >
+                Aceptar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

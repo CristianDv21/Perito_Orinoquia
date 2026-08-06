@@ -13,14 +13,30 @@ function FileUploader({ field, acceptedFile, onFileChange }) {
       return;
     }
 
-    const fileData = {
-      name: file.name,
-      type: file.type,
-      previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
-      rawFile: file
-    };
-
-    onFileChange(field, fileData);
+    // Igual que en los demás módulos, convertimos el archivo a Data URL (base64)
+    // de inmediato: es la única forma en que jsPDF puede dibujar la imagen luego
+    // dentro del reporte (una blob URL no sirve porque no persiste ni es legible
+    // de forma síncrona por jsPDF).
+    if (file.type.startsWith('image/')) {
+      const lector = new FileReader();
+      lector.onload = (evento) => {
+        onFileChange(field, {
+          name: file.name,
+          type: file.type,
+          previewUrl: evento.target.result,
+          dataUrl: evento.target.result,
+        });
+      };
+      lector.readAsDataURL(file);
+    } else {
+      // Los PDF no se pueden previsualizar/incrustar como imagen; solo guardamos el nombre.
+      onFileChange(field, {
+        name: file.name,
+        type: file.type,
+        previewUrl: null,
+        dataUrl: null,
+      });
+    }
   };
 
   const removeFile = (e) => {

@@ -19,21 +19,23 @@ export default function Login() {
       const response = await api.post('/login', { email, password });
       
       // 2. Obtenemos los datos que nos responde Laravel
-      // (Asegúrate de que los nombres 'access_token' y 'usuario' coincidan con lo que devuelve tu AuthController)
-      const token = response.data.access_token;
+      const token = response.data.access_token || response.data.token;
       const userData = response.data.usuario; 
 
-      // 3. Guardamos en el localStorage y actualizamos el estado global del contexto
-      // Tu función login del AuthContext debería encargarse de guardar el token en localStorage
+      // 3. ¡AQUÍ ESTÁ LA SOLUCIÓN! Guardamos directamente en el localStorage del navegador
+      if (token) {
+        localStorage.setItem('auth_token', token);
+      }
+
+      // 4. Actualizamos el estado global del contexto
       login(userData, token); 
       
       console.log("Login exitoso con la base de datos");
 
     } catch (error) {
-    // Esto te mostrará el JSON exacto de error que envía Laravel en la consola
-    console.error("Detalle del error 422:", error.response?.data);
-    alert(error.response?.data?.message || "Error al iniciar sesión.");
-}
+      console.error("Detalle del error 422:", error.response?.data);
+      alert(error.response?.data?.message || "Error al iniciar sesión.");
+    }
   };
 
   return (

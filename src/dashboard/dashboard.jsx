@@ -5,13 +5,23 @@ import Motor from '../modules/Motor';
 import VistaExterna from '../modules/VistaExterna'; 
 import VistaInterna from '../modules/VistaInterna';
 import Firma from '../modules/Firmas';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import InformePdf from '../modules/informePdf';
 import DetallesTecnicos from '../modules/DetallesTecnicos';
 import api from '../api/axios';
+import { useAuth } from '../useAuth';
+import { generarPdfEstiloCliente } from '../modules/Pdf';
+
+import {
+  User,
+  LayoutDashboard,
+  BarChart3,
+  Settings,
+} from "lucide-react";
+
 
 export default function Dashboard({ onLogout }) {
+
+  const { user } = useAuth();
 
 const [modalActivo, setModalActivo] = useState(null); // 'sucursal' o 'vendedor'
 const [nombreInput, setNombreInput] = useState('');
@@ -64,7 +74,8 @@ const [nombreInput, setNombreInput] = useState('');
     scoreLegal: 100
   });
 
-  // 1. Declarar la función PRIMERO
+  const usuario = JSON.parse(localStorage.getItem("peritaje_user"));
+
   const fetchInspecciones = async () => {
     try {
       setLoadingInspecciones(true);
@@ -90,13 +101,22 @@ const [nombreInput, setNombreInput] = useState('');
       if (activeTab === 'Bandeja') {
         try {
           if (isMounted) setLoadingInspecciones(true);
+          
+          // Verificamos que el token exista antes de hacer la petición
           const token = localStorage.getItem('auth_token');
-          const response = await api.get('peritajes', {
+          if (!token) {
+            console.warn("No hay token de autenticación en el localStorage.");
+            return;
+          }
+
+          // Nota la barra '/' al inicio para asegurar que tome la ruta absoluta de la API
+          const response = await api.get('/peritajes', {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Accept': 'application/json'
             }
           });
+
           if (isMounted) {
             setInspecciones(response.data.data || response.data || []);
           }
@@ -117,11 +137,29 @@ const [nombreInput, setNombreInput] = useState('');
     };
   }, [activeTab]);
 
-  const mainMenuItems = [
-    { id: 'Perfil', label: 'Perfil', icon: '👤' },
-    { id: 'Bandeja', label: 'Bandeja de Entrada', icon: '📥' },
-    { id: 'Estadisticas', label: 'Estadísticas', icon: '📊' },
-    { id: 'Configuracion', label: 'Configuración', icon: '⚙️' },
+
+
+ const mainMenuItems = [
+    {
+      id: "Perfil",
+      label: "Perfil",
+      icon: User, // <-- Sin < />
+    },
+    {
+      id: "Bandeja",
+      label: "Bandeja de Entrada",
+      icon: LayoutDashboard, // <-- Sin < />
+    },
+    {
+      id: "Estadisticas",
+      label: "Estadísticas",
+      icon: BarChart3, // <-- Sin < />
+    },
+    {
+      id: "Configuracion",
+      label: "Configuración",
+      icon: Settings, // <-- Sin < />
+    },
   ];
 
   const getInspectionSteps = (tipo) => {
@@ -147,7 +185,9 @@ const [nombreInput, setNombreInput] = useState('');
     );
 
     return steps;
+
   };
+
   const inspectionSteps = getInspectionSteps(peritajeData.tipoVehiculo);
 
  const guardarPeritajeCompleto = async (formDataDelEstado) => {
@@ -159,6 +199,9 @@ const [nombreInput, setNombreInput] = useState('');
       const metodo = esEdicion ? 'patch' : 'post';
 
       const response = await api[metodo](endpoint, {
+        // FORZAMOS EL ESTADO A COMPLETADO AQUÍ:
+        estado: 'completado',
+
         // Relaciones y IDs principales
         tipo_vehiculo_id: formDataDelEstado.tipoVehiculoId || formDataDelEstado.tipoVehiculo || null,
         sucursal_vendedor_id: (formDataDelEstado.sucursalVendedorId && !formDataDelEstado.sucursalVendedorId.includes('AQUI')) ? formDataDelEstado.sucursalVendedorId : null,
@@ -166,7 +209,8 @@ const [nombreInput, setNombreInput] = useState('');
         vendedor_id: (formDataDelEstado.vendedorId && !formDataDelEstado.vendedorId.includes('AQUI')) ? formDataDelEstado.vendedorId : null,
 
         // Información General del Vehículo
-        placa: formDataDelEstado.placa || '',
+        // Información General del Vehículo
+        placa: formDataDelEstado.placa ? String(formDataDelEstado.placa) : '',
         marca: formDataDelEstado.marca || '',
         linea: formDataDelEstado.linea || '',
         modelo_anio: Number(formDataDelEstado.modeloAnio || formDataDelEstado.modelo || 2026),
@@ -225,17 +269,16 @@ const [nombreInput, setNombreInput] = useState('');
         }
       });
 
-      console.log(esEdicion ? 'Peritaje actualizado exitosamente:' : 'Peritaje guardado exitosamente:', response.data);
-      alert(esEdicion ? '¡Peritaje actualizado y sincronizado correctamente!' : '¡Peritaje guardado y sincronizado correctamente!');
+      console.log('Peritaje finalizado con éxito:', response.data);
+      alert('¡Peritaje finalizado correctamente!');
       setIsInspecting(false);
       fetchInspecciones(); 
     } catch (error) {
       console.error('Error al guardar el peritaje:', error);
-      console.error('Detalle del servidor:', error.response?.data);
-      console.error('Errores detallados de validación:', error.response?.data?.errors);
       alert(error.response?.data?.message || 'Hubo un error al guardar el peritaje en el servidor.');
     }
   };
+
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
@@ -246,7 +289,23 @@ const [nombreInput, setNombreInput] = useState('');
     }));
   };
 
-  // 1. Agrega estos estados al inicio de tu componente Dashboard
+  
+
+const construirDatosParaPdf = (datos) => {
+  const buscarSucursal = (id) => sucursales.find((s) => s.id === id)?.nombre || null;
+  const buscarVendedor = (id) => {
+    const v = vendedores.find((v) => v.id === id);
+    return v ? [v.nombre, v.apellido].filter(Boolean).join(' ') : null;
+  };
+  return {
+    ...datos,
+    sucursalVendedorNombre: buscarSucursal(datos.sucursalVendedorId),
+    sucursalInspeccionNombre: buscarSucursal(datos.sucursalInspeccionId),
+    vendedorNombre: buscarVendedor(datos.vendedorId),
+    inspectorNombre: user?.name || user?.nombre || null,
+  };
+};
+
 const [sucursales, setSucursales] = useState([]);
 const [vendedores, setVendedores] = useState([]);
 
@@ -291,218 +350,132 @@ useEffect(() => {
       isMounted = false;
     };
   }, [activeTab]);
-  const handleDescargarPDF = (item) => {
-    const data = peritajeData; 
 
-    const doc = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
-    const fechaOriginal = item.fechaPeritaje || item.created_at;
-    const fechaFormateada = fechaOriginal 
-    ? new Date(fechaOriginal).toLocaleDateString('es-CO') 
-    : 'N/A';
-
-doc.text(`FECHA: ${fechaFormateada}`, 139, 25);
-
-    const colorPrimario = [8, 13, 26]; 
-    const colorSecundario = [37, 99, 235]; 
-    const colorExito = [16, 185, 129]; 
-    const colorGris = [100, 116, 139]; 
-
-    doc.setFillColor(colorSecundario[0], colorSecundario[1], colorSecundario[2]);
-    doc.rect(160, 0, 50, 10, 'F');
-
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(22);
-    doc.setTextColor(colorPrimario[0], colorPrimario[1], colorPrimario[2]);
-    doc.text('PERITO ORINOQUIA', 14, 20);
-    
-    doc.setFontSize(9);
-    doc.setFont('Helvetica', 'normal');
-    doc.setTextColor(colorGris[0], colorGris[1], colorGris[2]);
-    doc.text('CONSOLA DE PERITAJE TÉCNICO AUTOMOTRIZ', 14, 26);
-    doc.text('Sede Central: Yopal, Casanare', 14, 31);
-
-    doc.setDrawColor(226, 232, 240);
-    doc.setFillColor(248, 250, 252);
-    doc.roundedRect(135, 14, 61, 18, 2, 2, 'FD');
-    
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(colorPrimario[0], colorPrimario[1], colorPrimario[2]);
-    doc.text(`INSPECCIÓN: ${item.id || item.codigo || 'N/A'}`, 139, 20);
-    doc.text(`FECHA: ${fechaFormateada}`, 139, 25);
-    doc.text(`ESTADO: ${(item.estado || 'Completado').toUpperCase()}`, 139, 30);
-
-    doc.setDrawColor(colorSecundario[0], colorSecundario[1], colorSecundario[2]); 
-    doc.setLineWidth(0.8);
-    doc.line(14, 36, 196, 36);
-
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(colorSecundario[0], colorSecundario[1], colorSecundario[2]);
-    doc.text('1. INFORMACIÓN GENERAL DEL VEHÍCULO', 14, 44);
-
-    autoTable(doc, {
-      startY: 47,
-      theme: 'grid',
-      headStyles: { fillColor: colorPrimario, fontStyle: 'bold', fontSize: 9 },
-      bodyStyles: { fontSize: 8.5, textColor: [30, 41, 59] },
-      columnStyles: {
-        0: { fontStyle: 'bold', fillColor: [248, 250, 252], width: 35 },
-        2: { fontStyle: 'bold', fillColor: [248, 250, 252], width: 35 }
-      },
-      body: [
-        ['Placa:', item.placa || data.placa || 'N/A', 'Marca / Línea:', `${item.marca || data.marca || 'N/A'} ${data.linea || ''}`],
-        ['Modelo / Año:', item.anioModelo || item.modelo_anio || data.modelo || 'N/A', 'N° de Motor:', data.numMotor || 'N/A'],
-        ['N° de Chasis:', data.numChasis || 'N/A', 'Organismo Tránsito:', data.organismoTransito || 'N/A'],
-      ],
-    });
-
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(colorSecundario[0], colorSecundario[1], colorSecundario[2]);
-    doc.text('2. VERIFICACIÓN LEGAL Y DOCUMENTAL', 14, doc.lastAutoTable.finalY + 8);
-
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 11,
-      theme: 'striped',
-      headStyles: { fillColor: [71, 85, 105], fontStyle: 'bold', fontSize: 8.5 },
-      bodyStyles: { fontSize: 8 },
-      head: [['DOCUMENTO', 'NÚMERO DE CONTROL', 'ENTIDAD EMISORA', 'VENCIMIENTO', 'ESTADO']],
-      body: [
-        ['SOAT', data.numeroSoat || 'N/A', data.entityEmisoraSoat || 'N/A', data.venceSoat || 'N/A', data.soatAlDia ? 'AL DÍA' : 'VENCIDO'],
-        ['RTM (Tecnicomecánica)', data.numeroControlRtm || 'N/A', data.cdaEmisor || 'N/A', data.venceTecnicoMecanica || 'N/A', data.tecnicoMecanicaAlDia ? 'AL DÍA' : 'VENCIDO'],
-      ],
-    });
-
-    doc.setFillColor(254, 243, 199); 
-    doc.setDrawColor(245, 158, 11);
-    doc.roundedRect(14, doc.lastAutoTable.finalY + 4, 182, 12, 1, 1, 'FD');
-    
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(180, 83, 9);
-    doc.text(`ALERTAS RUNT: Coincide Propietario: ${data.coincidePropietarioRunt ? 'SÍ' : 'NO'}  |  Posee Embargos/Alertas: ${data.tieneEmbargosOAlertas ? 'SÍ' : 'NO'}  |  Blindaje: ${data.restriccionBlindaje.toUpperCase()}`, 18, doc.lastAutoTable.finalY + 11);
-
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(colorSecundario[0], colorSecundario[1], colorSecundario[2]);
-    doc.text('3. EVALUACIÓN COMPONENTES DEL MOTOR', 14, doc.lastAutoTable.finalY + 24);
-
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 27,
-      theme: 'grid',
-      headStyles: { fillColor: colorPrimario, fontStyle: 'bold', fontSize: 8.5 },
-      bodyStyles: { fontSize: 8.5 },
-      body: [
-        ['Compresión del Motor:', data.compresionMotor ? `${data.compresionMotor} PSI` : 'No registrada', 'Fugas de Aceite:', data.fugasAceite ? 'SÍ CORRESPONDE' : 'NO DETECTADAS'],
-        ['Estado de la Batería:', data.estadoBateria, 'Ruidos Extraños:', data.ruidosExtranos ? 'SÍ DETECTADOS' : 'NO DETECTADOS'],
-      ],
-    });
-
-    if (data.motorObservaciones) {
-      doc.setFont('Helvetica', 'italic');
-      doc.setFontSize(8);
-      doc.setTextColor(colorGris[0], colorGris[1], colorGris[2]);
-      doc.text(`Notas del Inspector: ${data.motorObservaciones}`, 14, doc.lastAutoTable.finalY + 5);
-    }
-
-    doc.addPage();
-
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(colorPrimario[0], colorPrimario[1], colorPrimario[2]);
-    doc.text('PERITO ORINOQUIA - REPORTE TÉCNICO CONTINUACIÓN', 14, 15);
-    doc.setDrawColor(226, 232, 240);
-    doc.line(14, 18, 196, 18);
-
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(colorSecundario[0], colorSecundario[1], colorSecundario[2]);
-    doc.text('4. INVENTARIO DE ACCESORIOS Y EQUIPAMIENTO', 14, 26);
-
-    const filasAccesorios = (data.accesoriosList || []).map(acc => [
-      acc.name,
-      acc.presente ? 'SÍ' : 'NO',
-      acc.danado ? 'MAL ESTADO' : 'OPERATIVO'
-    ]);
-
-    autoTable(doc, {
-      startY: 29,
-      theme: 'striped',
-      headStyles: { fillColor: [71, 85, 105], fontStyle: 'bold', fontSize: 8.5 },
-      bodyStyles: { fontSize: 8 },
-      head: [['ELEMENTO / ACCESORIO', 'PRESENTE', 'ESTADO EVALUADO']],
-      body: filasAccesorios.length > 0 ? filasAccesorios : [['Sin accesorios registrados', '-', '-']],
-      styles: { cellPadding: 1.5 }
-    });
-
-    const YFinal = doc.lastAutoTable.finalY + 12;
-    
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(colorSecundario[0], colorSecundario[1], colorSecundario[2]);
-    doc.text('5. CONCEPTO FINAL DE EVALUACIÓN', 14, YFinal);
-
-    const observacionesTexto = data.conceptoFinal || 'El vehículo se encuentra en condiciones óptimas operativas de acuerdo a la documentación examinada y pruebas dinámicas de motor realizadas en el departamento de Casanare.';
-    const textoDividido = doc.splitTextToSize(observacionesTexto, 174);
-    const lineasTexto = textoDividido.length;
-    const altoCuadro = 12 + (lineasTexto * 4);
-
-    doc.setDrawColor(209, 213, 219);
-    doc.setFillColor(248, 250, 252);
-    doc.roundedRect(14, YFinal + 3, 182, altoCuadro, 1, 1, 'FD');
-
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(colorPrimario[0], colorPrimario[1], colorPrimario[2]);
-    doc.text(`ESTADO GENERAL DEL AUTOMOTOR:`, 18, YFinal + 9);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(colorExito[0], colorExito[1], colorExito[2]);
-    doc.text(`${(data.estadoGeneralVehiculo || 'Aceptable').toUpperCase()}`, 78, YFinal + 9);
-
-    doc.setFont('Helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.text(textoDividido, 18, YFinal + 15, { width: 180 });
-
-    const YFirma = YFinal + altoCuadro + 25;
-
-    doc.setDrawColor(148, 163, 184);
-    doc.setLineWidth(0.5);
-    doc.line(14, YFirma, 74, YFirma);
-
-    if (data.firmaInspector && typeof data.firmaInspector === 'string' && data.firmaInspector.startsWith('data:image')) {
-      try {
-        doc.addImage(data.firmaInspector, 'PNG', 16, YFirma - 22, 50, 20);
-      } catch (e) {
-        console.error("No se pudo cargar la firma en el PDF", e);
-      }
-    }
-
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(8.5);
-    doc.setTextColor(colorPrimario[0], colorPrimario[1], colorPrimario[2]);
-    doc.text('Firma del Inspector Autorizado', 14, YFirma + 4);
-    
-    doc.setFont('Helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(colorGris[0], colorGris[1], colorGris[2]);
-    doc.text('Perito Certificado - Orinoquia', 14, YFirma + 8);
-
-    doc.setFontSize(7.5);
-    doc.text('Este documento es un dictamen técnico de inspección automotriz y no constituye un seguro contractual.', 14, 285);
-    doc.text(`Página 2 de 2`, 180, 285);
-
-    doc.save(`Peritaje_Orinoquia_${item.placa || 'VEHICULO'}.pdf`);
+  const resolverTipoVehiculo = (item) => {
+    const tipoIdBD = item.tipo_vehiculo_id || item.tipoVehiculoId;
+    if (tipoIdBD === '7c68a26d-372b-42dc-be00-92c4ed2ee6ce') return 'moto';
+    if (tipoIdBD === 'd5017832-04ac-4ead-8f57-efbe8af78860') return 'pesado';
+    if (tipoIdBD === 'e8ca5ff6-fe17-4916-b949-c13cac3a706e') return 'motocarro';
+    if (tipoIdBD === '1c9740ed-b045-4643-9fe6-cfb2c412854f') return 'carro';
+    // Si no reconocemos el ID, intentamos con el texto que venga del backend antes de asumir 'carro'
+    const tipoTexto = (item.tipoVehiculo || item.tipo_vehiculo?.nombre || item.tipo_vehiculo || '').toString().toLowerCase();
+    if (['carro', 'moto', 'pesado', 'motocarro'].includes(tipoTexto)) return tipoTexto;
+    return 'carro';
   };
 
+  const mapearPeritajeDeBackend = (item) => {
+    const compresiones = Array.isArray(item.compresion_cilindros) ? item.compresion_cilindros : [];
+    const compresionCilFields = {};
+    [0, 1, 2, 3].forEach((idx) => {
+      compresionCilFields[`compresionCil${idx + 1}`] = item[`compresionCil${idx + 1}`] || compresiones[idx] || null;
+    });
+
+    return {
+      ...item,
+      tipoVehiculo: resolverTipoVehiculo(item),
+      tipoVehiculoId: item.tipo_vehiculo_id || item.tipoVehiculoId || '',
+      modelo: item.modelo || item.linea || '',
+      version: item.version || '',
+      cilindrada: item.cilindrada || '',
+      tipoTransmision: item.tipo_transmision || item.tipoTransmision || '',
+      traccion: item.traccion || '',
+      estadoTransmision: item.estado_transmision || item.estadoTransmision || '',
+      numMotor: item.num_motor || item.numMotor || '',
+      numChasis: item.num_chasis || item.numChasis || '',
+      kilometraje: item.kilometraje || item.km || 0,
+      ...compresionCilFields,
+
+      // Documentación SOAT / RTM
+      venceSoat: item.vence_soat || item.venceSoat || '',
+      soatAlDia: item.soat_al_dia ?? item.soatAlDia ?? true,
+      archivoSoat: item.archivo_soat || item.archivoSoat || null,
+      venceTecnicoMecanica: item.vence_tecnico_mecanica || item.venceTecnicoMecanica || '',
+      tecnicoMecanicaAlDia: item.tecnico_mecanica_al_dia ?? item.tecnicoMecanicaAlDia ?? true,
+      archivoTecnicoMecanica: item.archivo_tecnico_mecanica || item.archivoTecnicoMecanica || null,
+      siniestros: item.siniestros || '',
+      tarjetaOperacion: item.tarjeta_operacion || item.tarjetaOperacion || '',
+      configuracionEjes: item.configuracion_ejes || item.configuracionEjes || '',
+
+      // Cliente
+      clienteNombre: item.cliente_nombre || item.cliente?.nombre || item.clienteNombre || '',
+      clienteDocumento: item.cliente_documento || item.cliente?.documento || item.clienteDocumento || '',
+      clienteTelefono: item.cliente_telefono || item.cliente?.telefono || item.clienteTelefono || '',
+
+      // Motor / mecánica
+      sistemasMecanicos: item.sistemas_mecanicos || item.sistemasMecanicos || {},
+      comentariosMotor: item.comentarios_motor || item.comentariosMotor || '',
+
+      // Daños y detalles técnicos (nombres SIN sufijo "List", así los busca Pdf.jsx)
+      danosExternos: item.danos_externos || item.danosExternos || {},
+      danosInternos: item.danos_internos || item.danosInternos || {},
+      detallesTecnicos: item.detalles_tecnicos || item.detallesTecnicos || {},
+      accesoriosList: item.accesorios || item.accesoriosList || [],
+
+      // Firma / metadatos finales
+      firmaInspector: item.firma_inspector || item.firmaInspector || null,
+      tiempoCompletitud: item.tiempo_completitud || item.tiempoCompletitud || '',
+
+      // Relaciones / nombres para mostrar
+      sucursalVendedorNombre: item.sucursal_vendedor?.nombre || item.sucursalVendedor?.nombre || null,
+      sucursalInspeccionNombre: item.sucursal_inspeccion?.nombre || item.sucursalInspeccion?.nombre || null,
+      vendedorNombre: item.vendedor?.nombre || (typeof item.vendedor === 'string' ? item.vendedor : null),
+      inspectorNombre: item.inspector?.name || 'Inspector Activo',
+      fechaPeritaje: item.fechaPeritaje || item.fecha_peritaje || item.created_at,
+    };
+  };
+
+  const handleDescargarPDF = (item) => {
+    generarPdfEstiloCliente(mapearPeritajeDeBackend(item));
+  };
+
+const handleEditarPeritaje = (item) => {
+  // 1. Mapeamos los datos del backend
+  const itemMapeado = mapearPeritajeDeBackend(item);
+  const tipoTexto = resolverTipoVehiculo(item);
+  const tipoIdBD = item.tipo_vehiculo_id || item.tipoVehiculoId;
+
+  // 2. Seteamos el estado del peritaje con la información existente
+  setPeritajeData({
+    ...peritajeData,
+    id: itemMapeado.id,
+    tipoVehiculo: tipoTexto,
+    tipoVehiculoId: tipoIdBD || '1c9740ed-b045-4643-9fe6-cfb2c412854f',
+    placa: itemMapeado.placa || '',
+    marca: itemMapeado.marca || '',
+    linea: itemMapeado.linea || '',
+    modelo: itemMapeado.modeloAnio || itemMapeado.modelo || item.modelo_anio || '',
+    color: itemMapeado.color || '',
+    numMotor: itemMapeado.numMotor || '',
+    numChasis: itemMapeado.numChasis || '',
+    kilometraje: itemMapeado.kilometraje || 0,
+    siniestros: itemMapeado.siniestros || item.comentarios_siniestros || '',
+    sucursalVendedorId: item.sucursal_vendedor_id || item.sucursalVendedorId || '',
+    sucursalInspeccionId: item.sucursal_inspeccion_id || item.sucursalInspeccionId || '',
+    vendedorId: item.vendedor_id || item.vendedorId || '',
+    clienteNombre: itemMapeado.clienteNombre || '',
+    clienteDocumento: itemMapeado.clienteDocumento || '',
+    clienteTelefono: itemMapeado.clienteTelefono || '',
+    soatAlDia: itemMapeado.soatAlDia ?? true,
+    venceSoat: itemMapeado.venceSoat ? itemMapeado.venceSoat.split('T')[0] : '',
+    tecnicoMecanicaAlDia: itemMapeado.tecnicoMecanicaAlDia ?? true,
+    venceTecnicoMecanica: itemMapeado.venceTecnicoMecanica ? itemMapeado.venceTecnicoMecanica.split('T')[0] : '',
+    accesoriosList: itemMapeado.accesoriosList || item.accesorios || [],
+    danosExternosList: itemMapeado.danosExternos || item.danos_externos || {},
+    danosInternosList: itemMapeado.danosInternos || item.danos_internos || {},
+    detallesTecnicosList: itemMapeado.detallesTecnicos || item.detalles_tecnicos || {},
+    sistemasMecanicosList: itemMapeado.sistemasMecanicos || item.sistemas_mecanicos || {},
+    compresionCilindrosList: itemMapeado.compresionCilindros || item.compresion_cilindros || [],
+  });
+
+  // 3. Cambiamos las vistas para abrir el formulario de inspección
+  setIsInspecting(true);
+  setInspectionStep('Documentacion');
+};
+
   const totalInspeccionesCount = inspecciones.length;
-  const enProcesoCount = inspecciones.filter(i => (i.estado || '').toLowerCase() === 'en proceso').length;
+  const enProcesoCount = inspecciones.filter(i => ['en proceso', 'borrador'].includes((i.estado || '').toLowerCase())).length;
   const completadasCount = inspecciones.filter(i => (i.estado || '').toLowerCase() === 'completado').length;
+  
 
   return (
     <div className="flex min-h-screen bg-[#f4f6fa] text-slate-800 font-sans relative overflow-x-hidden">
@@ -538,12 +511,12 @@ doc.text(`FECHA: ${fechaFormateada}`, 139, 25);
                     key={tipo.id}
                     onClick={async () => {
                       try {
+                        // Obtenemos el token directamente aquí para asegurarnos de que no sea nulo
                         const token = localStorage.getItem('auth_token');
-                        console.log("ID numérico que se envía:", tipo.tipoId); // <-- Usamos tipoId
 
                         const response = await api.post('/peritajes', {
                           tipo_vehiculo_id: tipo.tipoId, 
-                          placa: 'SIN-PLACA', // <-- Agregamos una placa temporal para satisfacer la base de datos
+                          placa: 'SIN-PLACA', 
                           estado: 'borrador'
                         }, {
                           headers: {
@@ -551,7 +524,7 @@ doc.text(`FECHA: ${fechaFormateada}`, 139, 25);
                             'Accept': 'application/json'
                           }
                         });
-
+                        
                         const peritajeCreado = response.data.data || response.data;
                         
                         handleDataChange({ 
@@ -560,8 +533,6 @@ doc.text(`FECHA: ${fechaFormateada}`, 139, 25);
                           tipoVehiculoId: tipo.tipoId,
                           accesoriosList: []
                         });
-
-                        
 
                         setShowVehicleSelector(false);
                         setIsInspecting(true);
@@ -597,38 +568,75 @@ doc.text(`FECHA: ${fechaFormateada}`, 139, 25);
         transition-transform duration-300 ease-in-out lg:static lg:translate-x-0
         ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
       `}>
-        <div>
-          <div className="px-6 py-6 border-b border-slate-800/60 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold tracking-tight text-white">
-                Perito <span className="text-blue-500">Orinoquia</span>
-              </h2>
-              <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mt-1">Consola de Peritaje</p>
-            </div>
-            <button onClick={toggleSidebar} className="lg:hidden text-slate-400 hover:text-white text-xl">✕</button>
-          </div>
+        <div className="flex flex-col h-full">
 
-          <nav className="p-4 space-y-1">
-            {mainMenuItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id);
-                  setIsInspecting(false); 
-                  setIsSidebarOpen(false);
-                }}
-                className={`w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold rounded-lg transition duration-150 border-l-2 ${
-                  activeTab === item.id && !isInspecting
-                    ? "text-white bg-blue-600/20 border-blue-500"
-                    : "text-slate-400 hover:text-white hover:bg-slate-800/30 border-transparent"
-                }`}
-              >
-                <span>{item.icon}</span>
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </nav>
+  <div className="relative flex items-center justify-center h-24 border-b border-slate-800/60">
+
+    <button
+      onClick={() => {
+        setActiveTab("Bandeja");
+        setIsInspecting(false);
+        setIsSidebarOpen(false);
+      }}
+      className="transition duration-500 hover:scale-105"
+    >
+      <img
+        src="/Logo1.png"
+        alt="Servi-Centro CDA"
+        className="w-500 object-contain"
+        draggable={false}
+      />
+    </button>
+
+    <button
+      onClick={toggleSidebar}
+      className="absolute right-4 top-4 lg:hidden text-slate-400 hover:text-white"
+    >
+      ✕
+    </button>
+
+  </div>
+
+  <nav className="flex-1 px-3 py-4">
+
+    <div className="space-y-1">
+
+      {mainMenuItems.map((item) => {
+    const Icon = item.icon; // Asignamos la referencia a una constante con mayúscula
+
+    return (
+      <button
+        key={item.id}
+        onClick={() => {
+          setActiveTab(item.id);
+          setIsInspecting(false);
+          setIsSidebarOpen(false);
+        }}
+        className={`group relative w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
+          activeTab === item.id && !isInspecting
+            ? "bg-blue-600 text-white shadow-lg"
+            : "text-slate-400 hover:bg-slate-800 hover:text-white"
+        }`}
+      >
+        <Icon
+          size={18}
+          strokeWidth={2}
+          className={
+            activeTab === item.id && !isInspecting
+              ? "text-white"
+              : "text-slate-400 group-hover:text-white"
+          }
+        />
+        <span>{item.label}</span>
+      </button>
+    );
+  })}
+
         </div>
+
+      </nav>
+
+    </div>
 
         <div className="p-4 border-t border-slate-800/60">
           <button onClick={onLogout} className="w-full px-4 py-2 text-xs font-bold uppercase tracking-wider text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20 rounded-lg">
@@ -642,7 +650,9 @@ doc.text(`FECHA: ${fechaFormateada}`, 139, 25);
         <header className="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-6 lg:px-8 shrink-0">
           <div className="flex items-center space-x-4">
             <button onClick={toggleSidebar} className="lg:hidden text-slate-600 hover:text-slate-900 text-2xl">☰</button>
-            <span className="text-xs font-semibold text-slate-400">Rol: Inspector de Vehiculos</span>
+          <span className="text-xs font-semibold text-slate-400">
+            {usuario ? `${usuario.nombre} • ${usuario.rol}` : "Usuario"}
+          </span>
           </div>
           <span className="text-xs font-medium text-slate-500">Yopal, Casanare</span>
         </header>
@@ -739,7 +749,7 @@ doc.text(`FECHA: ${fechaFormateada}`, 139, 25);
                     )}
                     
                     {inspectionStep === 'PDF' && (
-                      <InformePdf peritajeData={peritajeData} onChange={handleDataChange} />
+                      <InformePdf peritajeData={construirDatosParaPdf(peritajeData)} onChange={handleDataChange} />
                     )}
                   </div>
                 </div>
@@ -771,11 +781,17 @@ doc.text(`FECHA: ${fechaFormateada}`, 139, 25);
                     </button>
                   ) : (
                     <button 
-                      onClick={() => guardarPeritajeCompleto(peritajeData)}
+                      onClick={() => {
+                        // Imprimimos el JSON exacto que se va a enviar a Laravel en la consola
+                        console.log("JSON enviado al servidor:", JSON.stringify(peritajeData, null, 2));
+
+                        // Ejecutamos la función de guardado
+                        guardarPeritajeCompleto(peritajeData);
+                      }}
                       className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow"
                     >
-                      Finalizar Peritaje
-                    </button>
+                    Finalizar Peritaje
+                  </button>
                   )}
                 </div>
               </div>
@@ -817,7 +833,7 @@ doc.text(`FECHA: ${fechaFormateada}`, 139, 25);
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs text-slate-600 min-w-[1200px]">
-                    {/* 1. EL ENCABEZADO (<thead>) SOLO DEBE LLEVAR TH, SIN 'item' */}
+                    
                     <thead className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
                       <tr>
                         <th className="px-4 py-3">Fecha</th>
@@ -873,54 +889,22 @@ doc.text(`FECHA: ${fechaFormateada}`, 139, 25);
                             <td className="px-4 py-4 whitespace-nowrap font-semibold text-emerald-600">{item.costoReparacion || '$0'}</td>
                             <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.tiempoReparacion || '0 días'}</td>
                             <td className="px-4 py-4 text-right whitespace-nowrap">
-                              {item.estado === "completado" ? (
+                              <div className="flex items-center justify-end gap-3">
+                                {item.estado === "completado" && (
+                                  <button 
+                                    onClick={() => handleDescargarPDF(item)}
+                                    className="px-3 py-1.5 bg-slate-900 text-white text-[11px] font-bold uppercase rounded-lg shadow hover:bg-slate-800 transition duration-150"
+                                  >
+                                    ⬇️ PDF
+                                  </button>
+                                )}
                                 <button 
-                                  onClick={() => handleDescargarPDF(item)}
-                                  className="px-3 py-1.5 bg-slate-900 text-white text-[11px] font-bold uppercase rounded-lg shadow hover:bg-slate-800 transition duration-150"
-                                >
-                                  ⬇️ PDF
-                                </button>
-                              ) : (
-                                <button 
-                                  onClick={() => {
-                                    let tipoTexto = 'carro';
-                                    const tipoIdBD = item.tipo_vehiculo_id || item.tipoVehiculoId;
-
-                                    if (tipoIdBD === '7c68a26d-372b-42dc-be00-92c4ed2ee6ce' || item.tipoVehiculo === 'moto') {
-                                      tipoTexto = 'moto';
-                                    } else if (tipoIdBD === 'd5017832-04ac-4ead-8f57-efbe8af78860' || item.tipoVehiculo === 'pesado') {
-                                      tipoTexto = 'pesado';
-                                    } else if (tipoIdBD === 'e8ca5ff6-fe17-4916-b949-c13cac3a706e' || item.tipoVehiculo === 'motocarro') {
-                                      tipoTexto = 'motocarro';
-                                    }
-
-                                    setPeritajeData({
-                                      ...peritajeData,
-                                      id: item.id,
-                                      tipoVehiculo: tipoTexto,
-                                      tipoVehiculoId: tipoIdBD || '1c9740ed-b045-4643-9fe6-cfb2c412854f',
-                                      placa: item.placa || '',
-                                      marca: item.marca || '',
-                                      linea: item.linea || item.modelo || '',
-                                      modeloAnio: item.modelo_anio || item.anioModelo || '',
-                                      numMotor: item.num_motor || '',
-                                      numChasis: item.num_chasis || '',
-                                      kilometraje: item.kilometraje || item.km || 0,
-                                      accesoriosList: item.accesorios || [],
-                                      danosExternosList: item.danos_externos || [],
-                                      danosInternosList: item.danos_internos || [],
-                                      detallesTecnicosList: item.detalles_tecnicos || [],
-                                      sistemasMecanicosList: item.sistemas_mecanicos || [],
-                                      compresionCilindrosList: item.compresion_cilindros || [],
-                                    });
-                                    setIsInspecting(true);
-                                    setInspectionStep('Documentacion');
-                                  }}
+                                  onClick={() => handleEditarPeritaje(item)}
                                   className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline transition duration-140"
                                 >
                                   Editar
                                 </button>
-                              )}
+                              </div>
                             </td>
                           </tr> 
                         ))

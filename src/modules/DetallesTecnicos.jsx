@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
-const elementosIniciales = [
+// 1. Elementos para Automóviles
+const elementosAuto = [
   { id: 'motor', nombre: 'Motor' },
   { id: 'caja_diferencial', nombre: 'Caja y Diferencial' },
   { id: 'direccion', nombre: 'Dirección' },
@@ -21,11 +22,93 @@ const elementosIniciales = [
   { id: 'anclaje_cinturon', nombre: 'Anclaje del cinturón' },
 ];
 
+// 2. Elementos para Camionetas / Camperos / SUVs (Suele incluir 4x4)
+const elementosCamioneta = [
+  { id: 'motor', nombre: 'Motor' },
+  { id: 'caja_diferencial', nombre: 'Caja y Diferencial' },
+  { id: 'direccion', nombre: 'Dirección' },
+  { id: 'alineacion_susp', nombre: 'Alineación/Susp.' },
+  { id: 'luces', nombre: 'Luces' },
+  { id: 'tableros_instr', nombre: 'Tableros instr.' },
+  { id: 'calefaccion', nombre: 'Calefacción' },
+  { id: 'l_parabrisas_del_tras', nombre: 'L.Parabrisas del./tras.' },
+  { id: '4x4', nombre: '4x4 / Doble Tracción' },
+  { id: 'frenos', nombre: 'Frenos' },
+  { id: 'correas', nombre: 'Correas' },
+  { id: 'perdidas_agua', nombre: 'Pérdidas de Agua' },
+  { id: 'perdidas_aceite', nombre: 'Pérdidas de Aceite' },
+  { id: 'mangueras', nombre: 'Mangueras' },
+  { id: 'embrague', nombre: 'Embrague' },
+  { id: 'parabrisas', nombre: 'Parabrisas' },
+  { id: 'bocina', nombre: 'Bocina' },
+  { id: 'anclaje_cinturon', nombre: 'Anclaje del cinturón' },
+];
+
+// 3. Elementos para Motocicletas (Sin 4x4, sin parabrisas de auto, etc.)
+const elementosMoto = [
+  { id: 'motor', nombre: 'Motor' },
+  { id: 'caja_transmision', nombre: 'Caja / Transmisión' },
+  { id: 'direccion', nombre: 'Dirección / Manubrio' },
+  { id: 'suspension', nombre: 'Suspensión Delantera y Trasera' },
+  { id: 'luces', nombre: 'Luces e Indicadores' },
+  { id: 'frenos', nombre: 'Frenos' },
+  { id: 'cadena_correa', nombre: 'Cadena / Correa / Kit de arrastre' },
+  { id: 'perdidas_aceite', nombre: 'Pérdidas de Aceite' },
+  { id: 'llantas_rines', nombre: 'Llantas y Rines' },
+  { id: 'bocina', nombre: 'Bocina' },
+  { id: 'sistema_electrico', nombre: 'Sistema Eléctrico y Batería' },
+];
+
+// 4. Elementos para Motocarros (Similar a moto pero con componentes de estabilidad/reversa)
+const elementosMotocarro = [
+  { id: 'motor', nombre: 'Motor' },
+  { id: 'caja_transmision', nombre: 'Caja / Transmisión y Reversa' },
+  { id: 'direccion', nombre: 'Dirección / Manubrio' },
+  { id: 'suspension', nombre: 'Suspensión' },
+  { id: 'luces', nombre: 'Luces' },
+  { id: 'frenos', nombre: 'Frenos' },
+  { id: 'cardan_transmision', nombre: 'Cardán / Kit de arrastre' },
+  { id: 'perdidas_aceite', nombre: 'Pérdidas de Aceite' },
+  { id: 'llantas_rines', nombre: 'Llantas y Rines' },
+  { id: 'bocina', nombre: 'Bocina' },
+  { id: 'sistema_electrico', nombre: 'Sistema Eléctrico y Batería' },
+];
+
 export default function DetallesTecnicos({ peritajeData, onChange }) {
   const safeData = peritajeData || {};
   const detalles = safeData.detallesTecnicos || {};
 
   const [form, setForm] = useState(detalles);
+
+  // Detectar el tipo de vehículo (ajusta los strings según el ID o nombre que guardes en tu base de datos)
+  const tipoVehiculo = (safeData.tipoVehiculoId || safeData.tipo_vehiculo_id || '').toString().toLowerCase();
+
+  const obtenerElementosPorTipo = () => {
+    if (tipoVehiculo.includes('camioneta') || tipoVehiculo.includes('campero' ) || tipoVehiculo.includes('suv')) {
+      return elementosCamioneta;
+    }
+    if (tipoVehiculo.includes('motocarro')) {
+      return elementosMotocarro;
+    }
+    if (tipoVehiculo.includes('moto')) {
+      return elementosMoto;
+    }
+    // Por defecto asumimos automóvil
+    return elementosAuto;
+  };
+
+  const elementosIniciales = obtenerElementosPorTipo();
+  const esVehiculoLiviano = tipoVehiculo.includes('auto') || tipoVehiculo.includes('camioneta') || tipoVehiculo.includes('campero') || tipoVehiculo.includes('suv') || (!tipoVehiculo.includes('moto') && !tipoVehiculo.includes('motocarro'));
+
+  // Función auxiliar para calcular el costo total de reparación sumando los elementos activos
+  const calcularCostoTotal = (currentForm) => {
+    let total = 0;
+    elementosIniciales.forEach((item) => {
+      const costoItem = parseFloat(currentForm[item.id]?.costo) || 0;
+      total += costoItem;
+    });
+    return total.toString();
+  };
 
   const handleCheckboxChange = (id, checked) => {
     const updated = {
@@ -37,10 +120,16 @@ export default function DetallesTecnicos({ peritajeData, onChange }) {
   };
 
   const handleTextChange = (id, field, value) => {
+    const updatedItem = { ...(form[id] || {}), [field]: value };
+    const tempForm = { ...form, [id]: updatedItem };
+    
+    const costoReparacionTotal = field === 'costo' ? calcularCostoTotal(tempForm) : form.costoReparacion;
+
     const updated = {
-      ...form,
-      [id]: { ...(form[id] || {}), [field]: value }
+      ...tempForm,
+      costoReparacion: costoReparacionTotal
     };
+
     setForm(updated);
     if (onChange) onChange({ detallesTecnicos: updated });
   };
@@ -51,9 +140,6 @@ export default function DetallesTecnicos({ peritajeData, onChange }) {
     if (onChange) onChange({ detallesTecnicos: updated });
   };
 
-  // La imagen por ítem se guarda como data URL (base64) para poder
-  // dibujarla directamente en el PDF; el nombre del archivo se guarda aparte
-  // solo para mostrarlo en la interfaz.
   const handleImagenChange = (id, file) => {
     if (!file) return;
     const lector = new FileReader();
@@ -141,44 +227,46 @@ export default function DetallesTecnicos({ peritajeData, onChange }) {
         </table>
       </div>
 
-      {/* Sección: Vehículos híbridos/eléctricos */}
-      <div className="space-y-4 pt-4 border-t border-slate-200">
-        <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">
-          Vehículos híbridos/eléctricos
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">
-              Porcentaje restante de la batería (debe ser entre 0 y 100)
-            </label>
-            <div className="flex">
+      {/* Sección condicional para vehículos híbridos/eléctricos (solo autos/camionetas) */}
+      {esVehiculoLiviano && (
+        <div className="space-y-4 pt-4 border-t border-slate-200">
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">
+            Vehículos híbridos/eléctricos
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                Porcentaje restante de la batería (debe ser entre 0 y 100)
+              </label>
+              <div className="flex">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={form.porcentajeBateria || ''}
+                  onChange={(e) => handleGlobalChange('porcentajeBateria', e.target.value)}
+                  className="w-full p-2 border border-slate-300 rounded-l text-xs focus:ring-1 focus:ring-blue-500"
+                />
+                <span className="bg-slate-100 border border-l-0 border-slate-300 px-3 flex items-center text-xs font-bold text-slate-600 rounded-r">
+                  %
+                </span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                Vida útil de la batería
+              </label>
               <input
-                type="number"
-                min="0"
-                max="100"
-                value={form.porcentajeBateria || ''}
-                onChange={(e) => handleGlobalChange('porcentajeBateria', e.target.value)}
-                className="w-full p-2 border border-slate-300 rounded-l text-xs focus:ring-1 focus:ring-blue-500"
+                type="text"
+                value={form.vidaUtilBateria || ''}
+                onChange={(e) => handleGlobalChange('vidaUtilBateria', e.target.value)}
+                placeholder="Estado de la batería..."
+                className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-500"
               />
-              <span className="bg-slate-100 border border-l-0 border-slate-300 px-3 flex items-center text-xs font-bold text-slate-600 rounded-r">
-                %
-              </span>
             </div>
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">
-              Vida útil de la batería
-            </label>
-            <input
-              type="text"
-              value={form.vidaUtilBateria || ''}
-              onChange={(e) => handleGlobalChange('vidaUtilBateria', e.target.value)}
-              placeholder="Estado de la batería..."
-              className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
         </div>
-      </div>
+      )}
 
       {/* Sección: Otros */}
       <div className="space-y-4 pt-4 border-t border-slate-200">
@@ -186,7 +274,7 @@ export default function DetallesTecnicos({ peritajeData, onChange }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-1">
-              Costo de alistamiento
+              Costo Mano de Obra
             </label>
             <div className="relative flex items-center">
               <span className="absolute left-3 text-slate-400 font-bold">$</span>
@@ -214,16 +302,16 @@ export default function DetallesTecnicos({ peritajeData, onChange }) {
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-1">
-              Costo de reparación
+              Costo de reparación (Automático)
             </label>
             <div className="relative flex items-center">
               <span className="absolute left-3 text-slate-400 font-bold">$</span>
               <input
                 type="number"
                 value={form.costoReparacion || ''}
-                onChange={(e) => handleGlobalChange('costoReparacion', e.target.value)}
+                readOnly
                 placeholder="0"
-                className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-500"
+                className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded text-xs bg-slate-50 text-slate-600 cursor-not-allowed"
               />
             </div>
           </div>

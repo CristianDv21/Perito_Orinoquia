@@ -4,13 +4,15 @@ export default function VistaInterna({ peritajeData: data, onChange }) {
   const safeData = data || {};
   const tipoVehiculo = safeData.tipoVehiculo || 'carro';
 
-  // 1. PRIMERO declaramos TODOS los Hooks (antes de cualquier "if")
+  // 1. PRIMERO declaramos TODOS los Hooks (antes de cualquier "if" para evitar errores de renderizado de React)
   const [zonaSeleccionada, setZonaSeleccionada] = useState(null);
   
   const [formCabina, setFormCabina] = useState({
     estado: 'Óptimo',
     desgaste: 'Normal',
     comentario: '',
+    foto: null,
+    fotoNombre: ''
   });
 
   // 2. DESPUÉS de los Hooks, ponemos la validación de bloqueo o retorno temprano
@@ -57,9 +59,16 @@ export default function VistaInterna({ peritajeData: data, onChange }) {
   const handleSelectZona = (zonaId) => {
     setZonaSeleccionada(zonaId);
     if (safeData.danosInternos && safeData.danosInternos[zonaId]) {
-      setFormCabina(safeData.danosInternos[zonaId]);
+      setFormCabina({
+        estado: 'Óptimo',
+        desgaste: 'Normal',
+        comentario: '',
+        foto: null,
+        fotoNombre: '',
+        ...safeData.danosInternos[zonaId]
+      });
     } else {
-      setFormCabina({ estado: 'Óptimo', desgaste: 'Normal', comentario: '' });
+      setFormCabina({ estado: 'Óptimo', desgaste: 'Normal', comentario: '', foto: null, fotoNombre: '' });
     }
   };
 
@@ -68,14 +77,37 @@ export default function VistaInterna({ peritajeData: data, onChange }) {
     setFormCabina(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleFileChange = (e) => {
+    const { files } = e.target;
+    if (files && files[0]) {
+      const archivo = files[0];
+      const lector = new FileReader();
+      lector.onload = (evento) => {
+        setFormCabina(prev => ({ 
+          ...prev, 
+          foto: evento.target.result, 
+          fotoNombre: archivo.name 
+        }));
+      };
+      lector.readAsDataURL(archivo);
+    }
+  };
+
   const handleGuardarZona = () => {
     const nuevosDanos = { ...(safeData.danosInternos || {}) };
-    if (formCabina.estado === 'Óptimo' && !formCabina.comentario) {
+    if (formCabina.estado === 'Óptimo' && !formCabina.comentario && !formCabina.foto) {
       delete nuevosDanos[zonaSeleccionada];
     } else {
       nuevosDanos[zonaSeleccionada] = { ...formCabina };
     }
-    onChange({ danosInternos: nuevosDanos });
+    
+    // Propagación completa conservando el resto de datos del peritaje
+    if (onChange) {
+      onChange({
+        ...safeData,
+        danosInternos: nuevosDanos
+      });
+    }
     setZonaSeleccionada(null);
   };
 
@@ -163,6 +195,20 @@ export default function VistaInterna({ peritajeData: data, onChange }) {
                 <textarea name="comentario" value={formCabina.comentario} onChange={handleFormChange} rows="3" placeholder="Detalles de roturas, manchas o fallas..." className="w-full p-2.5 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white placeholder:text-slate-600 focus:ring-2 focus:ring-blue-500" />
               </div>
 
+              <div>
+                <label className="block text-xs font-bold text-slate-400 tracking-wider uppercase mb-1.5">Foto de Evidencia</label>
+                <input type="file" name="foto" accept="image/*" onChange={handleFileChange} className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-bold file:bg-slate-800 file:text-blue-400 hover:file:bg-slate-700 cursor-pointer" />
+                
+                {formCabina.foto && (
+                  <div className="mt-2 space-y-2">
+                    <p className="text-[11px] text-emerald-400 font-mono">✓ Cargada: {formCabina.fotoNombre || 'evidencia.jpg'}</p>
+                    <div className="w-20 h-20 rounded-lg overflow-hidden border border-slate-700 bg-slate-800">
+                      <img src={formCabina.foto} alt="Vista previa" className="w-full h-full object-cover" />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="pt-2 flex space-x-2">
                 <button type="button" onClick={() => setZonaSeleccionada(null)} className="w-1/3 py-2 text-xs font-bold uppercase tracking-wider border border-slate-700 text-slate-400 rounded-lg hover:bg-slate-800 transition">
                   Cancelar
@@ -182,9 +228,12 @@ export default function VistaInterna({ peritajeData: data, onChange }) {
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Zonas evaluadas ({Object.keys(safeData.danosInternos).length}):</p>
                   <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
                     {Object.entries(safeData.danosInternos).map(([zonaKey, val]) => (
-                      <div key={zonaKey} className="flex justify-between text-xs py-1 px-2 bg-slate-50 border rounded font-medium">
+                      <div key={zonaKey} className="flex justify-between items-center text-xs py-1.5 px-2 bg-slate-50 border rounded font-medium">
                         <span className="text-slate-700 font-bold">{zonasInternas.find(z => z.id === zonaKey)?.name || zonaKey}</span>
-                        <span className="text-slate-500 font-mono">{val.estado}</span>
+                        <div className="flex items-center space-x-2">
+                          {val.foto && <span className="text-[10px] text-emerald-600 font-bold">🖼️ Foto</span>}
+                          <span className="text-slate-500 font-mono">{val.estado}</span>
+                        </div>
                       </div>
                     ))}
                   </div>

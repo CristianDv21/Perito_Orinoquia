@@ -122,10 +122,7 @@ const ITEMS_MOTOR = {
   ],
 };
 
-// Listas de "Detalles Técnicos" (sección 7) específicas por tipo de vehículo.
-// Antes había una sola lista (pensada para carro) que se usaba también para
-// motos, motocarros y pesados, mostrando componentes que no aplican
-// (4x4, embrague, calefacción, parabrisas...) en un peritaje de moto.
+// --- Listas de Detalles Técnicos actualizadas con soporte para Camionetas / SUVs ---
 const ELEMENTOS_DETALLES_TECNICOS_AUTO = [
   { id: 'motor', nombre: 'Motor' },
   { id: 'caja_diferencial', nombre: 'Caja y Diferencial' },
@@ -136,6 +133,27 @@ const ELEMENTOS_DETALLES_TECNICOS_AUTO = [
   { id: 'calefaccion', nombre: 'Calefacción' },
   { id: 'l_parabrisas_del_tras', nombre: 'L.Parabrisas del./tras.' },
   { id: '4x4', nombre: '4x4' },
+  { id: 'frenos', nombre: 'Frenos' },
+  { id: 'correas', nombre: 'Correas' },
+  { id: 'perdidas_agua', nombre: 'Pérdidas de Agua' },
+  { id: 'perdidas_aceite', nombre: 'Pérdidas de Aceite' },
+  { id: 'mangueras', nombre: 'Mangueras' },
+  { id: 'embrague', nombre: 'Embrague' },
+  { id: 'parabrisas', nombre: 'Parabrisas' },
+  { id: 'bocina', nombre: 'Bocina' },
+  { id: 'anclaje_cinturon', nombre: 'Anclaje del cinturón' },
+];
+
+const ELEMENTOS_DETALLES_TECNICOS_CAMIONETA = [
+  { id: 'motor', nombre: 'Motor' },
+  { id: 'caja_diferencial', nombre: 'Caja y Diferencial' },
+  { id: 'direccion', nombre: 'Dirección' },
+  { id: 'alineacion_susp', nombre: 'Alineación/Susp.' },
+  { id: 'luces', nombre: 'Luces' },
+  { id: 'tableros_instr', nombre: 'Tableros instr.' },
+  { id: 'calefaccion', nombre: 'Calefacción' },
+  { id: 'l_parabrisas_del_tras', nombre: 'L.Parabrisas del./tras.' },
+  { id: '4x4', nombre: '4x4 / Doble Tracción' },
   { id: 'frenos', nombre: 'Frenos' },
   { id: 'correas', nombre: 'Correas' },
   { id: 'perdidas_agua', nombre: 'Pérdidas de Agua' },
@@ -175,24 +193,13 @@ const ELEMENTOS_DETALLES_TECNICOS_MOTOCARRO = [
   { id: 'sistema_electrico', nombre: 'Sistema Eléctrico y Batería' },
 ];
 
-const ELEMENTOS_DETALLES_TECNICOS_POR_TIPO = {
-  carro: ELEMENTOS_DETALLES_TECNICOS_AUTO,
-  pesado: ELEMENTOS_DETALLES_TECNICOS_AUTO,
-  moto: ELEMENTOS_DETALLES_TECNICOS_MOTO,
-  motocarro: ELEMENTOS_DETALLES_TECNICOS_MOTOCARRO,
-};
-
-// Posiciones aproximadas (fracción de ancho/alto) de cada pieza exterior
-// sobre el esquema de carro en planta, usadas solo para dibujar el punto
-// de color del hallazgo sobre el diagrama final del informe.
+// Posiciones aproximadas de cada pieza exterior sobre el esquema
 const POSICIONES_DIAGRAMA_CARRO = {
   bomper_del: [0.5, 0.05], capo: [0.5, 0.16], techo: [0.5, 0.5], baul: [0.5, 0.84], bomper_tras: [0.5, 0.95],
   guardabarro_del_izq: [0.14, 0.15], puerta_del_izq: [0.1, 0.34], puerta_tras_izq: [0.1, 0.6], guardabarro_tras_izq: [0.14, 0.82],
   guardabarro_del_der: [0.86, 0.15], puerta_del_der: [0.9, 0.34], puerta_tras_der: [0.9, 0.6], guardabarro_tras_der: [0.86, 0.82],
 };
 
-// Diagramas de vista lateral (izquierda = frente del vehículo) para los
-// demás tipos: [fracción de largo, fracción de alto].
 const POSICIONES_DIAGRAMA_MOTO = {
   carenaje_frontal: [0.08, 0.42], guardafango_del: [0.13, 0.78], tanque_gasolina: [0.36, 0.28],
   sillon_asiento: [0.58, 0.32], tapa_lateral_izq: [0.5, 0.52], tapa_lateral_der: [0.62, 0.52],
@@ -243,6 +250,7 @@ export const generarInstanciaPdf = (peritajeData) => {
     accesoriosList, sistemasMecanicos, comentariosMotor,
     danosExternos, danosInternos, detallesTecnicos,
     firmaInspector,
+    firmaCliente, // <-- Se añade la propiedad de la firma del cliente / solicitante
     tiempoCompletitud, fechaPeritaje,
   } = data;
 
@@ -265,12 +273,23 @@ export const generarInstanciaPdf = (peritajeData) => {
     return String(campo);
   };
 
-  const tipoStr = (tipoVehiculo || "carro").toLowerCase();
+  const tipoStr = (tipoVehiculo || data.tipoVehiculoId || data.tipo_vehiculo_id || "carro").toLowerCase();
   const esMoto = tipoStr === "moto";
   const esMotocarro = tipoStr === "motocarro";
   const esPesado = tipoStr === "pesado";
+  const esCamioneta = tipoStr.includes("camioneta") || tipoStr.includes("campero") || tipoStr.includes("suv");
+
   const catalogoKey = ["carro", "moto", "pesado", "motocarro"].includes(tipoStr) ? tipoStr : "carro";
-  const elementosTecnicosTipo = ELEMENTOS_DETALLES_TECNICOS_POR_TIPO[catalogoKey] || ELEMENTOS_DETALLES_TECNICOS_POR_TIPO.carro;
+  
+  // Selección dinámica de detalles técnicos según el tipo de vehículo evaluado
+  const obtenerElementosTecnicos = () => {
+    if (esCamioneta) return ELEMENTOS_DETALLES_TECNICOS_CAMIONETA;
+    if (esMoto) return ELEMENTOS_DETALLES_TECNICOS_MOTO;
+    if (esMotocarro) return ELEMENTOS_DETALLES_TECNICOS_MOTOCARRO;
+    if (esPesado) return ELEMENTOS_DETALLES_TECNICOS_AUTO;
+    return ELEMENTOS_DETALLES_TECNICOS_AUTO;
+  };
+  const elementosTecnicosTipo = obtenerElementosTecnicos();
 
   const colorFondoBarra = [41, 55, 77];
   const colorTextoBarra = [255, 255, 255];
@@ -313,7 +332,6 @@ export const generarInstanciaPdf = (peritajeData) => {
   doc.setFillColor(248, 250, 252);
   doc.setDrawColor(...colorBordeGrid);
   doc.roundedRect(10, 8, 196, 22, 1, 1, "FD");
-
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
@@ -370,9 +388,8 @@ export const generarInstanciaPdf = (peritajeData) => {
   tablaSimple(filasDocumentacion);
   tablaSimple([[`Historial de siniestros / antecedentes: ${siniestros || "Sin observaciones."}`]]);
 
-  // --- 3. ACCESORIOS Y EQUIPAMIENTOS (a partir de los datos reales capturados) ---
+  // --- 3. ACCESORIOS Y EQUIPAMIENTOS ---
   agregarBarraSeccion("3. Accesorios y equipamientos");
-
   const listaAccesorios = Array.isArray(accesoriosList) ? accesoriosList : [];
   let accesoriosBody = [];
   let filaAcc = [];
@@ -432,7 +449,7 @@ export const generarInstanciaPdf = (peritajeData) => {
     tablaSimple([[`Concepto mecánico final: ${comentariosMotor}`]]);
   }
 
-  // --- 5. VISTA EXTERNA (daños de carrocería) ---
+  // --- 5. VISTA EXTERNA ---
   agregarBarraSeccion("5. Vista Externa / Daños de Carrocería");
   const piezasTipo = PIEZAS_EXTERNAS[catalogoKey] || PIEZAS_EXTERNAS.carro;
   const danosExt = danosExternos || {};
@@ -450,7 +467,7 @@ export const generarInstanciaPdf = (peritajeData) => {
   });
   currentY = doc.lastAutoTable.finalY;
 
-  // --- 6. VISTA INTERNA (solo aplica para carro/pesado) ---
+  // --- 6. VISTA INTERNA ---
   if (!esMoto && !esMotocarro) {
     agregarBarraSeccion("6. Vista Interna / Cabina");
     const zonasTipo = ZONAS_INTERNAS[catalogoKey] || ZONAS_INTERNAS.carro;
@@ -486,7 +503,7 @@ export const generarInstanciaPdf = (peritajeData) => {
   });
   currentY = doc.lastAutoTable.finalY;
 
-  // --- 8. VEHÍCULOS HÍBRIDOS / ELÉCTRICOS (condicional) ---
+  // --- 8. VEHÍCULOS HÍBRIDOS / ELÉCTRICOS ---
   const esHibridoOElectrico = (tipoStr.includes("híbrido") || tipoStr.includes("hibrido") || tipoStr.includes("eléctrico") || tipoStr.includes("electrico") || porcentajeBateria !== undefined);
   if (esHibridoOElectrico) {
     agregarBarraSeccion("8. Vehículos Híbridos / Eléctricos");
@@ -502,40 +519,64 @@ export const generarInstanciaPdf = (peritajeData) => {
     ["Costo total de reparación:", `$ ${costoReparacion || "0"}`],
   ], { styles: { fontSize: 6.5, textColor: colorTextoNegro, cellPadding: 1, halign: "right", lineColor: colorBordeGrid } });
 
-  // --- FIRMA DEL INSPECTOR ---
-  agregarBarraSeccion(esMoto ? "9. Firma" : "10. Firma");
-  asegurarEspacio(28);
+  // --- BLOQUE DE FIRMAS: INSPECTOR Y CLIENTE / SOLICITANTE ---
+  agregarBarraSeccion(esMoto ? "9. Firmas de Autorización e Inspección" : "10. Firmas de Autorización e Inspección");
+  asegurarEspacio(32);
+  
+  // Dos cuadros de firma lado a lado (Inspector a la izquierda, Solicitante a la derecha)
+  const anchoCajaFirma = 94;
+  const altoCajaFirma = 26;
+  
+  // Cuadro Firma Inspector
   doc.setDrawColor(...colorBordeGrid);
-  doc.roundedRect(10, currentY, 196, 26, 1, 1, "S");
+  doc.roundedRect(10, currentY, anchoCajaFirma, altoCajaFirma, 1, 1, "S");
   if (firmaInspector) {
     try {
       const formato = firmaInspector.includes("image/png") ? "PNG" : "JPEG";
-      doc.addImage(firmaInspector, formato, 14, currentY + 2, 55, 20, undefined, "FAST");
+      doc.addImage(firmaInspector, formato, 14, currentY + 2, 45, 16, undefined, "FAST");
     } catch {
-      doc.text("No fue posible incrustar la firma.", 14, currentY + 12);
+      doc.text("Firma no disponible.", 14, currentY + 12);
     }
   } else {
-    doc.setFontSize(6.5);
+    doc.setFontSize(6);
     doc.setTextColor(148, 163, 184);
-    doc.text("Firma no registrada.", 14, currentY + 14);
+    doc.text("Firma del inspector no registrada.", 14, currentY + 14);
   }
   doc.setFont("helvetica", "bold");
   doc.setFontSize(6.5);
   doc.setTextColor(...colorTextoNegro);
-  doc.text(`Inspector: ${inspectorNombre ? extraerTexto(inspectorNombre) : "N/A"}`, 80, currentY + 10);
+  doc.text(`Inspector: ${inspectorNombre ? extraerTexto(inspectorNombre) : "N/A"}`, 14, currentY + 22);
+
+  // Cuadro Firma Cliente / Solicitante
+  doc.roundedRect(112, currentY, anchoCajaFirma, altoCajaFirma, 1, 1, "S");
+  if (firmaCliente) {
+    try {
+      const formato = firmaCliente.includes("image/png") ? "PNG" : "JPEG";
+      doc.addImage(firmaCliente, formato, 116, currentY + 2, 45, 16, undefined, "FAST");
+    } catch {
+      doc.text("Firma no disponible.", 116, currentY + 12);
+    }
+  } else {
+    doc.setFontSize(6);
+    doc.setTextColor(148, 163, 184);
+    doc.text("Firma del solicitante no registrada.", 116, currentY + 14);
+  }
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6.5);
+  doc.setTextColor(...colorTextoNegro);
+  doc.text(`Solicita Peritaje: ${clienteNombre || "N/A"}`, 116, currentY + 21);
   doc.setFont("helvetica", "normal");
-  doc.text(`Fecha: ${fechaPeritaje || new Date().toLocaleDateString()}`, 80, currentY + 15);
-  currentY += 26;
+  doc.text(`Doc: ${clienteDocumento || "N/A"}`, 116, currentY + 24.5);
+
+  currentY += 28;
 
   // ==========================================================================
-  // PÁGINA FINAL: ESQUEMA DE INSPECCIÓN + SELLO DE VEHÍCULO REVISADO
-  // (inspirada en el diseño de referencia entregado por el cliente)
+  // PÁGINA FINAL: ESQUEMA DE INSPECCIÓN + RESUMEN VISUAL
   // ==========================================================================
   doc.addPage();
   currentY = 15;
   agregarBarraSeccion("Resumen Visual de la Inspección");
 
-  // --- Cálculo del porcentaje general a partir de los datos realmente capturados ---
   const calcularPorcentaje = () => {
     let puntos = 0;
     let total = 0;
@@ -574,23 +615,19 @@ export const generarInstanciaPdf = (peritajeData) => {
   };
   const porcentajeGeneral = calcularPorcentaje();
 
-  // --- Diagrama esquemático del vehículo con los puntos de hallazgo ---
   const dx = 45, dy = currentY + 4, dw = 80, dh = catalogoKey === "carro" ? 130 : 60;
   doc.setDrawColor(...colorBordeGrid);
   doc.setFillColor(248, 250, 252);
   doc.roundedRect(dx, dy, dw, dh, 3, 3, "FD");
 
   if (catalogoKey === "carro") {
-    // Carrocería (vista en planta, simplificada)
     doc.setFillColor(226, 232, 240);
     doc.roundedRect(dx + dw * 0.18, dy + dh * 0.04, dw * 0.64, dh * 0.92, 8, 8, "F");
     doc.setDrawColor(148, 163, 184);
     doc.setLineWidth(0.3);
     doc.roundedRect(dx + dw * 0.18, dy + dh * 0.04, dw * 0.64, dh * 0.92, 8, 8, "S");
-    // Parabrisas / techo
     doc.setFillColor(203, 213, 225);
     doc.roundedRect(dx + dw * 0.26, dy + dh * 0.30, dw * 0.48, dh * 0.30, 4, 4, "F");
-    // Llantas
     doc.setFillColor(71, 85, 105);
     [0.14, 0.86].forEach((fx) => {
       [0.18, 0.82].forEach((fy) => {
@@ -598,20 +635,16 @@ export const generarInstanciaPdf = (peritajeData) => {
       });
     });
   } else {
-    // Vista lateral genérica: carrocería + 2 ruedas (frente = izquierda)
     doc.setFillColor(226, 232, 240);
     doc.setDrawColor(148, 163, 184);
     doc.setLineWidth(0.3);
     doc.roundedRect(dx + dw * 0.06, dy + dh * 0.28, dw * 0.88, dh * 0.34, 6, 6, "FD");
     if (catalogoKey === "pesado") {
-      // Cabina más alta al frente + platón/furgón trasero
       doc.roundedRect(dx + dw * 0.06, dy + dh * 0.12, dw * 0.26, dh * 0.5, 4, 4, "FD");
       doc.roundedRect(dx + dw * 0.55, dy + dh * 0.16, dw * 0.40, dh * 0.46, 3, 3, "FD");
     } else {
-      // Moto / motocarro: manubrio y asiento simplificados
       doc.roundedRect(dx + dw * 0.28, dy + dh * 0.14, dw * 0.30, dh * 0.24, 4, 4, "FD");
     }
-    // Ruedas
     doc.setFillColor(71, 85, 105);
     const radioLlanta = dh * 0.16;
     [0.14, 0.86].forEach((fx) => {
@@ -622,7 +655,6 @@ export const generarInstanciaPdf = (peritajeData) => {
     });
   }
 
-  // Puntos de hallazgo
   const posiciones = POSICIONES_DIAGRAMA_POR_TIPO[catalogoKey] || {};
   piezasTipo.forEach((p) => {
     const pos = posiciones[p.id];
@@ -646,7 +678,6 @@ export const generarInstanciaPdf = (peritajeData) => {
     dx + dw / 2, dy + dh + 5, { align: "center" }
   );
 
-  // Leyenda de colores de hallazgos
   const leyenda = [
     ["Sin novedad", [16, 185, 129]],
     ["Rayón", COLOR_POR_TIPO_DANO['Rayón']],
@@ -671,8 +702,6 @@ export const generarInstanciaPdf = (peritajeData) => {
     leyendaY += 5.5;
   });
 
-  // Sello de vehículo revisado, al lado del esquem
-
   currentY += (catalogoKey === "carro" ? 145 : 80);
   asegurarEspacio(20);
   autoTable(doc, {
@@ -687,7 +716,7 @@ export const generarInstanciaPdf = (peritajeData) => {
   currentY = doc.lastAutoTable.finalY;
 
   // ==========================================================================
-  // SET DE IMÁGENES (galería con toda la evidencia fotográfica capturada)
+  // SET DE IMÁGENES
   // ==========================================================================
   const imagenes = [];
   piezasTipo.forEach((p) => {

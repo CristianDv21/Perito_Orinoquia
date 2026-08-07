@@ -80,7 +80,7 @@ export default function DetallesTecnicos({ peritajeData, onChange }) {
 
   const [form, setForm] = useState(detalles);
 
-  // Detectar el tipo de vehículo (ajusta los strings según el ID o nombre que guardes en tu base de datos)
+  // Detectar el tipo de vehículo[cite: 7]
   const tipoVehiculo = (safeData.tipoVehiculoId || safeData.tipo_vehiculo_id || '').toString().toLowerCase();
 
   const obtenerElementosPorTipo = () => {
@@ -93,14 +93,14 @@ export default function DetallesTecnicos({ peritajeData, onChange }) {
     if (tipoVehiculo.includes('moto')) {
       return elementosMoto;
     }
-    // Por defecto asumimos automóvil
+    // Por defecto asumimos automóvil[cite: 7]
     return elementosAuto;
   };
 
   const elementosIniciales = obtenerElementosPorTipo();
   const esVehiculoLiviano = tipoVehiculo.includes('auto') || tipoVehiculo.includes('camioneta') || tipoVehiculo.includes('campero') || tipoVehiculo.includes('suv') || (!tipoVehiculo.includes('moto') && !tipoVehiculo.includes('motocarro'));
 
-  // Función auxiliar para calcular el costo total de reparación sumando los elementos activos
+  // Función auxiliar para calcular el costo total de reparación sumando los elementos activos[cite: 7]
   const calcularCostoTotal = (currentForm) => {
     let total = 0;
     elementosIniciales.forEach((item) => {
@@ -173,7 +173,9 @@ export default function DetallesTecnicos({ peritajeData, onChange }) {
               const itemData = form[item.id] || {};
               return (
                 <tr key={item.id} className="hover:bg-slate-50 transition">
-                  <td className="py-2.5 px-4 font-semibold text-slate-700">{item.nombre}</td>
+                  <td className="py-2.5 px-4 font-semibold text-slate-700">
+                    {item.nombre}
+                  </td>
                   <td className="py-2.5 px-3 text-center">
                     <input
                       type="checkbox"

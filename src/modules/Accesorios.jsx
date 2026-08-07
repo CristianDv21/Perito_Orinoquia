@@ -118,17 +118,15 @@ export default function Accesorios({ peritajeData: data, onChange }) {
 
   const listaIdeal = listasPorTipo[tipoVehiculo] || listasPorTipo.carro;
 
-  // Asegurar que si cambian de tipo de vehículo o la lista está vacía, se carguen exclusivamente los ítems correspondientes con sus valores por defecto
+  // Fusiona inteligentemente la información guardada en la base de datos con los ítems ideales del vehículo actual
   const accesoriosActivos = (() => {
     if (!safeData.accesoriosList || safeData.accesoriosList.length === 0) {
       return listaIdeal;
     }
-    // Verificamos si los elementos guardados pertenecen a la categoría actual
     const perteneceAlTipo = safeData.accesoriosList.some(item => listaIdeal.some(l => l.id === item.id));
     if (!perteneceAlTipo) {
       return listaIdeal;
     }
-    // Fusionamos el estado guardado con la lista ideal para mantener valores previos si aplican
     return listaIdeal.map(idealItem => {
       const encontrado = safeData.accesoriosList.find(item => item.id === idealItem.id);
       return encontrado ? { ...idealItem, ...encontrado } : idealItem;
@@ -142,7 +140,8 @@ export default function Accesorios({ peritajeData: data, onChange }) {
       }
       return item;
     });
-    onChange({ accesoriosList: listaActualizada });
+    // Se preservan los demás datos del formulario al actualizar la lista de accesorios
+    onChange({ ...safeData, accesoriosList: listaActualizada });
   };
 
   return (
@@ -172,7 +171,7 @@ export default function Accesorios({ peritajeData: data, onChange }) {
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase">Selección:</label>
                     <select
-                      value={item.seleccion || item.opciones[0]}
+                      value={item.seleccion !== undefined ? item.seleccion : item.opciones[0]}
                       onChange={(e) => handleItemChange(item.id, 'seleccion', e.target.value)}
                       className="w-full p-1.5 border border-slate-200 rounded text-xs bg-slate-50 text-slate-700 focus:outline-none focus:border-blue-500"
                     >

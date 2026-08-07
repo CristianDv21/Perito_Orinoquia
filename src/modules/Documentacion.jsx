@@ -24,6 +24,7 @@ function FileUploader({ field, acceptedFile, onFileChange }) {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
     if (!allowedTypes.includes(file.type)) {
       alert('Solo se permiten imágenes (JPG, PNG, WEBP) o archivos PDF.');
+      e.target.value = null;
       return;
     }
 
@@ -48,6 +49,7 @@ function FileUploader({ field, acceptedFile, onFileChange }) {
         dataUrl: null,
       });
     }
+    e.target.value = null;
   };
 
   const removeFile = (e) => {
@@ -84,7 +86,7 @@ function FileUploader({ field, acceptedFile, onFileChange }) {
       ) : (
         <div className="relative flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-xl shadow-sm">
           <div className="flex items-center space-x-3 overflow-hidden mr-2">
-            {esUrlBackend || acceptedFile?.previewUrl ? (
+            {urlVisualizacion ? (
               <img src={urlVisualizacion} alt="Vista previa" className="w-10 h-10 object-cover rounded-lg border border-slate-100 flex-shrink-0" />
             ) : (
               <div className="w-10 h-10 bg-red-50 border border-red-100 text-red-500 flex items-center justify-center rounded-lg flex-shrink-0">
@@ -133,7 +135,23 @@ export default function Documentacion({
 
   const handleInputChange = (field, value) => {
     if (onChange) {
-      onChange({ [field]: value });
+      const updatedData = { ...safeData, [field]: value };
+
+      // Mapeo automático de compatibilidad camelCase <-> snake_case para campos del cliente
+      const equivalencias = {
+        clienteNombre: 'cliente_nombre',
+        cliente_nombre: 'clienteNombre',
+        clienteDocumento: 'cliente_documento',
+        cliente_documento: 'clienteDocumento',
+        clienteTelefono: 'cliente_telefono',
+        cliente_telefono: 'clienteTelefono',
+      };
+
+      if (equivalencias[field]) {
+        updatedData[equivalencias[field]] = value;
+      }
+
+      onChange(updatedData);
     }
   };
 
@@ -179,6 +197,7 @@ export default function Documentacion({
   return (
     <div className="space-y-6 text-slate-800">
 
+      {/* ASIGNACIÓN DE OPERACIÓN Y PERSONAL */}
       <div className="bg-white border border-slate-200/60 rounded-xl p-6 space-y-4 shadow-sm">
         <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider border-b border-slate-100 pb-3">
           Asignación de Operación y Personal
@@ -199,7 +218,7 @@ export default function Documentacion({
               )}
             </div>
             <select
-              value={safeData.sucursalVendedorId || ''}
+              value={safeData.sucursalVendedorId || safeData.sucursal_vendedor_id || ''}
               onChange={(e) => handleInputChange('sucursalVendedorId', e.target.value)}
               className={inputStyle}
               required
@@ -227,7 +246,7 @@ export default function Documentacion({
               )}
             </div>
             <select
-              value={safeData.sucursalInspeccionId || ''}
+              value={safeData.sucursalInspeccionId || safeData.sucursal_inspeccion_id || ''}
               onChange={(e) => handleInputChange('sucursalInspeccionId', e.target.value)}
               className={inputStyle}
               required
@@ -255,7 +274,7 @@ export default function Documentacion({
               )}
             </div>
             <select
-              value={safeData.vendedorId || ''}
+              value={safeData.vendedorId || safeData.vendedor_id || ''}
               onChange={(e) => handleInputChange('vendedorId', e.target.value)}
               className={inputStyle}
               required
@@ -271,7 +290,7 @@ export default function Documentacion({
         </div>
       </div>
 
-
+      {/* DATOS DE IDENTIFICACIÓN DEL VEHÍCULO */}
       <div className="bg-white border border-slate-200/60 rounded-xl p-6 space-y-4 shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider">
@@ -350,7 +369,7 @@ export default function Documentacion({
             <input
               type="text"
               placeholder="Registro motor..."
-              value={safeData.numMotor || ''}
+              value={safeData.numMotor || safeData.num_motor || ''}
               onChange={(e) => handleInputChange('numMotor', e.target.value.toUpperCase())}
               className={`${inputStyle} font-mono tracking-wide uppercase`}
               required
@@ -362,7 +381,7 @@ export default function Documentacion({
             <input
               type="text"
               placeholder="Registro chasis..."
-              value={safeData.numChasis || ''}
+              value={safeData.numChasis || safeData.num_chasis || ''}
               onChange={(e) => handleInputChange('numChasis', e.target.value.toUpperCase())}
               className={`${inputStyle} font-mono tracking-wide uppercase`}
               required
@@ -382,7 +401,7 @@ export default function Documentacion({
         </div>
       </div>
 
-      {/* 📄 SECCIÓN 2: DOCUMENTOS LEGALES Y CLIENTE */}
+      {/* VERIFICACIÓN DE DOCUMENTACIÓN LEGAL Y PROPIETARIO */}
       <div className="bg-white border border-slate-200/60 rounded-xl p-6 space-y-4 shadow-sm">
         <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider border-b border-slate-100 pb-3">
           Verificación de Documentación Legal y Propietario
@@ -396,7 +415,7 @@ export default function Documentacion({
               <input
                 type="text"
                 placeholder="Nombre del cliente..."
-                value={safeData.clienteNombre || ''}
+                value={safeData.clienteNombre || safeData.cliente_nombre || ''}
                 onChange={(e) => handleInputChange('clienteNombre', e.target.value)}
                 className={inputStyle}
               />
@@ -406,7 +425,7 @@ export default function Documentacion({
               <input
                 type="text"
                 placeholder="Cédula o NIT..."
-                value={safeData.clienteDocumento || ''}
+                value={safeData.clienteDocumento || safeData.cliente_documento || ''}
                 onChange={(e) => handleInputChange('clienteDocumento', e.target.value)}
                 className={`${inputStyle} font-mono`}
               />
@@ -416,7 +435,7 @@ export default function Documentacion({
               <input
                 type="text"
                 placeholder="Teléfono..."
-                value={safeData.clienteTelefono || ''}
+                value={safeData.clienteTelefono || safeData.cliente_telefono || ''}
                 onChange={(e) => handleInputChange('clienteTelefono', e.target.value)}
                 className={`${inputStyle} font-mono`}
               />
@@ -426,14 +445,13 @@ export default function Documentacion({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
 
-          {/* SOAT */}
           <div className="p-4 bg-white border border-slate-200 rounded-xl flex flex-col justify-between shadow-sm space-y-4">
             <div className="space-y-3">
               <div className="flex items-center justify-between pb-1">
                 <span className="text-xs font-bold text-slate-700">¿SOAT Vigente?</span>
                 <input
                   type="checkbox"
-                  checked={!!safeData.soatAlDia}
+                  checked={!!(safeData.soatAlDia ?? safeData.soat_al_dia)}
                   onChange={(e) => handleInputChange('soatAlDia', e.target.checked)}
                   className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer border-slate-300"
                 />
@@ -443,24 +461,23 @@ export default function Documentacion({
                 <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1.5 tracking-wide">Fecha de Vencimiento SOAT</label>
                 <input
                   type="date"
-                  value={safeData.venceSoat || ''}
+                  value={safeData.venceSoat || safeData.vence_soat || ''}
                   onChange={(e) => handleInputChange('venceSoat', e.target.value)}
                   className={`${inputStyle} font-mono font-bold text-slate-600`}
                 />
               </div>
             </div>
 
-            <FileUploader field="archivoSoat" acceptedFile={safeData.archivoSoat} onFileChange={handleInputChange} />
+            <FileUploader field="archivoSoat" acceptedFile={safeData.archivoSoat || safeData.archivo_soat} onFileChange={handleInputChange} />
           </div>
 
-          {/* Técnico Mecánica (RTM) */}
           <div className="p-4 bg-white border border-slate-200 rounded-xl flex flex-col justify-between shadow-sm space-y-4">
             <div className="space-y-3">
               <div className="flex items-center justify-between pb-1">
                 <span className="text-xs font-bold text-slate-700">¿Técnico Mecánica Vigente?</span>
                 <input
                   type="checkbox"
-                  checked={!!safeData.tecnicoMecanicaAlDia}
+                  checked={!!(safeData.tecnicoMecanicaAlDia ?? safeData.tecnico_mecanica_al_dia)}
                   onChange={(e) => handleInputChange('tecnicoMecanicaAlDia', e.target.checked)}
                   className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer border-slate-300"
                 />
@@ -470,14 +487,14 @@ export default function Documentacion({
                 <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1.5 tracking-wide">Fecha de Vencimiento RTM</label>
                 <input
                   type="date"
-                  value={safeData.venceTecnicoMecanica || ''}
+                  value={safeData.venceTecnicoMecanica || safeData.vence_tecnico_mecanica || ''}
                   onChange={(e) => handleInputChange('venceTecnicoMecanica', e.target.value)}
                   className={`${inputStyle} font-mono font-bold text-slate-600`}
                 />
               </div>
             </div>
 
-            <FileUploader field="archivoTecnicoMecanica" acceptedFile={safeData.archivoTecnicoMecanica} onFileChange={handleInputChange} />
+            <FileUploader field="archivoTecnicoMecanica" acceptedFile={safeData.archivoTecnicoMecanica || safeData.archivo_tecnico_mecanica} onFileChange={handleInputChange} />
           </div>
 
         </div>

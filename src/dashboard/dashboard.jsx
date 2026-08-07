@@ -17,6 +17,11 @@ import {
   BarChart3,
   Settings,
   Users,
+  Building,
+
+  FileText,
+  Sliders,
+  Save
 } from "lucide-react";
 
 export default function Dashboard({ onLogout }) {
@@ -47,6 +52,20 @@ export default function Dashboard({ onLogout }) {
   const [showEditarUsuarioModal, setShowEditarUsuarioModal] = useState(false);
   const [showUserProfileModal, setShowUserProfileModal] = useState(false);
   const [selectedUserForProfile, setSelectedUserForProfile] = useState(null);
+
+  // Estado para el nuevo módulo de Configuración del Sistema
+  const [configSistema, setConfigSistema] = useState({
+    nombreEmpresa: 'Servi-Centro CDA / Perito Orinoquia',
+    nit: '900.456.789-1',
+    telefono: '+57 320 1234567',
+    direccion: 'Carrera 20 # 15-40',
+    ciudad: 'Yopal, Casanare',
+    emailEmpresa: 'contacto@peritoorinoquia.com',
+    scoreInicialDefecto: 100,
+    exigirFotosDocumentos: true,
+    modoOscuroPorDefecto: false,
+    textoLegalPdf: 'El presente peritaje es un diagnóstico visual, estético y mecánico del estado del vehículo al momento de la inspección. No compromete responsabilidad legal sobre fallas fortuitas posteriores ni vicios ocultos no detectables en banco.'
+  });
 
   const [nuevoUsuarioData, setNuevoUsuarioData] = useState({
     name: '',
@@ -185,15 +204,21 @@ export default function Dashboard({ onLogout }) {
   };
 
   useEffect(() => {
-    if (activeTab === 'Usuarios' && esAdmin) {
-      fetchUsuarios();
-    }
+    const cargarUsuarios = async () => {
+      if (activeTab === 'Usuarios' && esAdmin) {
+        await fetchUsuarios();
+      }
+    };
+    cargarUsuarios();
   }, [activeTab, esAdmin]);
 
   useEffect(() => {
-    if (activeTab === 'Bandeja' || activeTab === 'Perfil' || activeTab === 'Estadisticas') {
-      fetchInspecciones();
-    }
+    const cargarInspecciones = async () => {
+      if (activeTab === 'Bandeja' || activeTab === 'Perfil' || activeTab === 'Estadisticas') {
+        await fetchInspecciones();
+      }
+    };
+    cargarInspecciones();
   }, [activeTab]);
 
   const handleUpdateProfile = async () => {
@@ -204,6 +229,12 @@ export default function Dashboard({ onLogout }) {
       console.error("Error al actualizar:", error);
       alert(error.response?.data?.message || "Error al actualizar el perfil");
     }
+  };
+
+  const handleGuardarConfiguracion = (e) => {
+    e.preventDefault();
+    localStorage.setItem('peritaje_config_sistema', JSON.stringify(configSistema));
+    alert('¡Configuración del sistema guardada exitosamente!');
   };
 
   const handleCrearUsuario = async (e) => {
@@ -610,10 +641,10 @@ export default function Dashboard({ onLogout }) {
 
   const inspeccionesFiltradasEstadisticas = inspecciones.filter(item => {
     const placaMatch = !filtroEstadisticasPlaca || (item.placa || '').toLowerCase().includes(filtroEstadisticasPlaca.toLowerCase());
-    
+
     const inspectorNombre = (item.inspector?.name || item.inspector || '').toLowerCase();
     const inspectorMatch = !filtroEstadisticasInspector || inspectorNombre.includes(filtroEstadisticasInspector.toLowerCase());
-    
+
     const fechaItem = item.fechaPeritaje || item.created_at ? (item.fechaPeritaje || item.created_at).split('T')[0] : '';
     const fechaMatch = !filtroEstadisticasFecha || fechaItem === filtroEstadisticasFecha;
 
@@ -784,13 +815,16 @@ export default function Dashboard({ onLogout }) {
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Sucursal Asignada</label>
                 <select
-                  value={nuevoUsuarioData.sucursal_id}
+                  value={nuevoUsuarioData.sucursal_id || ''}
                   onChange={(e) => setNuevoUsuarioData({ ...nuevoUsuarioData, sucursal_id: e.target.value })}
                   className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
                 >
-                  <option value="">-- Sin sucursal fija --</option>
-                  {sucursales.map((suc) => (
-                    <option key={suc.id} value={suc.id}>{suc.nombre}</option>
+                  <option value="">Seleccione una sucursal...</option>
+                  {sucursales && sucursales.map((sucursal) => (
+                    <option key={sucursal.id} value={sucursal.id}>
+                      {sucursal.nombre}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -1018,7 +1052,7 @@ export default function Dashboard({ onLogout }) {
               }}
               className="transition duration-500 hover:scale-105"
             >
-              <img src="/Logo1.png" alt="Servi-Centro CDA" className="w-40 object-contain" draggable={false} />
+              <img src="/Logo1.png" alt="Servi-Centro CDA" className="w-400 object-contain" draggable={false} />
             </button>
             <button onClick={toggleSidebar} className="absolute right-4 top-4 lg:hidden text-slate-400 hover:text-white">✕</button>
           </div>
@@ -1212,7 +1246,6 @@ export default function Dashboard({ onLogout }) {
                             <th className="px-4 py-3">Fecha</th>
                             <th className="px-4 py-3">Marca</th>
                             <th className="px-4 py-3">Modelo</th>
-                            <th className="px-4 py-3">Año del modelo</th>
                             <th className="px-4 py-3">Km</th>
                             <th className="px-4 py-3">Placa</th>
                             <th className="px-4 py-3">Sucursal Vendedor</th>
@@ -1241,7 +1274,6 @@ export default function Dashboard({ onLogout }) {
                                 </td>
                                 <td className="px-4 py-4 whitespace-nowrap font-semibold text-slate-800">{item.marca || 'N/A'}</td>
                                 <td className="px-4 py-4 whitespace-nowrap">{item.modelo || item.linea || 'N/A'}</td>
-                                <td className="px-4 py-4 whitespace-nowrap">{item.anioModelo || item.modelo_anio || 'N/A'}</td>
                                 <td className="px-4 py-4 whitespace-nowrap font-mono">{item.km || item.kilometraje || '0'}</td>
                                 <td className="px-4 py-4 whitespace-nowrap">
                                   <span className="inline-block bg-slate-900 text-white px-2.5 py-1 rounded-md font-mono font-bold text-[11px] shadow-sm">
@@ -1467,11 +1499,10 @@ export default function Dashboard({ onLogout }) {
                                   {item.inspector?.name || item.inspector || 'Inspector Activo'}
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap">
-                                  <span className={`inline-block px-2.5 py-1 rounded-md text-[10px] font-bold uppercase ${
-                                    (item.estado || '').toLowerCase() === 'completado' 
-                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                                  <span className={`inline-block px-2.5 py-1 rounded-md text-[10px] font-bold uppercase ${(item.estado || '').toLowerCase() === 'completado'
+                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                       : 'bg-amber-50 text-amber-700 border border-amber-200'
-                                  }`}>
+                                    }`}>
                                     {item.estado || 'en proceso'}
                                   </span>
                                 </td>
@@ -1500,6 +1531,147 @@ export default function Dashboard({ onLogout }) {
                       </table>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {activeTab === 'Configuracion' && (
+                <div className="space-y-6 max-w-4xl mx-auto">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-4">
+                    <div>
+                      <h1 className="text-2xl font-bold tracking-tight text-slate-900">Configuración del Sistema</h1>
+                      <p className="text-slate-500 mt-1 text-sm">Gestiona los parámetros generales del CDA, textos legales para reportes PDF y reglas de inspección.</p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleGuardarConfiguracion} className="space-y-6">
+                    {/* Información de la Empresa / CDA */}
+                    <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm space-y-4">
+                      <div className="flex items-center space-x-2 border-b border-slate-100 pb-3 text-slate-900 font-bold text-sm uppercase tracking-wider">
+                        <Building size={18} className="text-blue-600" />
+                        <span>Datos Fiscales y de la Empresa</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                        <div>
+                          <label className="block font-bold text-slate-600 mb-1">Nombre del Centro / Taller</label>
+                          <input
+                            type="text"
+                            value={configSistema.nombreEmpresa}
+                            onChange={(e) => setConfigSistema({ ...configSistema, nombreEmpresa: e.target.value })}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-bold text-slate-600 mb-1">NIT</label>
+                          <input
+                            type="text"
+                            value={configSistema.nit}
+                            onChange={(e) => setConfigSistema({ ...configSistema, nit: e.target.value })}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-bold text-slate-600 mb-1">Teléfono de Contacto</label>
+                          <input
+                            type="text"
+                            value={configSistema.telefono}
+                            onChange={(e) => setConfigSistema({ ...configSistema, telefono: e.target.value })}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-bold text-slate-600 mb-1">Correo Electrónico</label>
+                          <input
+                            type="email"
+                            value={configSistema.emailEmpresa}
+                            onChange={(e) => setConfigSistema({ ...configSistema, emailEmpresa: e.target.value })}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-bold text-slate-600 mb-1">Dirección Física</label>
+                          <input
+                            type="text"
+                            value={configSistema.direccion}
+                            onChange={(e) => setConfigSistema({ ...configSistema, direccion: e.target.value })}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-bold text-slate-600 mb-1">Ciudad / Municipio</label>
+                          <input
+                            type="text"
+                            value={configSistema.ciudad}
+                            onChange={(e) => setConfigSistema({ ...configSistema, ciudad: e.target.value })}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Parámetros Operativos del Peritaje */}
+                    <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm space-y-4">
+                      <div className="flex items-center space-x-2 border-b border-slate-100 pb-3 text-slate-900 font-bold text-sm uppercase tracking-wider">
+                        <Sliders size={18} className="text-blue-600" />
+                        <span>Parámetros de Inspección</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                        <div>
+                          <label className="block font-bold text-slate-600 mb-1">Puntuación Inicial por Defecto (Scores)</label>
+                          <input
+                            type="number"
+                            min="50"
+                            max="100"
+                            value={configSistema.scoreInicialDefecto}
+                            onChange={(e) => setConfigSistema({ ...configSistema, scoreInicialDefecto: Number(e.target.value) })}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <span className="text-[10px] text-slate-400 mt-1 block">Puntaje máximo asignado al iniciar un nuevo peritaje.</span>
+                        </div>
+                        <div className="flex items-center justify-between p-3 border border-slate-100 rounded-lg bg-slate-50/50 self-center">
+                          <div>
+                            <span className="block font-bold text-slate-700">Validación Estricta de Documentos</span>
+                            <span className="text-[10px] text-slate-500">Exigir Soat y RTM alfanuméricos válidos</span>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={configSistema.exigirFotosDocumentos}
+                            onChange={(e) => setConfigSistema({ ...configSistema, exigirFotosDocumentos: e.target.checked })}
+                            className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Textos Legales para el PDF */}
+                    <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm space-y-4">
+                      <div className="flex items-center space-x-2 border-b border-slate-100 pb-3 text-slate-900 font-bold text-sm uppercase tracking-wider">
+                        <FileText size={18} className="text-blue-600" />
+                        <span>Cláusula Legal / Términos del Reporte PDF</span>
+                      </div>
+                      <div>
+                        <label className="block font-bold text-slate-600 mb-1 text-xs">Texto Legal al Pie de Página del Informe</label>
+                        <textarea
+                          rows="3"
+                          value={configSistema.textoLegalPdf}
+                          onChange={(e) => setConfigSistema({ ...configSistema, textoLegalPdf: e.target.value })}
+                          className="w-full border border-slate-200 rounded-lg p-3 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="text-[10px] text-slate-400 mt-1 block">Este texto se incluirá en la sección de términos y condiciones del PDF generado para los clientes.</span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                      <button
+                        type="submit"
+                        className="px-6 py-3 text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition flex items-center space-x-2"
+                      >
+                        <Save size={16} />
+                        <span>Guardar Configuración</span>
+                      </button>
+                    </div>
+                  </form>
                 </div>
               )}
 

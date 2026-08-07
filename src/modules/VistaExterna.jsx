@@ -10,7 +10,8 @@ export default function VistaExterna({ peritajeData: data, onChange }) {
     tipo: 'Ninguno',
     micras: '',
     comentario: '',
-    foto: null
+    foto: null,
+    fotoNombre: ''
   });
 
   // Catálogo de piezas adaptado por tipo de vehículo
@@ -64,16 +65,21 @@ export default function VistaExterna({ peritajeData: data, onChange }) {
   };
 
   const piezasCarroceria = piezasPorModelo[tipoVehiculo] || piezasPorModelo.carro;
-
-  // Validación para ocultar el módulo de micras en vehículos donde no aplique o mantenerlo condicional
   const esVehiculoLivianoPesado = tipoVehiculo === 'carro' || tipoVehiculo === 'pesado';
 
   const handleSelectPieza = (piezaId) => {
     setPiezaSeleccionada(piezaId);
     if (safeData.danosExternos && safeData.danosExternos[piezaId]) {
-      setFormDano(safeData.danosExternos[piezaId]);
+      setFormDano({
+        tipo: 'Ninguno',
+        micras: '',
+        comentario: '',
+        foto: null,
+        fotoNombre: '',
+        ...safeData.danosExternos[piezaId]
+      });
     } else {
-      setFormDano({ tipo: 'Ninguno', micras: '', comentario: '', foto: null });
+      setFormDano({ tipo: 'Ninguno', micras: '', comentario: '', foto: null, fotoNombre: '' });
     }
   };
 
@@ -86,11 +92,13 @@ export default function VistaExterna({ peritajeData: data, onChange }) {
     const { files } = e.target;
     if (files && files[0]) {
       const archivo = files[0];
-      // Convertimos a data URL (base64) aquí mismo, porque jsPDF no puede
-      // dibujar un objeto File crudo: necesita una imagen ya decodificada.
       const lector = new FileReader();
       lector.onload = (evento) => {
-        setFormDano(prev => ({ ...prev, foto: evento.target.result, fotoNombre: archivo.name }));
+        setFormDano(prev => ({ 
+          ...prev, 
+          foto: evento.target.result, 
+          fotoNombre: archivo.name 
+        }));
       };
       lector.readAsDataURL(archivo);
     }
@@ -99,13 +107,19 @@ export default function VistaExterna({ peritajeData: data, onChange }) {
   const handleGuardarDano = () => {
     const nuevosDanos = { ...(safeData.danosExternos || {}) };
     
-    if (formDano.tipo === 'Ninguno' && !formDano.micras && !formDano.comentario) {
+    if (formDano.tipo === 'Ninguno' && !formDano.micras && !formDano.comentario && !formDano.foto) {
       delete nuevosDanos[piezaSeleccionada];
     } else {
       nuevosDanos[piezaSeleccionada] = { ...formDano };
     }
 
-    onChange({ danosExternos: nuevosDanos });
+    // Se propaga el estado completo conservando toda la información previa y las imágenes
+    if (onChange) {
+      onChange({
+        ...safeData,
+        danosExternos: nuevosDanos
+      });
+    }
     setPiezaSeleccionada(null);
   };
 
@@ -358,7 +372,6 @@ export default function VistaExterna({ peritajeData: data, onChange }) {
                 </select>
               </div>
 
-              {/* El campo de micras se muestra opcionalmente según el tipo de vehículo */}
               {esVehiculoLivianoPesado && (
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Espesor de Pintura (Micras μm)</label>
@@ -374,7 +387,15 @@ export default function VistaExterna({ peritajeData: data, onChange }) {
               <div>
                 <label className="block text-xs font-bold text-slate-400 tracking-wider uppercase mb-1.5">Foto de Evidencia</label>
                 <input type="file" name="foto" accept="image/*" onChange={handleFileChange} className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-bold file:bg-slate-800 file:text-blue-400 hover:file:bg-slate-700 cursor-pointer" />
-                {formDano.foto && <p className="text-[11px] text-emerald-400 mt-1 font-mono">✓ Cargada: {formDano.fotoNombre || 'imagen'}</p>}
+                
+                {formDano.foto && (
+                  <div className="mt-2 space-y-2">
+                    <p className="text-[11px] text-emerald-400 font-mono">✓ Cargada: {formDano.fotoNombre || 'evidencia.jpg'}</p>
+                    <div className="w-20 h-20 rounded-lg overflow-hidden border border-slate-700 bg-slate-800">
+                      <img src={formDano.foto} alt="Vista previa" className="w-full h-full object-cover" />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="pt-2 flex space-x-2">
@@ -397,9 +418,12 @@ export default function VistaExterna({ peritajeData: data, onChange }) {
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Resumen de daños ({Object.keys(safeData.danosExternos).length}):</p>
                   <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
                     {Object.entries(safeData.danosExternos).map(([piezaKey, val]) => (
-                      <div key={piezaKey} className="flex justify-between text-xs py-1 px-2 bg-slate-50 border rounded font-medium">
+                      <div key={piezaKey} className="flex justify-between items-center text-xs py-1.5 px-2 bg-slate-50 border rounded font-medium">
                         <span className="text-slate-700 font-bold">{piezasCarroceria.find(p => p.id === piezaKey)?.name || piezaKey}</span>
-                        <span className="text-slate-500 font-mono">{val.tipo} {val.micras ? `(${val.micras} μm)` : ''}</span>
+                        <div className="flex items-center space-x-2">
+                          {val.foto && <span className="text-[10px] text-emerald-600 font-bold">🖼️ Foto</span>}
+                          <span className="text-slate-500 font-mono">{val.tipo} {val.micras ? `(${val.micras} μm)` : ''}</span>
+                        </div>
                       </div>
                     ))}
                   </div>

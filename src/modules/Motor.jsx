@@ -2,14 +2,17 @@ export default function Motor({ peritajeData: data, onChange }) {
   const safeData = data || {};
   const tipoVehiculo = safeData.tipoVehiculo || 'carro'; // Heredado globalmente
 
-  // Manejador genérico para actualizar campos raíz
+  // Manejador genérico seguro para actualizar campos raíz sin sobrescribir el resto del estado
   const handleInputChange = (field, value) => {
     if (onChange) {
-      onChange({ [field]: value });
+      onChange({
+        ...safeData,
+        [field]: value
+      });
     }
   };
 
-  // Manejador específico para los componentes mecánicos del checklist
+  // Manejador específico para los componentes mecánicos del checklist asegurando inmutabilidad
   const handleMecanicoItemChange = (itemKey, field, value) => {
     const currentItems = safeData.sistemasMecanicos || {};
     const updatedItems = {
@@ -69,9 +72,9 @@ export default function Motor({ peritajeData: data, onChange }) {
 
   // 🧮 Definir cantidad de cilindros para la prueba de compresión según el vehículo
   const getCilindrosConfig = () => {
-    if (tipoVehiculo === 'moto') return [1]; // La gran mayoría son 1 cilindro
-    if (tipoVehiculo === 'motocarro') return [1, 2]; // Monocilíndrico o bicilíndrico común
-    return [1, 2, 3, 4]; // Carros y pesados por defecto (4 cilindros base)
+    if (tipoVehiculo === 'moto') return [1]; 
+    if (tipoVehiculo === 'motocarro') return [1, 2]; 
+    return [1, 2, 3, 4]; 
   };
 
   const cilindrosActivos = getCilindrosConfig();
@@ -92,7 +95,6 @@ export default function Motor({ peritajeData: data, onChange }) {
 
         <div className="divide-y divide-slate-100">
           {itemsMecanicos.map((item) => {
-            // Se inicializa en '' para que ningún botón esté seleccionado por defecto
             const itemState = safeData.sistemasMecanicos?.[item.key] || { estado: '', observaciones: '' };
             
             return (
@@ -162,14 +164,14 @@ export default function Motor({ peritajeData: data, onChange }) {
             <input 
               type="number" 
               placeholder="Ej. 15000"
-              value={safeData.kilometraje || ''} 
+              value={safeData.kilometraje ?? ''} 
               onChange={(e) => handleInputChange('kilometraje', e.target.value)}
               className={`${inputStyle} font-mono font-bold text-blue-600`}
             />
           </div>
         </div>
 
-        {/* ⚙️ CAMPOS NUEVOS Y EXISTENTES DE TRANSMISIÓN Y TRACCIÓN */}
+        {/* ⚙️ CAMPOS DE TRANSMISIÓN Y TRACCIÓN */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
           
           {/* Tipo de Transmisión */}
@@ -243,7 +245,7 @@ export default function Motor({ peritajeData: data, onChange }) {
 
         </div>
 
-        {/* Datos técnicos de compresión dinámicos según el número de cilindros */}
+        {/* Datos técnicos de compresión dinámicos */}
         <div className="pt-4 border-t border-slate-100">
           <label className="block text-xs font-bold uppercase text-slate-500 mb-2 tracking-wide">Lectura de Compresión (PSI)</label>
           <div className={`grid grid-cols-2 ${cilindrosActivos.length > 2 ? 'sm:grid-cols-4' : 'sm:grid-cols-2'} gap-3 max-w-2xl`}>
@@ -255,7 +257,7 @@ export default function Motor({ peritajeData: data, onChange }) {
                 <input 
                   type="number" 
                   placeholder="000"
-                  value={safeData[`compresionCil${num}`] || ''} 
+                  value={safeData[`compresionCil${num}`] ?? ''} 
                   onChange={(e) => handleInputChange(`compresionCil${num}`, e.target.value)}
                   className={`${inputStyle} pl-12 text-right font-mono font-bold text-blue-600`}
                 />
@@ -265,7 +267,6 @@ export default function Motor({ peritajeData: data, onChange }) {
           <span className="text-[10px] text-slate-400 mt-1.5 block font-medium">
             * Ingrese los valores obtenidos con el manómetro/compresómetro para el motor de {cilindrosActivos.length} cilindro(s).
           </span>
-
         </div>
       </div>
 

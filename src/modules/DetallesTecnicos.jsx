@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // 1. Elementos para Automóviles
 const elementosAuto = [
@@ -22,7 +22,7 @@ const elementosAuto = [
   { id: 'anclaje_cinturon', nombre: 'Anclaje del cinturón' },
 ];
 
-// 2. Elementos para Camionetas / Camperos / SUVs (Suele incluir 4x4)
+// 2. Elementos para Camionetas / Camperos / SUVs
 const elementosCamioneta = [
   { id: 'motor', nombre: 'Motor' },
   { id: 'caja_diferencial', nombre: 'Caja y Diferencial' },
@@ -44,7 +44,7 @@ const elementosCamioneta = [
   { id: 'anclaje_cinturon', nombre: 'Anclaje del cinturón' },
 ];
 
-// 3. Elementos para Motocicletas (Sin 4x4, sin parabrisas de auto, etc.)
+// 3. Elementos para Motocicletas
 const elementosMoto = [
   { id: 'motor', nombre: 'Motor' },
   { id: 'caja_transmision', nombre: 'Caja / Transmisión' },
@@ -59,7 +59,7 @@ const elementosMoto = [
   { id: 'sistema_electrico', nombre: 'Sistema Eléctrico y Batería' },
 ];
 
-// 4. Elementos para Motocarros (Similar a moto pero con componentes de estabilidad/reversa)
+// 4. Elementos para Motocarros
 const elementosMotocarro = [
   { id: 'motor', nombre: 'Motor' },
   { id: 'caja_transmision', nombre: 'Caja / Transmisión y Reversa' },
@@ -80,11 +80,15 @@ export default function DetallesTecnicos({ peritajeData, onChange }) {
 
   const [form, setForm] = useState(detalles);
 
-  // Detectar el tipo de vehículo[cite: 7]
+  // Sincronizar el estado local si peritajeData cambia o se carga asíncronamente
+  useEffect(() => {
+  }, [safeData.detallesTecnicos]);
+
+  // Detectar el tipo de vehículo
   const tipoVehiculo = (safeData.tipoVehiculoId || safeData.tipo_vehiculo_id || '').toString().toLowerCase();
 
   const obtenerElementosPorTipo = () => {
-    if (tipoVehiculo.includes('camioneta') || tipoVehiculo.includes('campero' ) || tipoVehiculo.includes('suv')) {
+    if (tipoVehiculo.includes('camioneta') || tipoVehiculo.includes('campero') || tipoVehiculo.includes('suv')) {
       return elementosCamioneta;
     }
     if (tipoVehiculo.includes('motocarro')) {
@@ -93,21 +97,20 @@ export default function DetallesTecnicos({ peritajeData, onChange }) {
     if (tipoVehiculo.includes('moto')) {
       return elementosMoto;
     }
-    // Por defecto asumimos automóvil[cite: 7]
-    return elementosAuto;
+    return elementosAuto; //
   };
 
   const elementosIniciales = obtenerElementosPorTipo();
   const esVehiculoLiviano = tipoVehiculo.includes('auto') || tipoVehiculo.includes('camioneta') || tipoVehiculo.includes('campero') || tipoVehiculo.includes('suv') || (!tipoVehiculo.includes('moto') && !tipoVehiculo.includes('motocarro'));
 
-  // Función auxiliar para calcular el costo total de reparación sumando los elementos activos[cite: 7]
+  // Calcular costo total manejando correctamente el tipo numérico
   const calcularCostoTotal = (currentForm) => {
     let total = 0;
     elementosIniciales.forEach((item) => {
       const costoItem = parseFloat(currentForm[item.id]?.costo) || 0;
       total += costoItem;
     });
-    return total.toString();
+    return total;
   };
 
   const handleCheckboxChange = (id, checked) => {
@@ -229,7 +232,7 @@ export default function DetallesTecnicos({ peritajeData, onChange }) {
         </table>
       </div>
 
-      {/* Sección condicional para vehículos híbridos/eléctricos (solo autos/camionetas) */}
+      {/* Sección condicional para vehículos híbridos/eléctricos */}
       {esVehiculoLiviano && (
         <div className="space-y-4 pt-4 border-t border-slate-200">
           <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">

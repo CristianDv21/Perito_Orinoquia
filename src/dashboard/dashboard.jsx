@@ -5,7 +5,7 @@ import Motor from '../modules/Motor';
 import VistaExterna from '../modules/VistaExterna';
 import VistaInterna from '../modules/VistaInterna';
 import Firma from '../modules/Firmas';
-import InformePdf from '../modules/informePdf';
+import InformePdf from '../modules/InformePdf';
 import DetallesTecnicos from '../modules/DetallesTecnicos';
 import api from '../api/axios';
 import { useAuth } from '../useAuth';
@@ -18,7 +18,6 @@ import {
   Settings,
   Users,
   Building,
-
   FileText,
   Sliders,
   Save
@@ -573,22 +572,13 @@ export default function Dashboard({ onLogout }) {
       mensaje: '¿Estás seguro de que deseas eliminar este peritaje?',
       onConfirm: async () => {
         setModalConfig({ isOpen: false, mensaje: '', onConfirm: null });
-        const token = localStorage.getItem('auth_token');
         try {
-          const response = await fetch(`http://127.0.0.1:8000/api/peritajes/${idPeritaje}`, {
-            method: 'DELETE',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          if (!response.ok) throw new Error('No se pudo eliminar el peritaje en el servidor.');
+          await api.delete(`peritajes/${idPeritaje}`);
           setInspecciones(prevLista => prevLista.filter(item => item.id !== idPeritaje));
           alert('Peritaje eliminado correctamente.');
         } catch (error) {
           console.error("Error al eliminar:", error);
-          alert('Hubo un error al intentar eliminar el peritaje.');
+          alert(error.response?.data?.message || 'Hubo un error al intentar eliminar el peritaje.');
         }
       }
     });
@@ -626,9 +616,9 @@ export default function Dashboard({ onLogout }) {
       accesoriosList: itemMapeado.accesoriosList || artículo.accesorios || [],
       danosExternos: itemMapeado.danosExternos || artículo.danos_externos || {},
       danosInternos: itemMapeado.danosInternos || artículo.danos_internos || {},
-      detallesTecnicosList: itemMapeado.detallesTecnicos || artículo.detalles_técnicos || {},
-      sistemasMecanicos: itemMapeado.sistemasMecanicos || artículo.sistemas_mecánicos || {},
-      compresionCilindrosList: itemMapeado.compresionCilindros || artículo.cilindros_de_compresión || [],
+      detallesTecnicosList: itemMapeado.detallesTecnicos || artículo.detalles_tecnicos || artículo.detalles_técnicos || {},
+      sistemasMecanicos: itemMapeado.sistemasMecanicos || artículo.sistemas_mecanicos || artículo.sistemas_mecánicos || {},
+      compresionCilindrosList: itemMapeado.compresionCilindros || artículo.compresion_cilindros || artículo.cilindros_de_compresión || [],
     });
 
     setIsInspecting(true);
@@ -687,13 +677,10 @@ export default function Dashboard({ onLogout }) {
                   key={tipo.id}
                   onClick={async () => {
                     try {
-                      const token = localStorage.getItem('auth_token');
-                      const response = await api.post('/peritajes', {
+                      const response = await api.post('peritajes', {
                         tipo_vehiculo_id: tipo.tipoId,
                         placa: 'SIN-PLACA',
                         estado: 'borrador'
-                      }, {
-                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
                       });
 
                       const peritajeCreado = response.data.data || response.data;
@@ -1052,7 +1039,7 @@ export default function Dashboard({ onLogout }) {
               }}
               className="transition duration-500 hover:scale-105"
             >
-              <img src="/Logo1.png" alt="Servi-Centro CDA" className="w-400 object-contain" draggable={false} />
+              <img src="/Logo1.png" alt="Servi-Centro CDA" className="w-40 object-contain" draggable={false} />
             </button>
             <button onClick={toggleSidebar} className="absolute right-4 top-4 lg:hidden text-slate-400 hover:text-white">✕</button>
           </div>
@@ -1544,7 +1531,6 @@ export default function Dashboard({ onLogout }) {
                   </div>
 
                   <form onSubmit={handleGuardarConfiguracion} className="space-y-6">
-                    {/* Información de la Empresa / CDA */}
                     <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm space-y-4">
                       <div className="flex items-center space-x-2 border-b border-slate-100 pb-3 text-slate-900 font-bold text-sm uppercase tracking-wider">
                         <Building size={18} className="text-blue-600" />
@@ -1610,7 +1596,6 @@ export default function Dashboard({ onLogout }) {
                       </div>
                     </div>
 
-                    {/* Parámetros Operativos del Peritaje */}
                     <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm space-y-4">
                       <div className="flex items-center space-x-2 border-b border-slate-100 pb-3 text-slate-900 font-bold text-sm uppercase tracking-wider">
                         <Sliders size={18} className="text-blue-600" />
@@ -1644,7 +1629,6 @@ export default function Dashboard({ onLogout }) {
                       </div>
                     </div>
 
-                    {/* Textos Legales para el PDF */}
                     <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm space-y-4">
                       <div className="flex items-center space-x-2 border-b border-slate-100 pb-3 text-slate-900 font-bold text-sm uppercase tracking-wider">
                         <FileText size={18} className="text-blue-600" />
@@ -1952,7 +1936,7 @@ export default function Dashboard({ onLogout }) {
           )}
 
           {modalActivo && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-xs">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
               <div className="bg-white rounded-lg p-6 w-96 shadow-2xl border border-gray-100">
                 <h3 className="text-lg font-bold mb-4 text-gray-800">
                   {modalActivo === 'sucursal' ? 'Nueva Sucursal' : 'Nuevo Vendedor / Asesor'}
@@ -2013,7 +1997,7 @@ export default function Dashboard({ onLogout }) {
               <button
                 type="button"
                 onClick={modalConfig.onConfirm}
-                className="px-4 py-2 text-sm font-medium text-white bg-[#7B3F2E] hover:bg-[#633224] rounded-xl shadow-md transition"
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md transition"
               >
                 Aceptar
               </button>

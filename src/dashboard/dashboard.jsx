@@ -32,14 +32,32 @@ export default function Dashboard({ onLogout }) {
   const [inspecciones, setInspecciones] = useState([]);
   const [loadingInspecciones, setLoadingInspecciones] = useState(false);
 
-  // Estado para controlar el modal de peritajes realizados del perfil
   const [showMisPeritajesModal, setShowMisPeritajesModal] = useState(false);
 
-  // Estados para la gestión de usuarios (Admin)
+  // Estados para los filtros del módulo de Estadística
+  const [filtroEstadisticasPlaca, setFiltroEstadisticasPlaca] = useState('');
+  const [filtroEstadisticasInspector, setFiltroEstadisticasInspector] = useState('');
+  const [filtroEstadisticasFecha, setFiltroEstadisticasFecha] = useState('');
+  const [filtroEstadisticasTipo, setFiltroEstadisticasTipo] = useState('');
+
+  // Gestión de usuarios y perfil administrativo
   const [usuariosList, setUsuariosList] = useState([]);
   const [loadingUsuarios, setLoadingUsuarios] = useState(false);
   const [showCrearUsuarioModal, setShowCrearUsuarioModal] = useState(false);
+  const [showEditarUsuarioModal, setShowEditarUsuarioModal] = useState(false);
+  const [showUserProfileModal, setShowUserProfileModal] = useState(false);
+  const [selectedUserForProfile, setSelectedUserForProfile] = useState(null);
+
   const [nuevoUsuarioData, setNuevoUsuarioData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    rol: 'tecnico',
+    sucursal_id: '',
+    activo: true
+  });
+
+  const [usuarioEditData, setUsuarioEditData] = useState({
     name: '',
     email: '',
     password: '',
@@ -102,28 +120,18 @@ export default function Dashboard({ onLogout }) {
     ubicacion: user?.ubicacion || ''
   });
 
-  // Validar si el usuario actual es Administrador
   const esAdmin = (profileData.rol || '').toLowerCase().includes('admin');
-
   const usuario = JSON.parse(localStorage.getItem("peritaje_user"));
 
-  const fetchInspecciones = async () => {
-    try {
-      setLoadingInspecciones(true);
-      const token = localStorage.getItem('auth_token');
-      const response = await api.get('peritajes', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
-      });
-      setInspecciones(response.data.data || response.data || []);
-    } catch (error) {
-      console.error('Error al cargar las inspecciones:', error);
-    } finally {
-      setLoadingInspecciones(false);
-    }
-  };
+  const [sucursales, setSucursales] = useState([]);
+  const [vendedores, setVendedores] = useState([]);
+  const [modalConfig, setModalConfig] = useState({
+    isOpen: false,
+    tipo: 'confirm',
+    titulo: '',
+    mensaje: '',
+    onConfirm: null,
+  });
 
   const fetchUsuarios = async () => {
     try {
@@ -140,53 +148,52 @@ export default function Dashboard({ onLogout }) {
     }
   };
 
+  const fetchInspecciones = async () => {
+    try {
+      setLoadingInspecciones(true);
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+      const headers = { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' };
+
+      const [resPeritajes, resSucursales, resVendedores] = await Promise.all([
+        api.get('peritajes', { headers }),
+        api.get('sucursales', { headers }).catch(() => ({ data: [] })),
+        api.get('vendedores', { headers }).catch(() => ({ data: [] }))
+      ]);
+
+      const peritajesMapeados = (resPeritajes.data.data || resPeritajes.data || []).map(p => ({
+        ...p,
+        modelo: p.modelo !== undefined && p.modelo !== null && p.modelo !== "" ? p.modelo : p.modelo_anio,
+        siniestros: p.siniestros || p.comentarios_siniestros || '',
+        comentarios_siniestros: p.comentarios_siniestros || p.siniestros || '',
+        archivoSoat: p.archivoSoat || p.archivo_soat || p.foto_soat || null,
+        archivoRtm: p.archivoRtm || p.archivo_rtm || p.foto_rtm || null,
+        soatAlDia: p.soatAlDia !== undefined ? p.soatAlDia : p.soat_al_dia,
+        tecnicoMecanicaAlDia: p.tecnicoMecanicaAlDia !== undefined ? p.tecnicoMecanicaAlDia : p.tecnico_mecanica_al_dia,
+        venceSoat: p.venceSoat || p.vence_soat || '',
+        venceTecnicoMecanica: p.venceTecnicoMecanica || p.vence_tecnico_mecanica || '',
+      }));
+
+      setInspecciones(peritajesMapeados);
+      setSucursales(resSucursales.data.data || resSucursales.data || []);
+      setVendedores(resVendedores.data.data || resVendedores.data || []);
+    } catch (error) {
+      console.error('Error al cargar los datos:', error);
+    } finally {
+      setLoadingInspecciones(false);
+    }
+  };
+
   useEffect(() => {
-    let isMounted = true;
-
-    const obtenerUsuarios = async () => {
-      if (activeTab === 'Usuarios' && esAdmin) {
-        await fetchUsuarios(isMounted);
-      }
-    };
-
-    obtenerUsuarios();
-
-    return () => {
-      isMounted = false;
-    };
+    if (activeTab === 'Usuarios' && esAdmin) {
+      fetchUsuarios();
+    }
   }, [activeTab, esAdmin]);
 
   useEffect(() => {
-    let isMounted = true;
-
-    const cargarDatos = async () => {
-      if (activeTab === 'Bandeja' || activeTab === 'Perfil') {
-        try {
-          if (isMounted) setLoadingInspecciones(true);
-
-          const token = localStorage.getItem('auth_token');
-          if (!token) return;
-
-          const response = await api.get('/peritajes', {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Accept': 'application/json'
-            }
-          });
-
-          if (isMounted) {
-            setInspecciones(response.data.data || response.data || []);
-          }
-        } catch (error) {
-          console.error('Error al cargar las inspecciones:', error);
-        } finally {
-          if (isMounted) setLoadingInspecciones(false);
-        }
-      }
-    };
-
-    cargarDatos();
-    return () => { isMounted = false; };
+    if (activeTab === 'Bandeja' || activeTab === 'Perfil' || activeTab === 'Estadisticas') {
+      fetchInspecciones();
+    }
   }, [activeTab]);
 
   const handleUpdateProfile = async () => {
@@ -209,19 +216,68 @@ export default function Dashboard({ onLogout }) {
 
       alert('¡Usuario creado exitosamente!');
       setShowCrearUsuarioModal(false);
-      setNuevoUsuarioData({
-        name: '',
-        email: '',
-        password: '',
-        rol: 'tecnico',
-        sucursal_id: '',
-        activo: true
-      });
+      setNuevoUsuarioData({ name: '', email: '', password: '', rol: 'tecnico', sucursal_id: '', activo: true });
       fetchUsuarios();
     } catch (error) {
       console.error('Error al crear usuario:', error);
       alert(error.response?.data?.message || 'Error al crear el usuario en el servidor.');
     }
+  };
+
+  const handleEditarUsuarioModalOpen = (usr) => {
+    setSelectedUserForProfile(usr);
+    setUsuarioEditData({
+      name: usr.name || '',
+      email: usr.email || '',
+      password: '',
+      rol: usr.rol || 'tecnico',
+      sucursal_id: usr.sucursal_id || '',
+      activo: usr.activo !== false
+    });
+    setShowEditarUsuarioModal(true);
+  };
+
+  const handleActualizarUsuarioSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedUserForProfile) return;
+    try {
+      const token = localStorage.getItem('auth_token');
+      const payload = { ...usuarioEditData };
+      if (!payload.password) delete payload.password;
+
+      await api.put(`users/${selectedUserForProfile.id}`, payload, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+      });
+
+      alert('¡Usuario actualizado exitosamente!');
+      setShowEditarUsuarioModal(false);
+      setSelectedUserForProfile(null);
+      fetchUsuarios();
+    } catch (error) {
+      console.error('Error al actualizar usuario:', error);
+      alert(error.response?.data?.message || 'Error al actualizar el usuario en el servidor.');
+    }
+  };
+
+  const handleEliminarUsuario = (userId) => {
+    setModalConfig({
+      isOpen: true,
+      mensaje: '¿Estás seguro de que deseas eliminar este usuario del sistema?',
+      onConfirm: async () => {
+        setModalConfig({ isOpen: false, mensaje: '', onConfirm: null });
+        try {
+          const token = localStorage.getItem('auth_token');
+          await api.delete(`users/${userId}`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+          });
+          setUsuariosList(prev => prev.filter(u => u.id !== userId));
+          alert('Usuario eliminado correctamente.');
+        } catch (error) {
+          console.error('Error al eliminar usuario:', error);
+          alert(error.response?.data?.message || 'Hubo un error al intentar eliminar el usuario.');
+        }
+      }
+    });
   };
 
   const mainMenuItems = [
@@ -256,6 +312,8 @@ export default function Dashboard({ onLogout }) {
     return steps;
   };
 
+  const inspectionSteps = getInspectionSteps(peritajeData.tipoVehiculo);
+
   const misPeritajesList = inspecciones?.filter(item => {
     const inspectorNombre = item.inspector?.name || item.inspector || '';
     const userName = profileData.name || user?.name || user?.nombre || '';
@@ -269,12 +327,10 @@ export default function Dashboard({ onLogout }) {
       alert("Por favor completa todos los campos de contraseña.");
       return;
     }
-
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       alert("Las nuevas contraseñas no coinciden.");
       return;
     }
-
     try {
       const token = localStorage.getItem('auth_token');
       await api.put('user/password', {
@@ -282,10 +338,7 @@ export default function Dashboard({ onLogout }) {
         new_password: passwordData.newPassword,
         new_password_confirmation: passwordData.confirmPassword
       }, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
       });
 
       alert("¡Contraseña actualizada exitosamente!");
@@ -295,16 +348,6 @@ export default function Dashboard({ onLogout }) {
       alert(error.response?.data?.message || "Ocurrió un error al actualizar la contraseña.");
     }
   };
-
-  const [modalConfig, setModalConfig] = useState({
-    isOpen: false,
-    tipo: 'confirm',
-    titulo: '',
-    mensaje: '',
-    onConfirm: null,
-  });
-
-  const inspectionSteps = getInspectionSteps(peritajeData.tipoVehiculo);
 
   const guardarPeritajeCompleto = async (formDataDelEstado) => {
     try {
@@ -428,55 +471,6 @@ export default function Dashboard({ onLogout }) {
     };
   };
 
-  const [sucursales, setSucursales] = useState([]);
-  const [vendedores, setVendedores] = useState([]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const cargarDatosYCatalogos = async () => {
-      if (activeTab === 'Bandeja') {
-        try {
-          if (isMounted) setLoadingInspecciones(true);
-          const token = localStorage.getItem('auth_token');
-          const headers = { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' };
-
-          const [resPeritajes, resSucursales, resVendedores] = await Promise.all([
-            api.get('peritajes', { headers }),
-            api.get('sucursales', { headers }).catch(() => ({ data: [] })),
-            api.get('vendedores', { headers }).catch(() => ({ data: [] }))
-          ]);
-
-          if (isMounted) {
-            const peritajesMapeados = (resPeritajes.data.data || resPeritajes.data || []).map(p => ({
-              ...p,
-              modelo: p.modelo !== undefined && p.modelo !== null && p.modelo !== "" ? p.modelo : p.modelo_anio,
-              siniestros: p.siniestros || p.comentarios_siniestros || '',
-              comentarios_siniestros: p.comentarios_siniestros || p.siniestros || '',
-              archivoSoat: p.archivoSoat || p.archivo_soat || p.foto_soat || null,
-              archivoRtm: p.archivoRtm || p.archivo_rtm || p.foto_rtm || null,
-              soatAlDia: p.soatAlDia !== undefined ? p.soatAlDia : p.soat_al_dia,
-              tecnicoMecanicaAlDia: p.tecnicoMecanicaAlDia !== undefined ? p.tecnicoMecanicaAlDia : p.tecnico_mecanica_al_dia,
-              venceSoat: p.venceSoat || p.vence_soat || '',
-              venceTecnicoMecanica: p.venceTecnicoMecanica || p.vence_tecnico_mecanica || '',
-            }));
-
-            setInspecciones(peritajesMapeados);
-            setSucursales(resSucursales.data.data || resSucursales.data || []);
-            setVendedores(resVendedores.data.data || resVendedores.data || []);
-          }
-        } catch (error) {
-          console.error('Error al cargar los datos:', error);
-        } finally {
-          if (isMounted) setLoadingInspecciones(false);
-        }
-      }
-    };
-
-    cargarDatosYCatalogos();
-    return () => { isMounted = false; };
-  }, [activeTab]);
-
   const resolverTipoVehiculo = (item) => {
     const tipoIdBD = item.tipo_vehiculo_id || item.tipoVehiculoId;
     if (tipoIdBD === '7c68a26d-372b-42dc-be00-92c4ed2ee6ce') return 'moto';
@@ -543,14 +537,12 @@ export default function Dashboard({ onLogout }) {
 
   const handleEliminarPeritaje = (idPeritaje) => {
     if (!idPeritaje) return;
-
     setModalConfig({
       isOpen: true,
       mensaje: '¿Estás seguro de que deseas eliminar este peritaje?',
       onConfirm: async () => {
         setModalConfig({ isOpen: false, mensaje: '', onConfirm: null });
         const token = localStorage.getItem('auth_token');
-
         try {
           const response = await fetch(`http://127.0.0.1:8000/api/peritajes/${idPeritaje}`, {
             method: 'DELETE',
@@ -560,9 +552,7 @@ export default function Dashboard({ onLogout }) {
               'Authorization': `Bearer ${token}`
             }
           });
-
           if (!response.ok) throw new Error('No se pudo eliminar el peritaje en el servidor.');
-
           setInspecciones(prevLista => prevLista.filter(item => item.id !== idPeritaje));
           alert('Peritaje eliminado correctamente.');
         } catch (error) {
@@ -618,9 +608,23 @@ export default function Dashboard({ onLogout }) {
   const enProcesoCount = inspecciones.filter(i => ['en proceso', 'borrador'].includes((i.estado || '').toLowerCase())).length;
   const completadasCount = inspecciones.filter(i => (i.estado || '').toLowerCase() === 'completado').length;
 
+  const inspeccionesFiltradasEstadisticas = inspecciones.filter(item => {
+    const placaMatch = !filtroEstadisticasPlaca || (item.placa || '').toLowerCase().includes(filtroEstadisticasPlaca.toLowerCase());
+    
+    const inspectorNombre = (item.inspector?.name || item.inspector || '').toLowerCase();
+    const inspectorMatch = !filtroEstadisticasInspector || inspectorNombre.includes(filtroEstadisticasInspector.toLowerCase());
+    
+    const fechaItem = item.fechaPeritaje || item.created_at ? (item.fechaPeritaje || item.created_at).split('T')[0] : '';
+    const fechaMatch = !filtroEstadisticasFecha || fechaItem === filtroEstadisticasFecha;
+
+    const tipoVehiculoItem = resolverTipoVehiculo(item);
+    const tipoMatch = !filtroEstadisticasTipo || tipoVehiculoItem === filtroEstadisticasTipo;
+
+    return placaMatch && inspectorMatch && fechaMatch && tipoMatch;
+  });
+
   return (
     <div className="flex min-h-screen bg-[#f4f6fa] text-slate-800 font-sans relative overflow-x-hidden">
-
       {isSidebarOpen && (
         <div onClick={toggleSidebar} className="fixed inset-0 bg-black/40 z-40 lg:hidden" />
       )}
@@ -698,7 +702,6 @@ export default function Dashboard({ onLogout }) {
         </div>
       )}
 
-      {/* Modal para Crear Usuario */}
       {showCrearUsuarioModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
@@ -812,6 +815,194 @@ export default function Dashboard({ onLogout }) {
         </div>
       )}
 
+      {showEditarUsuarioModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Editar Usuario / Perfil</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Modifica los datos del usuario en el sistema</p>
+              </div>
+              <button
+                onClick={() => setShowEditarUsuarioModal(false)}
+                className="text-slate-400 hover:text-slate-700 text-lg font-bold p-1 rounded-lg hover:bg-slate-200/50 transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleActualizarUsuarioSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Nombre Completo *</label>
+                <input
+                  type="text"
+                  required
+                  value={usuarioEditData.name}
+                  onChange={(e) => setUsuarioEditData({ ...usuarioEditData, name: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Correo Electrónico *</label>
+                <input
+                  type="email"
+                  required
+                  value={usuarioEditData.email}
+                  onChange={(e) => setUsuarioEditData({ ...usuarioEditData, email: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Nueva Contraseña (Opcional)</label>
+                <input
+                  type="password"
+                  placeholder="Dejar en blanco para mantener la actual"
+                  value={usuarioEditData.password}
+                  onChange={(e) => setUsuarioEditData({ ...usuarioEditData, password: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Rol *</label>
+                  <select
+                    value={usuarioEditData.rol}
+                    onChange={(e) => setUsuarioEditData({ ...usuarioEditData, rol: e.target.value })}
+                    className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="tecnico">Técnico</option>
+                    <option value="admin">Administrador</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Estado</label>
+                  <select
+                    value={usuarioEditData.activo ? '1' : '0'}
+                    onChange={(e) => setUsuarioEditData({ ...usuarioEditData, activo: e.target.value === '1' })}
+                    className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="1">Activo</option>
+                    <option value="0">Inactivo</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Sucursal Asignada</label>
+                <select
+                  value={usuarioEditData.sucursal_id}
+                  onChange={(e) => setUsuarioEditData({ ...usuarioEditData, sucursal_id: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Sin sucursal fija --</option>
+                  {sucursales.map((suc) => (
+                    <option key={suc.id} value={suc.id}>{suc.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowEditarUsuarioModal(false)}
+                  className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-slate-900 bg-slate-100 rounded-xl transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow transition"
+                >
+                  Actualizar Usuario
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showUserProfileModal && selectedUserForProfile && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Perfil del Usuario</h3>
+                <p className="text-xs text-slate-500">Vista de auditoría administrativa</p>
+              </div>
+              <button
+                onClick={() => { setShowUserProfileModal(false); setSelectedUserForProfile(null); }}
+                className="text-slate-400 hover:text-slate-700 text-lg font-bold p-1 rounded-lg hover:bg-slate-200/50 transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-full flex items-center justify-center text-2xl font-black shadow-md">
+                  {selectedUserForProfile.name ? selectedUserForProfile.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">{selectedUserForProfile.name}</h4>
+                  <p className="text-xs text-slate-500">{selectedUserForProfile.email}</p>
+                  <span className="inline-block mt-1.5 bg-blue-50 text-blue-700 font-bold px-2.5 py-0.5 rounded text-[10px] uppercase border border-blue-100">
+                    {selectedUserForProfile.rol || 'tecnico'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100 text-xs">
+                <div>
+                  <span className="block text-[10px] font-bold text-slate-400 uppercase">Sucursal Asignada</span>
+                  <span className="font-semibold text-slate-700 mt-0.5 block">
+                    {sucursales.find(s => s.id === selectedUserForProfile.sucursal_id)?.nombre || 'Sin sucursal fija'}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[10px] font-bold text-slate-400 uppercase">Estado de la Cuenta</span>
+                  <span className={`inline-block mt-0.5 font-bold ${selectedUserForProfile.activo !== false ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {selectedUserForProfile.activo !== false ? 'Activo' : 'Inactivo'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => {
+                    setShowUserProfileModal(false);
+                    handleEditarUsuarioModalOpen(selectedUserForProfile);
+                  }}
+                  className="px-3 py-2 text-xs font-bold uppercase tracking-wider bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl transition"
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={() => {
+                    setShowUserProfileModal(false);
+                    handleEliminarUsuario(selectedUserForProfile.id);
+                  }}
+                  className="px-3 py-2 text-xs font-bold uppercase tracking-wider bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition"
+                >
+                  Eliminar
+                </button>
+              </div>
+              <button
+                onClick={() => { setShowUserProfileModal(false); setSelectedUserForProfile(null); }}
+                className="px-4 py-2 text-xs font-bold uppercase tracking-wider bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-[#080d1a] border-r border-slate-800/50 flex flex-col justify-between shrink-0
         transition-transform duration-300 ease-in-out lg:static lg:translate-x-0
@@ -827,7 +1018,7 @@ export default function Dashboard({ onLogout }) {
               }}
               className="transition duration-500 hover:scale-105"
             >
-              <img src="/Logo1.png" alt="Servi-Centro CDA" className="w-500 object-contain" draggable={false} />
+              <img src="/Logo1.png" alt="Servi-Centro CDA" className="w-40 object-contain" draggable={false} />
             </button>
             <button onClick={toggleSidebar} className="absolute right-4 top-4 lg:hidden text-slate-400 hover:text-white">✕</button>
           </div>
@@ -1105,6 +1296,213 @@ export default function Dashboard({ onLogout }) {
                 </div>
               )}
 
+              {activeTab === 'Estadisticas' && (
+                <div className="space-y-6">
+                  <div className="border-b border-slate-200 pb-4">
+                    <h1 className="text-2xl font-bold tracking-tight text-slate-900">Estadísticas y Rendimiento</h1>
+                    <p className="text-slate-500 mt-1 text-sm">Análisis global de los peritajes vehiculares registrados en el sistema con filtros avanzados.</p>
+                  </div>
+
+                  <div className="bg-white border border-slate-200/80 p-5 rounded-xl shadow-sm space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Filtros de Análisis</h3>
+                      {(filtroEstadisticasPlaca || filtroEstadisticasInspector || filtroEstadisticasFecha || filtroEstadisticasTipo) && (
+                        <button
+                          onClick={() => {
+                            setFiltroEstadisticasPlaca('');
+                            setFiltroEstadisticasInspector('');
+                            setFiltroEstadisticasFecha('');
+                            setFiltroEstadisticasTipo('');
+                          }}
+                          className="text-[11px] font-bold text-blue-600 hover:underline"
+                        >
+                          Limpiar filtros
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+                      <div>
+                        <label className="block font-bold text-slate-600 mb-1">Filtrar por Placa</label>
+                        <input
+                          type="text"
+                          placeholder="Ej. ABC123"
+                          value={filtroEstadisticasPlaca}
+                          onChange={(e) => setFiltroEstadisticasPlaca(e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg p-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-slate-600 mb-1">Filtrar por Inspector</label>
+                        <input
+                          type="text"
+                          placeholder="Nombre del inspector"
+                          value={filtroEstadisticasInspector}
+                          onChange={(e) => setFiltroEstadisticasInspector(e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-slate-600 mb-1">Fecha de Peritaje</label>
+                        <input
+                          type="date"
+                          value={filtroEstadisticasFecha}
+                          onChange={(e) => setFiltroEstadisticasFecha(e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg p-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-slate-600 mb-1">Tipo de Vehículo</label>
+                        <select
+                          value={filtroEstadisticasTipo}
+                          onChange={(e) => setFiltroEstadisticasTipo(e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg p-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">-- Todos --</option>
+                          <option value="carro">Carro</option>
+                          <option value="moto">Moto</option>
+                          <option value="pesado">Pesado</option>
+                          <option value="motocarro">Motocarro</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm">
+                      <p className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Inspecciones Filtradas</p>
+                      <p className="text-3xl font-bold text-slate-900 mt-2">{inspeccionesFiltradasEstadisticas.length}</p>
+                    </div>
+                    <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm border-l-4 border-l-blue-500">
+                      <p className="text-[10px] font-bold uppercase text-blue-600 tracking-wider">Completadas</p>
+                      <p className="text-3xl font-bold text-slate-900 mt-2">
+                        {inspeccionesFiltradasEstadisticas.filter(i => (i.estado || '').toLowerCase() === 'completado').length}
+                      </p>
+                    </div>
+                    <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm border-l-4 border-l-amber-500">
+                      <p className="text-[10px] font-bold uppercase text-amber-600 tracking-wider">Borradores / En Proceso</p>
+                      <p className="text-3xl font-bold text-slate-900 mt-2">
+                        {inspeccionesFiltradasEstadisticas.filter(i => ['en proceso', 'borrador'].includes((i.estado || '').toLowerCase())).length}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm space-y-4">
+                      <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-3">
+                        Distribución por Tipo de Vehículo
+                      </h3>
+                      <div className="space-y-3 text-xs">
+                        {['carro', 'moto', 'pesado', 'motocarro'].map((tipo) => {
+                          const count = inspeccionesFiltradasEstadisticas.filter(i => resolverTipoVehiculo(i) === tipo).length;
+                          const porcentaje = inspeccionesFiltradasEstadisticas.length ? Math.round((count / inspeccionesFiltradasEstadisticas.length) * 100) : 0;
+                          return (
+                            <div key={tipo} className="space-y-1">
+                              <div className="flex justify-between font-medium text-slate-700 capitalize">
+                                <span>{tipo}</span>
+                                <span>{count} ({porcentaje}%)</span>
+                              </div>
+                              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                <div className="bg-blue-600 h-full rounded-full transition-all duration-500" style={{ width: `${porcentaje}%` }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm space-y-4">
+                      <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-3">
+                        Resumen Operativo
+                      </h3>
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        Las métricas se calculan de forma dinámica en base a los filtros aplicados (Placa, Inspector, Fecha y Tipo de Vehículo) sobre los registros sincronizados en el sistema.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-slate-200/80 rounded-xl shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                      <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                        Peritajes Filtrados ({inspeccionesFiltradasEstadisticas.length})
+                      </h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs text-slate-600 min-w-[1000px]">
+                        <thead className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
+                          <tr>
+                            <th className="px-4 py-3">Fecha</th>
+                            <th className="px-4 py-3">Placa</th>
+                            <th className="px-4 py-3">Tipo</th>
+                            <th className="px-4 py-3">Marca / Modelo</th>
+                            <th className="px-4 py-3">Inspector</th>
+                            <th className="px-4 py-3">Estado</th>
+                            <th className="px-4 py-3 text-right">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {inspeccionesFiltradasEstadisticas.length === 0 ? (
+                            <tr>
+                              <td colSpan="7" className="px-4 py-8 text-center text-slate-400">
+                                No se encontraron peritajes con los filtros seleccionados.
+                              </td>
+                            </tr>
+                          ) : (
+                            inspeccionesFiltradasEstadisticas.map((item) => (
+                              <tr key={item.id || item.placa} className="hover:bg-slate-50/50 transition">
+                                <td className="px-4 py-3 whitespace-nowrap text-slate-500">
+                                  {item.fechaPeritaje || item.created_at ? new Date(item.fechaPeritaje || item.created_at).toLocaleDateString('es-CO') : 'N/A'}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  <span className="inline-block bg-slate-900 text-white px-2 py-0.5 rounded-md font-mono font-bold text-[11px]">
+                                    {item.placa || 'SIN PLACA'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap capitalize font-medium text-slate-700">
+                                  {resolverTipoVehiculo(item)}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap font-semibold text-slate-800">
+                                  {item.marca || 'N/A'} {item.modelo || item.linea || ''}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-slate-600">
+                                  {item.inspector?.name || item.inspector || 'Inspector Activo'}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  <span className={`inline-block px-2.5 py-1 rounded-md text-[10px] font-bold uppercase ${
+                                    (item.estado || '').toLowerCase() === 'completado' 
+                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                                      : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                  }`}>
+                                    {item.estado || 'en proceso'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-right whitespace-nowrap">
+                                  <div className="flex items-center justify-end gap-2">
+                                    {item.estado === "completado" && (
+                                      <button
+                                        onClick={() => handleDescargarPDF(item)}
+                                        className="px-3 py-1.5 bg-slate-900 text-white text-[10px] font-bold uppercase rounded-lg hover:bg-slate-800 transition shadow-xs"
+                                      >
+                                        ⬇️ PDF
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => handleEditarPeritaje(item)}
+                                      className="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-bold uppercase rounded-lg transition font-medium"
+                                    >
+                                      Ver / Editar
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {activeTab === 'Perfil' && (
                 <div key={user?.id || 'loading'} className="space-y-6 max-w-4xl mx-auto">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-4">
@@ -1218,7 +1616,7 @@ export default function Dashboard({ onLogout }) {
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-4">
                     <div>
                       <h1 className="text-2xl font-bold tracking-tight text-slate-900">Gestión de Usuarios</h1>
-                      <p className="text-slate-500 mt-1 text-sm">Panel exclusivo de administración para dar de alta nuevos usuarios y técnicos.</p>
+                      <p className="text-slate-500 mt-1 text-sm">Panel exclusivo de administración para dar de alta nuevos usuarios, editar o eliminar perfiles.</p>
                     </div>
                     <button
                       onClick={() => setShowCrearUsuarioModal(true)}
@@ -1242,12 +1640,13 @@ export default function Dashboard({ onLogout }) {
                             <th className="px-6 py-3">Rol</th>
                             <th className="px-6 py-3">Sucursal Asignada</th>
                             <th className="px-6 py-3">Estado</th>
+                            <th className="px-6 py-3 text-right">Acciones</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {usuariosList.length === 0 && !loadingUsuarios ? (
                             <tr>
-                              <td colSpan="5" className="px-6 py-8 text-center text-slate-400">
+                              <td colSpan="6" className="px-6 py-8 text-center text-slate-400">
                                 No se encontraron usuarios registrados.
                               </td>
                             </tr>
@@ -1268,6 +1667,31 @@ export default function Dashboard({ onLogout }) {
                                   <span className={`inline-block px-2.5 py-1 rounded-md text-[10px] font-bold uppercase ${usr.activo !== false ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
                                     {usr.activo !== false ? 'Activo' : 'Inactivo'}
                                   </span>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      onClick={() => {
+                                        setSelectedUserForProfile(usr);
+                                        setShowUserProfileModal(true);
+                                      }}
+                                      className="px-3 py-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200 text-[11px] font-bold uppercase rounded-lg transition"
+                                    >
+                                      Ver
+                                    </button>
+                                    <button
+                                      onClick={() => handleEditarUsuarioModalOpen(usr)}
+                                      className="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 text-[11px] font-bold uppercase rounded-lg transition"
+                                    >
+                                      Editar
+                                    </button>
+                                    <button
+                                      onClick={() => handleEliminarUsuario(usr.id)}
+                                      className="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 text-[11px] font-bold uppercase rounded-lg transition"
+                                    >
+                                      Eliminar
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             ))

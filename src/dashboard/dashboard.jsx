@@ -20,7 +20,8 @@ import {
   Building,
   FileText,
   Sliders,
-  Save
+  Save,
+  CheckCircle2
 } from "lucide-react";
 
 export default function Dashboard({ onLogout }) {
@@ -231,7 +232,7 @@ export default function Dashboard({ onLogout }) {
   };
 
   const handleGuardarConfiguracion = (e) => {
-    e.preventDefault();
+    if(e) e.preventDefault();
     localStorage.setItem('peritaje_config_sistema', JSON.stringify(configSistema));
     alert('¡Configuración del sistema guardada exitosamente!');
   };
@@ -584,45 +585,21 @@ export default function Dashboard({ onLogout }) {
     });
   };
 
-  const handleEditarPeritaje = (artículo) => {
-    const itemMapeado = mapearPeritajeDeBackend(artículo);
-    const tipoTexto = resolverTipoVehiculo(artículo);
-    const tipoIdBD = artículo.tipo_vehiculo_id || artículo.tipoVehiculoId;
-
-    setPeritajeData({
-      ...peritajeData,
-      id: artículo.id,
-      tipoVehiculo: tipoTexto,
-      tipoVehiculoId: tipoIdBD || '1c9740ed-b045-4643-9fe6-cfb2c412854f',
-      placa: itemMapeado.placa || '',
-      marca: itemMapeado.marca || '',
-      linea: itemMapeado.linea || '',
-      modelo: itemMapeado.modeloAnio || itemMapeado.modelo || artículo.modelo_anio || '',
-      color: itemMapeado.color || '',
-      numMotor: itemMapeado.numMotor || '',
-      numChasis: itemMapeado.numChasis || '',
-      kilometraje: itemMapeado.kilometraje || 0,
-      siniestros: itemMapeado.siniestros || artículo.comentarios_siniestros || '',
-      sucursalVendedorId: artículo.sucursal_vendedor_id || artículo.sucursalVendedorId || '',
-      sucursalInspeccionId: artículo.sucursal_inspeccion_id || artículo.sucursalInspeccionId || '',
-      vendedorId: artículo.vendedor_id || artículo.vendedorId || '',
-      clienteNombre: itemMapeado.clienteNombre || '',
-      clienteDocumento: itemMapeado.clienteDocumento || '',
-      clienteTelefono: itemMapeado.clienteTelefono || '',
-      soatAlDia: itemMapeado.soatAlDia ?? true,
-      venceSoat: itemMapeado.venceSoat ? itemMapeado.venceSoat.split('T')[0] : '',
-      tecnicoMecanicaAlDia: itemMapeado.tecnicoMecanicaAlDia ?? true,
-      venceTecnicoMecanica: itemMapeado.venceTecnicoMecanica ? itemMapeado.venceTecnicoMecanica.split('T')[0] : '',
-      accesoriosList: itemMapeado.accesoriosList || artículo.accesorios || [],
-      danosExternos: itemMapeado.danosExternos || artículo.danos_externos || {},
-      danosInternos: itemMapeado.danosInternos || artículo.danos_internos || {},
-      detallesTecnicosList: itemMapeado.detallesTecnicos || artículo.detalles_tecnicos || artículo.detalles_técnicos || {},
-      sistemasMecanicos: itemMapeado.sistemasMecanicos || artículo.sistemas_mecanicos || artículo.sistemas_mecánicos || {},
-      compresionCilindrosList: itemMapeado.compresionCilindros || artículo.compresion_cilindros || artículo.cilindros_de_compresión || [],
-    });
-
+  const handleEditarPeritaje = (item) => {
+    const peritajeMapeado = mapearPeritajeDeBackend(item);
+    setPeritajeData(peritajeMapeado);
     setIsInspecting(true);
     setInspectionStep('Documentacion');
+  };
+
+  // Novedad: Helper para forzar la visualización del nombre de la sucursal si el backend manda el ID
+  const getNombreSucursal = (id, obj) => {
+    if (obj?.nombre) return obj.nombre;
+    if (id) {
+      const match = sucursales.find(s => String(s.id) === String(id));
+      if (match) return match.nombre;
+    }
+    return 'Sin sucursal asignada';
   };
 
   const totalInspeccionesCount = inspecciones.length;
@@ -631,13 +608,10 @@ export default function Dashboard({ onLogout }) {
 
   const inspeccionesFiltradasEstadisticas = inspecciones.filter(item => {
     const placaMatch = !filtroEstadisticasPlaca || (item.placa || '').toLowerCase().includes(filtroEstadisticasPlaca.toLowerCase());
-
     const inspectorNombre = (item.inspector?.name || item.inspector || '').toLowerCase();
     const inspectorMatch = !filtroEstadisticasInspector || inspectorNombre.includes(filtroEstadisticasInspector.toLowerCase());
-
     const fechaItem = item.fechaPeritaje || item.created_at ? (item.fechaPeritaje || item.created_at).split('T')[0] : '';
     const fechaMatch = !filtroEstadisticasFecha || fechaItem === filtroEstadisticasFecha;
-
     const tipoVehiculoItem = resolverTipoVehiculo(item);
     const tipoMatch = !filtroEstadisticasTipo || tipoVehiculoItem === filtroEstadisticasTipo;
 
@@ -650,6 +624,7 @@ export default function Dashboard({ onLogout }) {
         <div onClick={toggleSidebar} className="fixed inset-0 bg-black/40 z-40 lg:hidden" />
       )}
 
+      {/* Selectors y Modales existentes */}
       {showVehicleSelector && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden transform transition-all">
@@ -723,113 +698,56 @@ export default function Dashboard({ onLogout }) {
       {showCrearUsuarioModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+             {/* Contenido modal crear usuario */}
             <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <div>
                 <h3 className="text-base font-bold text-slate-900">Registrar Nuevo Usuario</h3>
                 <p className="text-xs text-slate-500 mt-0.5">Asigna credenciales y rol en el sistema</p>
               </div>
-              <button
-                onClick={() => setShowCrearUsuarioModal(false)}
-                className="text-slate-400 hover:text-slate-700 text-lg font-bold p-1 rounded-lg hover:bg-slate-200/50 transition"
-              >
-                ✕
-              </button>
+              <button onClick={() => setShowCrearUsuarioModal(false)} className="text-slate-400 hover:text-slate-700 text-lg font-bold p-1 rounded-lg hover:bg-slate-200/50 transition">✕</button>
             </div>
 
             <form onSubmit={handleCrearUsuario} className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Nombre Completo *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej. Juan Pérez"
-                  value={nuevoUsuarioData.name}
-                  onChange={(e) => setNuevoUsuarioData({ ...nuevoUsuarioData, name: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <input type="text" required value={nuevoUsuarioData.name} onChange={(e) => setNuevoUsuarioData({ ...nuevoUsuarioData, name: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
-
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Correo Electrónico *</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="correo@servicentro.com"
-                  value={nuevoUsuarioData.email}
-                  onChange={(e) => setNuevoUsuarioData({ ...nuevoUsuarioData, email: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <input type="email" required value={nuevoUsuarioData.email} onChange={(e) => setNuevoUsuarioData({ ...nuevoUsuarioData, email: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
-
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Contraseña *</label>
-                <input
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  value={nuevoUsuarioData.password}
-                  onChange={(e) => setNuevoUsuarioData({ ...nuevoUsuarioData, password: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <input type="password" required value={nuevoUsuarioData.password} onChange={(e) => setNuevoUsuarioData({ ...nuevoUsuarioData, password: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Rol *</label>
-                  <select
-                    value={nuevoUsuarioData.rol}
-                    onChange={(e) => setNuevoUsuarioData({ ...nuevoUsuarioData, rol: e.target.value })}
-                    className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
+                  <select value={nuevoUsuarioData.rol} onChange={(e) => setNuevoUsuarioData({ ...nuevoUsuarioData, rol: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="tecnico">Técnico</option>
                     <option value="admin">Administrador</option>
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Estado</label>
-                  <select
-                    value={nuevoUsuarioData.activo ? '1' : '0'}
-                    onChange={(e) => setNuevoUsuarioData({ ...nuevoUsuarioData, activo: e.target.value === '1' })}
-                    className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
+                  <select value={nuevoUsuarioData.activo ? '1' : '0'} onChange={(e) => setNuevoUsuarioData({ ...nuevoUsuarioData, activo: e.target.value === '1' })} className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="1">Activo</option>
                     <option value="0">Inactivo</option>
                   </select>
                 </div>
               </div>
-
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Sucursal Asignada</label>
-                <select
-                  value={nuevoUsuarioData.sucursal_id || ''}
-                  onChange={(e) => setNuevoUsuarioData({ ...nuevoUsuarioData, sucursal_id: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
+                <select value={nuevoUsuarioData.sucursal_id || ''} onChange={(e) => setNuevoUsuarioData({ ...nuevoUsuarioData, sucursal_id: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                   <option value="">Seleccione una sucursal...</option>
                   {sucursales && sucursales.map((sucursal) => (
-                    <option key={sucursal.id} value={sucursal.id}>
-                      {sucursal.nombre}
-                    </option>
+                    <option key={sucursal.id} value={sucursal.id}>{sucursal.nombre}</option>
                   ))}
                 </select>
               </div>
-
               <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowCrearUsuarioModal(false)}
-                  className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-slate-900 bg-slate-100 rounded-xl transition"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow transition"
-                >
-                  Guardar Usuario
-                </button>
+                <button type="button" onClick={() => setShowCrearUsuarioModal(false)} className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-slate-900 bg-slate-100 rounded-xl transition">Cancelar</button>
+                <button type="submit" className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow transition">Guardar Usuario</button>
               </div>
             </form>
           </div>
@@ -839,113 +757,63 @@ export default function Dashboard({ onLogout }) {
       {showEditarUsuarioModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+             {/* Contenido modal editar usuario */}
             <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <div>
                 <h3 className="text-base font-bold text-slate-900">Editar Usuario / Perfil</h3>
                 <p className="text-xs text-slate-500 mt-0.5">Modifica los datos del usuario en el sistema</p>
               </div>
-              <button
-                onClick={() => setShowEditarUsuarioModal(false)}
-                className="text-slate-400 hover:text-slate-700 text-lg font-bold p-1 rounded-lg hover:bg-slate-200/50 transition"
-              >
-                ✕
-              </button>
+              <button onClick={() => setShowEditarUsuarioModal(false)} className="text-slate-400 hover:text-slate-700 text-lg font-bold p-1 rounded-lg hover:bg-slate-200/50 transition">✕</button>
             </div>
 
             <form onSubmit={handleActualizarUsuarioSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Nombre Completo *</label>
-                <input
-                  type="text"
-                  required
-                  value={usuarioEditData.name}
-                  onChange={(e) => setUsuarioEditData({ ...usuarioEditData, name: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <input type="text" required value={usuarioEditData.name} onChange={(e) => setUsuarioEditData({ ...usuarioEditData, name: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
-
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Correo Electrónico *</label>
-                <input
-                  type="email"
-                  required
-                  value={usuarioEditData.email}
-                  onChange={(e) => setUsuarioEditData({ ...usuarioEditData, email: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <input type="email" required value={usuarioEditData.email} onChange={(e) => setUsuarioEditData({ ...usuarioEditData, email: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
-
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Nueva Contraseña (Opcional)</label>
-                <input
-                  type="password"
-                  placeholder="Dejar en blanco para mantener la actual"
-                  value={usuarioEditData.password}
-                  onChange={(e) => setUsuarioEditData({ ...usuarioEditData, password: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <input type="password" placeholder="Dejar en blanco para mantener la actual" value={usuarioEditData.password} onChange={(e) => setUsuarioEditData({ ...usuarioEditData, password: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Rol *</label>
-                  <select
-                    value={usuarioEditData.rol}
-                    onChange={(e) => setUsuarioEditData({ ...usuarioEditData, rol: e.target.value })}
-                    className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
+                  <select value={usuarioEditData.rol} onChange={(e) => setUsuarioEditData({ ...usuarioEditData, rol: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="tecnico">Técnico</option>
                     <option value="admin">Administrador</option>
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Estado</label>
-                  <select
-                    value={usuarioEditData.activo ? '1' : '0'}
-                    onChange={(e) => setUsuarioEditData({ ...usuarioEditData, activo: e.target.value === '1' })}
-                    className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
+                  <select value={usuarioEditData.activo ? '1' : '0'} onChange={(e) => setUsuarioEditData({ ...usuarioEditData, activo: e.target.value === '1' })} className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="1">Activo</option>
                     <option value="0">Inactivo</option>
                   </select>
                 </div>
               </div>
-
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Sucursal Asignada</label>
-                <select
-                  value={usuarioEditData.sucursal_id}
-                  onChange={(e) => setUsuarioEditData({ ...usuarioEditData, sucursal_id: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
+                <select value={usuarioEditData.sucursal_id} onChange={(e) => setUsuarioEditData({ ...usuarioEditData, sucursal_id: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="">-- Sin sucursal fija --</option>
                   {sucursales.map((suc) => (
                     <option key={suc.id} value={suc.id}>{suc.nombre}</option>
                   ))}
                 </select>
               </div>
-
               <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowEditarUsuarioModal(false)}
-                  className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-slate-900 bg-slate-100 rounded-xl transition"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow transition"
-                >
-                  Actualizar Usuario
-                </button>
+                <button type="button" onClick={() => setShowEditarUsuarioModal(false)} className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-slate-900 bg-slate-100 rounded-xl transition">Cancelar</button>
+                <button type="submit" className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow transition">Actualizar Usuario</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
+      {/* Modal para ver el perfil del usuario (Audit/Admin) */}
       {showUserProfileModal && selectedUserForProfile && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
@@ -968,7 +836,7 @@ export default function Dashboard({ onLogout }) {
                   {selectedUserForProfile.name ? selectedUserForProfile.name.charAt(0).toUpperCase() : 'U'}
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900">{selectedUserForProfile.name}</h4>
+                  <h4 className="text-lg font-bold text-slate-900">{selectedUserForProfile.name}</h4>
                   <p className="text-xs text-slate-500">{selectedUserForProfile.email}</p>
                   <span className="inline-block mt-1.5 bg-blue-50 text-blue-700 font-bold px-2.5 py-0.5 rounded text-[10px] uppercase border border-blue-100">
                     {selectedUserForProfile.rol || 'tecnico'}
@@ -976,17 +844,24 @@ export default function Dashboard({ onLogout }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100 text-xs">
+              {/* AQUI SE AGREGA LA ESTADÍSTICA DE PERITAJES REALIZADOS PARA EL GESTOR DE USUARIOS */}
+              <div className="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100 text-xs">
                 <div>
-                  <span className="block text-[10px] font-bold text-slate-400 uppercase">Sucursal Asignada</span>
-                  <span className="font-semibold text-slate-700 mt-0.5 block">
-                    {sucursales.find(s => s.id === selectedUserForProfile.sucursal_id)?.nombre || 'Sin sucursal fija'}
+                  <span className="block text-[10px] font-bold text-slate-400 uppercase">Sucursal</span>
+                  <span className="font-semibold text-slate-700 mt-0.5 block truncate">
+                    {sucursales.find(s => s.id === selectedUserForProfile.sucursal_id)?.nombre || 'General'}
                   </span>
                 </div>
                 <div>
-                  <span className="block text-[10px] font-bold text-slate-400 uppercase">Estado de la Cuenta</span>
+                  <span className="block text-[10px] font-bold text-slate-400 uppercase">Estado</span>
                   <span className={`inline-block mt-0.5 font-bold ${selectedUserForProfile.activo !== false ? 'text-emerald-600' : 'text-red-600'}`}>
                     {selectedUserForProfile.activo !== false ? 'Activo' : 'Inactivo'}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[10px] font-bold text-slate-400 uppercase">Peritajes</span>
+                  <span className="font-black text-blue-600 mt-0.5 block text-lg leading-none">
+                    {inspecciones.filter(i => (i.inspector?.name || i.inspector || '').toLowerCase() === (selectedUserForProfile.name || '').toLowerCase()).length}
                   </span>
                 </div>
               </div>
@@ -1024,6 +899,7 @@ export default function Dashboard({ onLogout }) {
         </div>
       )}
 
+      {/* Sidebar */}
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-[#080d1a] border-r border-slate-800/50 flex flex-col justify-between shrink-0
         transition-transform duration-300 ease-in-out lg:static lg:translate-x-0
@@ -1077,6 +953,7 @@ export default function Dashboard({ onLogout }) {
         </div>
       </aside>
 
+      {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 w-full">
         <header className="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-6 lg:px-8 shrink-0">
           <div className="flex items-center space-x-4">
@@ -1100,12 +977,12 @@ export default function Dashboard({ onLogout }) {
                     <span>←</span> <span>Volver a la Bandeja</span>
                   </button>
                   <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                    Nuevo Peritaje Vehicular {peritajeData.tipoVehiculo && <span className="text-blue-600 uppercase text-lg">({peritajeData.tipoVehiculo})</span>}
+                    {peritajeData.id ? 'Editar Peritaje Vehicular' : 'Nuevo Peritaje Vehicular'} {peritajeData.tipoVehiculo && <span className="text-blue-600 uppercase text-lg">({peritajeData.tipoVehiculo})</span>}
                   </h1>
                 </div>
                 <div className="flex items-center space-x-2">
                   <span className="text-xs bg-amber-50 text-amber-700 px-3 py-1 rounded-full font-bold border border-amber-200">
-                    Borrador en Progreso
+                    {peritajeData.id ? 'Modo Edición' : 'Borrador en Progreso'}
                   </span>
                 </div>
               </div>
@@ -1183,7 +1060,7 @@ export default function Dashboard({ onLogout }) {
                       onClick={() => guardarPeritajeCompleto(peritajeData)}
                       className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow"
                     >
-                      Finalizar Peritaje
+                      {peritajeData.id ? 'Actualizar Peritaje' : 'Finalizar Peritaje'}
                     </button>
                   )}
                 </div>
@@ -1255,8 +1132,8 @@ export default function Dashboard({ onLogout }) {
                             inspecciones.map((item) => (
                               <tr key={item.id || item.placa} className="hover:bg-slate-50/50 transition duration-100">
                                 <td className="px-4 py-4 whitespace-nowrap text-slate-500">
-                                  {item.fechaPeritaje || item.created_at
-                                    ? new Date(item.fechaPeritaje || item.created_at).toLocaleDateString('es-CO')
+                                  {item.fecha_peritaje || item.created_at
+                                    ? new Date(item.fecha_peritaje || item.created_at).toLocaleDateString('es-ES')
                                     : 'N/A'}
                                 </td>
                                 <td className="px-4 py-4 whitespace-nowrap font-semibold text-slate-800">{item.marca || 'N/A'}</td>
@@ -1267,8 +1144,13 @@ export default function Dashboard({ onLogout }) {
                                     {item.placa || 'SIN PLACA'}
                                   </span>
                                 </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.sucursal_vendedor?.nombre || item.sucursalVendedor?.nombre || 'Sin sucursal'}</td>
-                                <td className="px-4 py-4 whitespace-nowrap text-slate-500">{item.sucursal_inspeccion?.nombre || item.sucursalInspeccion?.nombre || 'Sin sucursal'}</td>
+                                {/* AQUI ESTÁ EL AJUSTE PARA MOSTRAR SUCURSALES (Usando getNombreSucursal) */}
+                                <td className="px-4 py-4 whitespace-nowrap text-slate-500">
+                                  {getNombreSucursal(item.sucursal_vendedor_id || item.sucursalVendedorId, item.sucursal_vendedor || item.sucursalVendedor)}
+                                </td>
+                                <td className="px-4 py-4 whitespace-nowrap text-slate-500">
+                                  {getNombreSucursal(item.sucursal_inspeccion_id || item.sucursalInspeccionId, item.sucursal_inspeccion || item.sucursalInspeccion)}
+                                </td>
                                 <td className="px-4 py-4 whitespace-nowrap text-slate-700">
                                   {item.vendedor?.nombre || item.vendedor || 'Sin vendedor'}
                                 </td>
@@ -1317,6 +1199,7 @@ export default function Dashboard({ onLogout }) {
 
               {activeTab === 'Estadisticas' && (
                 <div className="space-y-6">
+                  {/* Contenido Estadísticas existente */}
                   <div className="border-b border-slate-200 pb-4">
                     <h1 className="text-2xl font-bold tracking-tight text-slate-900">Estadísticas y Rendimiento</h1>
                     <p className="text-slate-500 mt-1 text-sm">Análisis global de los peritajes vehiculares registrados en el sistema con filtros avanzados.</p>
@@ -1487,8 +1370,8 @@ export default function Dashboard({ onLogout }) {
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap">
                                   <span className={`inline-block px-2.5 py-1 rounded-md text-[10px] font-bold uppercase ${(item.estado || '').toLowerCase() === 'completado'
-                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                      : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    : 'bg-amber-50 text-amber-700 border border-amber-200'
                                     }`}>
                                     {item.estado || 'en proceso'}
                                   </span>
@@ -1521,141 +1404,128 @@ export default function Dashboard({ onLogout }) {
                 </div>
               )}
 
+              {/* REDISEÑO COMPLETO DE CONFIGURACIONES */}
               {activeTab === 'Configuracion' && (
-                <div className="space-y-6 max-w-4xl mx-auto">
+                <div className="space-y-6 max-w-5xl mx-auto">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-4">
                     <div>
                       <h1 className="text-2xl font-bold tracking-tight text-slate-900">Configuración del Sistema</h1>
-                      <p className="text-slate-500 mt-1 text-sm">Gestiona los parámetros generales del CDA, textos legales para reportes PDF y reglas de inspección.</p>
+                      <p className="text-slate-500 mt-1 text-sm">Gestiona los parámetros generales, textos legales para reportes PDF y reglas de inspección.</p>
                     </div>
+                    <button
+                      onClick={handleGuardarConfiguracion}
+                      className="px-6 py-2.5 text-xs font-bold uppercase tracking-wider bg-slate-900 hover:bg-black text-white rounded-xl shadow-md transition flex items-center space-x-2 self-start sm:self-auto"
+                    >
+                      <Save size={16} />
+                      <span>Guardar Cambios</span>
+                    </button>
                   </div>
 
-                  <form onSubmit={handleGuardarConfiguracion} className="space-y-6">
-                    <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm space-y-4">
-                      <div className="flex items-center space-x-2 border-b border-slate-100 pb-3 text-slate-900 font-bold text-sm uppercase tracking-wider">
-                        <Building size={18} className="text-blue-600" />
-                        <span>Datos Fiscales y de la Empresa</span>
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Columna Izquierda: Menú Navegación Rápida */}
+                    <div className="lg:col-span-1 space-y-4">
+                      <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Módulos de Ajuste</h3>
+                        <ul className="space-y-2 text-sm font-medium text-slate-600">
+                          <li className="flex items-center space-x-3 p-3 bg-blue-50 text-blue-700 rounded-xl border border-blue-100 cursor-default">
+                            <Building size={18} /> <span>Perfil de la Empresa</span>
+                          </li>
+                          <li className="flex items-center space-x-3 p-3 hover:bg-slate-50 rounded-xl transition cursor-default">
+                            <Sliders size={18} /> <span>Reglas de Inspección</span>
+                          </li>
+                          <li className="flex items-center space-x-3 p-3 hover:bg-slate-50 rounded-xl transition cursor-default">
+                            <FileText size={18} /> <span>Documentos & PDF</span>
+                          </li>
+                        </ul>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                        <div>
-                          <label className="block font-bold text-slate-600 mb-1">Nombre del Centro / Taller</label>
-                          <input
-                            type="text"
-                            value={configSistema.nombreEmpresa}
-                            onChange={(e) => setConfigSistema({ ...configSistema, nombreEmpresa: e.target.value })}
-                            className="w-full border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="block font-bold text-slate-600 mb-1">NIT</label>
-                          <input
-                            type="text"
-                            value={configSistema.nit}
-                            onChange={(e) => setConfigSistema({ ...configSistema, nit: e.target.value })}
-                            className="w-full border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="block font-bold text-slate-600 mb-1">Teléfono de Contacto</label>
-                          <input
-                            type="text"
-                            value={configSistema.telefono}
-                            onChange={(e) => setConfigSistema({ ...configSistema, telefono: e.target.value })}
-                            className="w-full border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block font-bold text-slate-600 mb-1">Correo Electrónico</label>
-                          <input
-                            type="email"
-                            value={configSistema.emailEmpresa}
-                            onChange={(e) => setConfigSistema({ ...configSistema, emailEmpresa: e.target.value })}
-                            className="w-full border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block font-bold text-slate-600 mb-1">Dirección Física</label>
-                          <input
-                            type="text"
-                            value={configSistema.direccion}
-                            onChange={(e) => setConfigSistema({ ...configSistema, direccion: e.target.value })}
-                            className="w-full border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block font-bold text-slate-600 mb-1">Ciudad / Municipio</label>
-                          <input
-                            type="text"
-                            value={configSistema.ciudad}
-                            onChange={(e) => setConfigSistema({ ...configSistema, ciudad: e.target.value })}
-                            className="w-full border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
+                      <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-5 rounded-2xl shadow-sm text-white">
+                        <CheckCircle2 size={24} className="mb-3 text-blue-200" />
+                        <h3 className="text-sm font-bold mb-1">Ajustes Globales</h3>
+                        <p className="text-xs text-blue-100 leading-relaxed">
+                          Estos parámetros afectarán a todas las nuevas inspecciones generadas por los técnicos desde la plataforma.
+                        </p>
                       </div>
                     </div>
 
-                    <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm space-y-4">
-                      <div className="flex items-center space-x-2 border-b border-slate-100 pb-3 text-slate-900 font-bold text-sm uppercase tracking-wider">
-                        <Sliders size={18} className="text-blue-600" />
-                        <span>Parámetros de Inspección</span>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                        <div>
-                          <label className="block font-bold text-slate-600 mb-1">Puntuación Inicial por Defecto (Scores)</label>
-                          <input
-                            type="number"
-                            min="50"
-                            max="100"
-                            value={configSistema.scoreInicialDefecto}
-                            onChange={(e) => setConfigSistema({ ...configSistema, scoreInicialDefecto: Number(e.target.value) })}
-                            className="w-full border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                          <span className="text-[10px] text-slate-400 mt-1 block">Puntaje máximo asignado al iniciar un nuevo peritaje.</span>
+                    {/* Columna Derecha: Formularios rediseñados */}
+                    <div className="lg:col-span-2 space-y-6">
+                      
+                      {/* Form: Empresa */}
+                      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div className="bg-slate-50 px-6 py-4 border-b border-slate-100">
+                          <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <Building size={18} className="text-blue-600"/> Datos Fiscales y del CDA
+                          </h3>
                         </div>
-                        <div className="flex items-center justify-between p-3 border border-slate-100 rounded-lg bg-slate-50/50 self-center">
-                          <div>
-                            <span className="block font-bold text-slate-700">Validación Estricta de Documentos</span>
-                            <span className="text-[10px] text-slate-500">Exigir Soat y RTM alfanuméricos válidos</span>
+                        <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
+                          <div className="space-y-1.5 sm:col-span-2">
+                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Nombre del Centro / Taller</label>
+                            <input type="text" value={configSistema.nombreEmpresa} onChange={(e) => setConfigSistema({ ...configSistema, nombreEmpresa: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none" required />
                           </div>
-                          <input
-                            type="checkbox"
-                            checked={configSistema.exigirFotosDocumentos}
-                            onChange={(e) => setConfigSistema({ ...configSistema, exigirFotosDocumentos: e.target.checked })}
-                            className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
-                          />
+                          <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">NIT</label>
+                            <input type="text" value={configSistema.nit} onChange={(e) => setConfigSistema({ ...configSistema, nit: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none" required />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Teléfono de Contacto</label>
+                            <input type="text" value={configSistema.telefono} onChange={(e) => setConfigSistema({ ...configSistema, telefono: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none" />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Correo Electrónico</label>
+                            <input type="email" value={configSistema.emailEmpresa} onChange={(e) => setConfigSistema({ ...configSistema, emailEmpresa: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none" />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Dirección Física</label>
+                            <input type="text" value={configSistema.direccion} onChange={(e) => setConfigSistema({ ...configSistema, direccion: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Form: Reglas */}
+                      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div className="bg-slate-50 px-6 py-4 border-b border-slate-100">
+                          <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <Sliders size={18} className="text-blue-600"/> Parámetros de Inspección
+                          </h3>
+                        </div>
+                        <div className="p-6 space-y-5">
+                          <div className="flex items-center justify-between p-4 border border-slate-100 rounded-xl hover:border-blue-100 transition-colors bg-white">
+                            <div>
+                              <p className="text-sm font-bold text-slate-800">Validación Estricta de Documentos</p>
+                              <p className="text-xs text-slate-500 mt-0.5">Exigir formato alfanumérico válido para SOAT y RTM.</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                              <input type="checkbox" className="sr-only peer" checked={configSistema.exigirFotosDocumentos} onChange={(e) => setConfigSistema({ ...configSistema, exigirFotosDocumentos: e.target.checked })} />
+                              <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                          </div>
+                          
+                          <div className="space-y-1.5 w-full sm:w-1/2">
+                            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Score / Puntaje Inicial</label>
+                            <div className="relative">
+                              <input type="number" min="50" max="100" value={configSistema.scoreInicialDefecto} onChange={(e) => setConfigSistema({ ...configSistema, scoreInicialDefecto: Number(e.target.value) })} className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-10 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none" />
+                              <span className="absolute right-3 top-2.5 text-xs font-bold text-slate-400">pts</span>
+                            </div>
+                            <p className="text-[10px] text-slate-400">Puntaje máximo asignado al iniciar un nuevo peritaje.</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Form: Textos Legales */}
+                      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div className="bg-slate-50 px-6 py-4 border-b border-slate-100">
+                          <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <FileText size={18} className="text-blue-600"/> Términos y PDF
+                          </h3>
+                        </div>
+                        <div className="p-6 space-y-1.5">
+                          <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Texto Legal al Pie de Página (Reportes PDF)</label>
+                          <textarea rows="4" value={configSistema.textoLegalPdf} onChange={(e) => setConfigSistema({ ...configSistema, textoLegalPdf: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none resize-none leading-relaxed" />
+                          <p className="text-[10px] text-slate-400 mt-1">Este texto se adjuntará automáticamente al generar el diagnóstico en PDF.</p>
                         </div>
                       </div>
                     </div>
-
-                    <div className="bg-white border border-slate-200/80 p-6 rounded-xl shadow-sm space-y-4">
-                      <div className="flex items-center space-x-2 border-b border-slate-100 pb-3 text-slate-900 font-bold text-sm uppercase tracking-wider">
-                        <FileText size={18} className="text-blue-600" />
-                        <span>Cláusula Legal / Términos del Reporte PDF</span>
-                      </div>
-                      <div>
-                        <label className="block font-bold text-slate-600 mb-1 text-xs">Texto Legal al Pie de Página del Informe</label>
-                        <textarea
-                          rows="3"
-                          value={configSistema.textoLegalPdf}
-                          onChange={(e) => setConfigSistema({ ...configSistema, textoLegalPdf: e.target.value })}
-                          className="w-full border border-slate-200 rounded-lg p-3 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <span className="text-[10px] text-slate-400 mt-1 block">Este texto se incluirá en la sección de términos y condiciones del PDF generado para los clientes.</span>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end pt-2">
-                      <button
-                        type="submit"
-                        className="px-6 py-3 text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition flex items-center space-x-2"
-                      >
-                        <Save size={16} />
-                        <span>Guardar Configuración</span>
-                      </button>
-                    </div>
-                  </form>
+                  </div>
                 </div>
               )}
 
@@ -1837,7 +1707,7 @@ export default function Dashboard({ onLogout }) {
                                     </button>
                                     <button
                                       onClick={() => handleEditarUsuarioModalOpen(usr)}
-                                      className="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 text-[11px] font-bold uppercase rounded-lg transition"
+                                      className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline transition duration-140"
                                     >
                                       Editar
                                     </button>
@@ -1985,21 +1855,19 @@ export default function Dashboard({ onLogout }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity">
           <div className="bg-white rounded-2xl p-6 shadow-2xl max-w-sm w-full mx-4 transform transition-all scale-100">
             <h3 className="text-lg font-bold text-gray-800 mb-2">Confirmar acción</h3>
-            <p className="text-gray-600 text-sm mb-6">{modalConfig.mensaje}</p>
+            <p className="text-gray-600 text-xs mb-6">{modalConfig.mensaje}</p>
             <div className="flex justify-end space-x-3">
               <button
-                type="button"
                 onClick={() => setModalConfig({ isOpen: false, mensaje: '', onConfirm: null })}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition"
+                className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition"
               >
                 Cancelar
               </button>
               <button
-                type="button"
                 onClick={modalConfig.onConfirm}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md transition"
+                className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-white bg-red-600 hover:bg-red-700 rounded-xl shadow transition"
               >
-                Aceptar
+                Confirmar
               </button>
             </div>
           </div>

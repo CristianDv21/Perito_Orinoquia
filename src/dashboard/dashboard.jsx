@@ -423,8 +423,6 @@ export default function Dashboard({ onLogout }) {
       if (formDataDelEstado.venceSoat) dataToSend.append('vence_soat', formDataDelEstado.venceSoat);
       dataToSend.append('soat_al_dia', formDataDelEstado.soatAlDia ? '1' : '0');
 
-      if (formDataDelEstado.fotoSoat instanceof File) dataToSend.append('foto_soat', formDataDelEstado.fotoSoat);
-      if (formDataDelEstado.fotoRtm instanceof File) dataToSend.append('foto_rtm', formDataDelEstado.fotoRtm);
 
       dataToSend.append('numero_control_rtm', formDataDelEstado.numeroControlRtm || '');
       dataToSend.append('cda_emisor', formDataDelEstado.cdaEmisor || '');
@@ -437,7 +435,12 @@ export default function Dashboard({ onLogout }) {
       dataToSend.append('fugas_aceite', formDataDelEstado.fugasAceite ? '1' : '0');
       dataToSend.append('estado_bateria', formDataDelEstado.estadoBateria || 'Bueno');
       dataToSend.append('ruidos_extranos', formDataDelEstado.ruidosExtranos ? '1' : '0');
-      dataToSend.append('comentarios_motor', formDataDelEstado.motorObservaciones || '');
+      // Motor.jsx guarda el dictamen final en "comentariosMotor" (no "motorObservaciones")
+      dataToSend.append('comentarios_motor', formDataDelEstado.comentariosMotor || '');
+      // Motor.jsx también captura estos tres campos y nunca se estaban enviando
+      dataToSend.append('tipo_transmision', formDataDelEstado.tipoTransmision || '');
+      dataToSend.append('traccion', formDataDelEstado.traccion || '');
+      dataToSend.append('estado_transmision', formDataDelEstado.estadoTransmision || '');
       dataToSend.append('estado_general_vehiculo', formDataDelEstado.estadoGeneralVehiculo || 'Aceptable');
       dataToSend.append('concepto_final', formDataDelEstado.conceptoFinal || '');
       dataToSend.append('tiempo_estimado_reparacion', formDataDelEstado.tiempoEstimadoReparacion || '');
@@ -447,6 +450,16 @@ export default function Dashboard({ onLogout }) {
       dataToSend.append('score_electrico', Number(formDataDelEstado.scoreElectrico ?? 100));
       dataToSend.append('score_legal', Number(formDataDelEstado.scoreLegal ?? 100));
 
+      // Cliente / Propietario — se capturaban en Documentacion.jsx pero nunca se enviaban
+      dataToSend.append('cliente_nombre', formDataDelEstado.clienteNombre || '');
+      dataToSend.append('cliente_documento', formDataDelEstado.clienteDocumento || '');
+      dataToSend.append('cliente_telefono', formDataDelEstado.clienteTelefono || '');
+
+      // Firma digital del inspector (Firmas.jsx) — nunca se enviaba
+      if (formDataDelEstado.firmaInspector) {
+        dataToSend.append('firma_inspector', formDataDelEstado.firmaInspector);
+      }
+
       const normalizarLista = (lista) => {
         if (!lista) return [];
         if (Array.isArray(lista)) return lista;
@@ -455,11 +468,31 @@ export default function Dashboard({ onLogout }) {
       };
 
       dataToSend.append('accesorios', JSON.stringify(normalizarLista(formDataDelEstado.accesoriosList)));
-      dataToSend.append('danos_externos', JSON.stringify(normalizarLista(formDataDelEstado.danosExternosList || formDataDelEstado.danosExternos)));
-      dataToSend.append('danos_internos', JSON.stringify(normalizarLista(formDataDelEstado.danosInternosList)));
-      dataToSend.append('detalles_tecnicos', JSON.stringify(normalizarLista(formDataDelEstado.detallesTecnicosList)));
-      dataToSend.append('sistemas_mecanicos', JSON.stringify(normalizarLista(formDataDelEstado.sistemasMecanicosList)));
-      dataToSend.append('compresion_cilindros', JSON.stringify(normalizarLista(formDataDelEstado.compresionCilindrosList)));
+      // OJO: los módulos guardan estos objetos SIN sufijo "List"
+      // (VistaExterna.jsx -> danosExternos, VistaInterna.jsx -> danosInternos,
+      // DetallesTecnicos.jsx -> detallesTecnicos, Motor.jsx -> sistemasMecanicos).
+      // Leer "...List" siempre daba undefined y el guardado mandaba [] vacío,
+      // borrando esa sección cada vez que se guardaba el peritaje.
+      dataToSend.append('danos_externos', JSON.stringify(normalizarLista(formDataDelEstado.danosExternos)));
+      dataToSend.append('danos_internos', JSON.stringify(normalizarLista(formDataDelEstado.danosInternos)));
+      dataToSend.append('detalles_tecnicos', JSON.stringify(normalizarLista(formDataDelEstado.detallesTecnicos)));
+      dataToSend.append('sistemas_mecanicos', JSON.stringify(normalizarLista(formDataDelEstado.sistemasMecanicos)));
+
+      // La compresión se captura por cilindro (compresionCil1..4), no como lista aparte
+      const compresionCilindros = [1, 2, 3, 4]
+        .map((n) => formDataDelEstado[`compresionCil${n}`])
+        .filter((v) => v !== undefined && v !== null && v !== '');
+      dataToSend.append('compresion_cilindros', JSON.stringify(compresionCilindros));
+
+      // Soportes adjuntos de SOAT y Técnico-Mecánica (Documentacion.jsx los guarda
+      // como { file, name, type, previewUrl, dataUrl } bajo "archivoSoat" /
+      // "archivoTecnicoMecanica", no como "fotoSoat"/"fotoRtm")
+      if (formDataDelEstado.archivoSoat?.file instanceof File) {
+        dataToSend.append('foto_soat', formDataDelEstado.archivoSoat.file);
+      }
+      if (formDataDelEstado.archivoTecnicoMecanica?.file instanceof File) {
+        dataToSend.append('foto_rtm', formDataDelEstado.archivoTecnicoMecanica.file);
+      }
 
       await api.post(endpoint, dataToSend, {
         headers: {
@@ -1873,6 +1906,6 @@ export default function Dashboard({ onLogout }) {
           </div>
         </div>
       )}
-    </div>
+    </div>  
   );
 }

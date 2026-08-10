@@ -5,7 +5,7 @@ import Motor from '../modules/Motor';
 import VistaExterna from '../modules/VistaExterna';
 import VistaInterna from '../modules/VistaInterna';
 import Firma from '../modules/Firmas';
-import InformePdf from '../modules/InformePdf';
+import InformePdf from '../modules/informePdf';
 import DetallesTecnicos from '../modules/DetallesTecnicos';
 import api from '../api/axios';
 import { useAuth } from '../useAuth';

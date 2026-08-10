@@ -27,6 +27,10 @@ export function AuthProvider({ children }) {
         setUser(null);
         localStorage.removeItem('peritaje_user');
         localStorage.removeItem('peritaje_token');
+        // auth_token es la clave que realmente usan api/axios.js y dashboard.jsx
+        // para autenticar contra el backend (login.jsx la fija por separado);
+        // si no se borra aquí, queda huérfana en el navegador tras cerrar sesión.
+        localStorage.removeItem('auth_token');
     };
 
     const value = {

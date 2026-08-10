@@ -46,6 +46,7 @@ export default function Dashboard({ onLogout }) {
   const [filtroEstadisticasTipo, setFiltroEstadisticasTipo] = useState('');
 
   // Gestión de usuarios y perfil administrativo
+  // Prueba
   const [usuariosList, setUsuariosList] = useState([]);
   const [loadingUsuarios, setLoadingUsuarios] = useState(false);
   const [showCrearUsuarioModal, setShowCrearUsuarioModal] = useState(false);
@@ -1830,7 +1831,6 @@ export default function Dashboard({ onLogout }) {
               </div>
             </div>
           )}
-
           {modalActivo && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
               <div className="bg-white rounded-lg p-6 w-96 shadow-2xl border border-gray-100">

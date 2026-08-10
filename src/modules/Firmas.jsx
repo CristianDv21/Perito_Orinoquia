@@ -4,16 +4,26 @@ import SignatureCanvas from 'react-signature-canvas';
 export default function ModuloFirma({ peritajeData, onChange }) {
   const safeData = peritajeData || {};
   const padFirma = useRef(null);
+  const containerRef = useRef(null);
+  
+  // Inicializamos el estado directamente con la prop para evitar el useEffect sincrónico
   const [firmaGuardada, setFirmaGuardada] = useState(safeData.firmaInspector || null);
+  const [canvasSize, setCanvasSize] = useState({ width: 500, height: 150 });
 
-  // Si ya existe una firma guardada previamente en el peritaje (por ejemplo,
-  // al volver a este paso), la reflejamos en la vista previa.
+  // Solo dejamos el efecto para manejar el redimensionamiento responsivo de la ventana
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setFirmaGuardada(safeData.firmaInspector || null);
-  }, [safeData.firmaInspector]);
+    const actualizarAncho = () => {
+      if (containerRef.current) {
+        const anchoContenedor = containerRef.current.offsetWidth;
+        setCanvasSize({ width: anchoContenedor > 0 ? anchoContenedor : 500, height: 150 });
+      }
+    };
 
-  // Función para limpiar el recuadro y volver a firmar
+    actualizarAncho();
+    window.addEventListener('resize', actualizarAncho);
+    return () => window.removeEventListener('resize', actualizarAncho);
+  }, []);
+
   const limpiarFirma = () => {
     if (padFirma.current) {
       padFirma.current.clear();
@@ -22,7 +32,6 @@ export default function ModuloFirma({ peritajeData, onChange }) {
     if (onChange) onChange({ firmaInspector: null });
   };
 
-  // Función para guardar el trazo de manera segura
   const guardarFirma = () => {
     if (!padFirma.current || padFirma.current.isEmpty()) {
       alert("Por favor, inserte una firma primero.");
@@ -55,20 +64,21 @@ export default function ModuloFirma({ peritajeData, onChange }) {
         </p>
       </div>
 
-      {/* Contenedor del lienzo de dibujo */}
-      <div className="border-2 border-dashed border-slate-300 rounded-xl w-full max-w-md bg-slate-50 overflow-hidden">
+      <div 
+        ref={containerRef}
+        className="border-2 border-dashed border-slate-300 rounded-xl w-full max-w-md bg-slate-50 overflow-hidden touch-none"
+      >
         <SignatureCanvas 
           ref={padFirma}
           penColor='black'
           canvasProps={{
-            width: 500, 
-            height: 150, 
-            className: 'sigCanvas w-full h-[150px] cursor-crosshair'
+            width: canvasSize.width,
+            height: canvasSize.height,
+            className: 'sigCanvas w-full h-[150px] cursor-crosshair block'
           }}
         />
       </div>
 
-      {/* Botones de acción */}
       <div className="flex flex-wrap gap-3 pt-2">
         <button 
           type="button"
@@ -87,16 +97,15 @@ export default function ModuloFirma({ peritajeData, onChange }) {
         </button>
       </div>
 
-      {/* Vista previa de la firma procesada */}
       {firmaGuardada && (
-        <div className="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2 animate-fadeIn">
+        <div className="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
           <p className="text-xs text-emerald-800 font-bold flex items-center gap-1.5">
             ✓ Firma digitalizada con éxito para el reporte técnico:
           </p>
           <img 
             src={firmaGuardada} 
             alt="Firma del perito" 
-            className="border border-emerald-300 bg-white rounded-lg max-h-20 shadow-inner p-1" 
+            className="border border-emerald-300 bg-white rounded-lg max-h-20 shadow-inner p-1 object-contain" 
           />
         </div>
       )}

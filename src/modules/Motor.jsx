@@ -27,7 +27,7 @@ export default function Motor({ peritajeData: data, onChange }) {
 
   // Clase de diseño estándar y uniforme
   const inputStyle = "w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-500 transition duration-150";
-  
+
   // Clases compartidas para los selectores de diagnóstico tipo pastilla (Pills)
   const pillBase = "px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg border transition duration-150 cursor-pointer flex-1 text-center select-none";
 
@@ -72,16 +72,16 @@ export default function Motor({ peritajeData: data, onChange }) {
 
   // 🧮 Definir cantidad de cilindros para la prueba de compresión según el vehículo
   const getCilindrosConfig = () => {
-    if (tipoVehiculo === 'moto') return [1]; 
-    if (tipoVehiculo === 'motocarro') return [1, 2]; 
-    return [1, 2, 3, 4]; 
+    if (tipoVehiculo === 'moto') return [1];
+    if (tipoVehiculo === 'motocarro') return [1, 2];
+    return [1, 2, 3, 4];
   };
 
   const cilindrosActivos = getCilindrosConfig();
 
   return (
     <div className="space-y-6 text-slate-800">
-      
+
       {/* ⚙️ SECCIÓN 1: ESTADO DE COMPONENTES MECÁNICOS */}
       <div className="bg-white border border-slate-200/60 rounded-xl p-6 space-y-4 shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -96,10 +96,10 @@ export default function Motor({ peritajeData: data, onChange }) {
         <div className="divide-y divide-slate-100">
           {itemsMecanicos.map((item) => {
             const itemState = safeData.sistemasMecanicos?.[item.key] || { estado: '', observaciones: '' };
-            
+
             return (
               <div key={item.key} className="py-4 first:pt-0 last:pb-0 flex flex-col lg:flex-row lg:items-center justify-between gap-4 animate-fadeIn">
-                
+
                 {/* Nombre del sistema o pieza */}
                 <div className="lg:w-1/3">
                   <span className="text-xs font-bold text-slate-700 block">{item.label}</span>
@@ -107,7 +107,7 @@ export default function Motor({ peritajeData: data, onChange }) {
 
                 {/* Controles de estado y notas */}
                 <div className="flex flex-col sm:flex-row items-center gap-3 flex-1 lg:w-2/3 w-full">
-                  
+
                   {/* Selector de Diagnóstico (Pills) */}
                   <div className="flex bg-slate-100 p-1 rounded-xl w-full sm:w-auto min-w-[240px] gap-1">
                     <button
@@ -135,8 +135,8 @@ export default function Motor({ peritajeData: data, onChange }) {
 
                   {/* Detalle o gravedad del hallazgo */}
                   <div className="flex-1 w-full">
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="Describa la anomalía, goteo o pieza afectada..."
                       value={itemState.observaciones || ''}
                       onChange={(e) => handleMecanicoItemChange(item.key, 'observaciones', e.target.value)}
@@ -156,16 +156,27 @@ export default function Motor({ peritajeData: data, onChange }) {
         <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider border-b border-slate-100 pb-3">
           Parámetros de Motor, Transmisión y Tracción
         </h3>
-        
-        {/* 🛞 LECTURA DE KILOMETRAJE */}
-        <div className="pb-4 border-b border-slate-100">
+
+        {/* Odómetro y Cilindraje limpios y ordenados */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-slate-100">
           <div className="max-w-xs">
             <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Lectura Actual del Odómetro (KM)</label>
-            <input 
-              type="number" 
+            <input
+              type="number"
               placeholder="Ej. 15000"
-              value={safeData.kilometraje ?? ''} 
+              value={safeData.kilometraje ?? ''}
               onChange={(e) => handleInputChange('kilometraje', e.target.value)}
+              className={`${inputStyle} font-mono font-bold text-blue-600`}
+            />
+          </div>
+          
+          <div className="max-w-xs">
+            <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Cilindraje</label>
+            <input
+              type="text" 
+              placeholder="Ej. 1500cc"
+              value={safeData.cilindrada ?? ''}
+              onChange={(e) => handleInputChange('cilindrada', e.target.value)}
               className={`${inputStyle} font-mono font-bold text-blue-600`}
             />
           </div>
@@ -173,12 +184,12 @@ export default function Motor({ peritajeData: data, onChange }) {
 
         {/* ⚙️ CAMPOS DE TRANSMISIÓN Y TRACCIÓN */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-          
+
           {/* Tipo de Transmisión */}
           <div>
             <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Tipo de Transmisión</label>
-            <select 
-              value={safeData.tipoTransmision || ''} 
+            <select
+              value={safeData.tipoTransmision || ''}
               onChange={(e) => handleInputChange('tipoTransmision', e.target.value)}
               className={inputStyle}
             >
@@ -203,8 +214,8 @@ export default function Motor({ peritajeData: data, onChange }) {
           {/* Tipo de Tracción */}
           <div>
             <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Tipo de Tracción</label>
-            <select 
-              value={safeData.traccion || ''} 
+            <select
+              value={safeData.traccion || ''}
               onChange={(e) => handleInputChange('traccion', e.target.value)}
               className={inputStyle}
             >
@@ -230,8 +241,8 @@ export default function Motor({ peritajeData: data, onChange }) {
           {/* Estado del Embrague / Caja / Transmisión */}
           <div>
             <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Estado del Conjunto / Caja</label>
-            <select 
-              value={safeData.estadoTransmision || ''} 
+            <select
+              value={safeData.estadoTransmision || ''}
               onChange={(e) => handleInputChange('estadoTransmision', e.target.value)}
               className={inputStyle}
             >
@@ -254,10 +265,10 @@ export default function Motor({ peritajeData: data, onChange }) {
                 <span className="absolute left-3 text-[10px] font-extrabold text-slate-400 uppercase select-none">
                   Cil {num}
                 </span>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   placeholder="000"
-                  value={safeData[`compresionCil${num}`] ?? ''} 
+                  value={safeData[`compresionCil${num}`] ?? ''}
                   onChange={(e) => handleInputChange(`compresionCil${num}`, e.target.value)}
                   className={`${inputStyle} pl-12 text-right font-mono font-bold text-blue-600`}
                 />
@@ -277,10 +288,10 @@ export default function Motor({ peritajeData: data, onChange }) {
         </h3>
         <div>
           <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Notas y Concepto Mecánico Final</label>
-          <textarea 
-            rows="3" 
+          <textarea
+            rows="3"
             placeholder="Registre observaciones finales sobre el estado operativo del motor, si requiere reparaciones urgentes, sincronización o cambios de fluidos..."
-            value={safeData.comentariosMotor || ''} 
+            value={safeData.comentariosMotor || ''}
             onChange={(e) => handleInputChange('comentariosMotor', e.target.value)}
             className={`${inputStyle} resize-none`}
           />

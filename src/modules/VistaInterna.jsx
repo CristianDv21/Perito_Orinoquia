@@ -6,7 +6,7 @@ export default function VistaInterna({ peritajeData: data, onChange }) {
 
   // 1. PRIMERO declaramos TODOS los Hooks (antes de cualquier "if" para evitar errores de renderizado de React)
   const [zonaSeleccionada, setZonaSeleccionada] = useState(null);
-  
+
   const [formCabina, setFormCabina] = useState({
     estado: 'Óptimo',
     desgaste: 'Normal',
@@ -31,7 +31,7 @@ export default function VistaInterna({ peritajeData: data, onChange }) {
   }
 
   // Catálogo de zonas adaptado según si es carro o vehículo pesado
-  const zonasPorModelo = {
+  const todasLasZonasGlobales = {
     carro: [
       { id: 'tapiceria_del', name: 'Silletería / Tapicería Delantera' },
       { id: 'tapiceria_tras', name: 'Silletería / Tapicería Trasera' },
@@ -54,7 +54,7 @@ export default function VistaInterna({ peritajeData: data, onChange }) {
     ]
   };
 
-  const zonasInternas = zonasPorModelo[tipoVehiculo] || zonasPorModelo.carro;
+  const zonasInternas = todasLasZonasGlobales[tipoVehiculo] || todasLasZonasGlobales.carro;
 
   const handleSelectZona = (zonaId) => {
     setZonaSeleccionada(zonaId);
@@ -83,10 +83,10 @@ export default function VistaInterna({ peritajeData: data, onChange }) {
       const archivo = files[0];
       const lector = new FileReader();
       lector.onload = (evento) => {
-        setFormCabina(prev => ({ 
-          ...prev, 
-          foto: evento.target.result, 
-          fotoNombre: archivo.name 
+        setFormCabina(prev => ({
+          ...prev,
+          foto: evento.target.result,
+          fotoNombre: archivo.name
         }));
       };
       lector.readAsDataURL(archivo);
@@ -100,7 +100,7 @@ export default function VistaInterna({ peritajeData: data, onChange }) {
     } else {
       nuevosDanos[zonaSeleccionada] = { ...formCabina };
     }
-    
+
     // Propagación completa conservando el resto de datos del peritaje
     if (onChange) {
       onChange({
@@ -136,7 +136,7 @@ export default function VistaInterna({ peritajeData: data, onChange }) {
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6 w-full text-left">
               Distribución Interior de Cabina ({tipoVehiculo.toUpperCase()})
             </h3>
-            
+
             <div className="w-full max-w-md mx-auto space-y-3 font-mono text-[11px] font-bold">
               <div className="grid grid-cols-2 gap-3">
                 {zonasInternas.map((zona) => (
@@ -198,7 +198,7 @@ export default function VistaInterna({ peritajeData: data, onChange }) {
               <div>
                 <label className="block text-xs font-bold text-slate-400 tracking-wider uppercase mb-1.5">Foto de Evidencia</label>
                 <input type="file" name="foto" accept="image/*" onChange={handleFileChange} className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-bold file:bg-slate-800 file:text-blue-400 hover:file:bg-slate-700 cursor-pointer" />
-                
+
                 {formCabina.foto && (
                   <div className="mt-2 space-y-2">
                     <p className="text-[11px] text-emerald-400 font-mono">✓ Cargada: {formCabina.fotoNombre || 'evidencia.jpg'}</p>
@@ -222,7 +222,7 @@ export default function VistaInterna({ peritajeData: data, onChange }) {
             <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-400 flex flex-col items-center justify-center h-full min-h-[300px]">
               <span className="text-3xl mb-2">👈</span>
               <p className="text-xs font-bold uppercase tracking-wide">Selecciona un elemento en el plano interior para registrar su estado.</p>
-              
+
               {Object.keys(safeData.danosInternos || {}).length > 0 && (
                 <div className="w-full mt-6 pt-4 border-t border-slate-100 text-left">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Zonas evaluadas ({Object.keys(safeData.danosInternos).length}):</p>

@@ -123,8 +123,11 @@ export default function Accesorios({ peritajeData: data, onChange }) {
     if (!safeData.accesoriosList || safeData.accesoriosList.length === 0) {
       return listaIdeal;
     }
-    const perteneceAlTipo = safeData.accesoriosList.some(item => listaIdeal.some(l => l.id === item.id));
-    if (!perteneceAlTipo) {
+    const coincidencias = safeData.accesoriosList.filter(item => 
+      listaIdeal.some(l => l.id === item.id)
+    ).length;
+
+    if (coincidencias < listaIdeal.length * 0.3) {
       return listaIdeal;
     }
     return listaIdeal.map(idealItem => {

@@ -5,7 +5,7 @@ export default function VistaExterna({ peritajeData: data, onChange }) {
   const tipoVehiculo = safeData.tipoVehiculo || 'carro'; // Heredado globalmente
 
   const [piezaSeleccionada, setPiezaSeleccionada] = useState(null);
-  
+
   const [formDano, setFormDano] = useState({
     tipo: 'Ninguno',
     micras: '',
@@ -15,7 +15,7 @@ export default function VistaExterna({ peritajeData: data, onChange }) {
   });
 
   // Catálogo de piezas adaptado por tipo de vehículo
-  const piezasPorModelo = {
+  const todasLasPiezasGlobales = {
     carro: [
       { id: 'capo', name: 'Capó / Motor' },
       { id: 'techo', name: 'Techo' },
@@ -64,7 +64,7 @@ export default function VistaExterna({ peritajeData: data, onChange }) {
     ]
   };
 
-  const piezasCarroceria = piezasPorModelo[tipoVehiculo] || piezasPorModelo.carro;
+  const piezasCarroceria = todasLasPiezasGlobales[tipoVehiculo] || todasLasPiezasGlobales.carro;
   const esVehiculoLivianoPesado = tipoVehiculo === 'carro' || tipoVehiculo === 'pesado';
 
   const handleSelectPieza = (piezaId) => {
@@ -94,10 +94,10 @@ export default function VistaExterna({ peritajeData: data, onChange }) {
       const archivo = files[0];
       const lector = new FileReader();
       lector.onload = (evento) => {
-        setFormDano(prev => ({ 
-          ...prev, 
-          foto: evento.target.result, 
-          fotoNombre: archivo.name 
+        setFormDano(prev => ({
+          ...prev,
+          foto: evento.target.result,
+          fotoNombre: archivo.name
         }));
       };
       lector.readAsDataURL(archivo);
@@ -106,7 +106,7 @@ export default function VistaExterna({ peritajeData: data, onChange }) {
 
   const handleGuardarDano = () => {
     const nuevosDanos = { ...(safeData.danosExternos || {}) };
-    
+
     if (formDano.tipo === 'Ninguno' && !formDano.micras && !formDano.comentario && !formDano.foto) {
       delete nuevosDanos[piezaSeleccionada];
     } else {
@@ -144,14 +144,14 @@ export default function VistaExterna({ peritajeData: data, onChange }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
+
         {/* COLUMNA IZQUIERDA: ESQUEMAS DINÁMICOS */}
         <div className="lg:col-span-7 bg-white p-6 border border-slate-200 rounded-xl space-y-6">
           <div>
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">
               Plano Esquemático de Inspección ({tipoVehiculo.toUpperCase()})
             </h3>
-            
+
             {/* ESQUEMA DE CARRO */}
             {tipoVehiculo === 'carro' && (
               <div className="w-full max-w-md mx-auto space-y-2 font-mono text-[11px] font-bold">
@@ -163,13 +163,13 @@ export default function VistaExterna({ peritajeData: data, onChange }) {
 
                 <div className="grid grid-cols-3 gap-2">
                   <button type="button" onClick={() => handleSelectPieza('guardabarro_del_izq')} className={`py-6 border rounded-l-xl transition shadow-sm text-center ${getPiezaColorClass('guardabarro_del_izq')} ${piezaSeleccionada === 'guardabarro_del_izq' ? 'ring-4 ring-blue-500 border-blue-500' : ''}`}>
-                    G. Barro <br/> Del. Izq
+                    G. Barro <br /> Del. Izq
                   </button>
                   <button type="button" onClick={() => handleSelectPieza('capo')} className={`py-6 border transition shadow-sm text-center ${getPiezaColorClass('capo')} ${piezaSeleccionada === 'capo' ? 'ring-4 ring-blue-500 border-blue-500' : ''}`}>
                     Capó
                   </button>
                   <button type="button" onClick={() => handleSelectPieza('guardabarro_del_der')} className={`py-6 border rounded-r-xl transition shadow-sm text-center ${getPiezaColorClass('guardabarro_del_der')} ${piezaSeleccionada === 'guardabarro_del_der' ? 'ring-4 ring-blue-500 border-blue-500' : ''}`}>
-                    G. Barro <br/> Del. Der
+                    G. Barro <br /> Del. Der
                   </button>
                 </div>
 
@@ -197,13 +197,13 @@ export default function VistaExterna({ peritajeData: data, onChange }) {
 
                 <div className="grid grid-cols-3 gap-2">
                   <button type="button" onClick={() => handleSelectPieza('guardabarro_tras_izq')} className={`py-6 border rounded-l-xl transition shadow-sm text-center ${getPiezaColorClass('guardabarro_tras_izq')} ${piezaSeleccionada === 'guardabarro_tras_izq' ? 'ring-4 ring-blue-500 border-blue-500' : ''}`}>
-                    G. Barro <br/> Tras. Izq
+                    G. Barro <br /> Tras. Izq
                   </button>
                   <button type="button" onClick={() => handleSelectPieza('baul')} className={`py-6 border transition shadow-sm text-center ${getPiezaColorClass('baul')} ${piezaSeleccionada === 'baul' ? 'ring-4 ring-blue-500 border-blue-500' : ''}`}>
                     Baúl
                   </button>
                   <button type="button" onClick={() => handleSelectPieza('guardabarro_tras_der')} className={`py-6 border rounded-r-xl transition shadow-sm text-center ${getPiezaColorClass('guardabarro_tras_der')} ${piezaSeleccionada === 'guardabarro_tras_der' ? 'ring-4 ring-blue-500 border-blue-500' : ''}`}>
-                    G. Barro <br/> Tras. Der
+                    G. Barro <br /> Tras. Der
                   </button>
                 </div>
 
@@ -387,7 +387,7 @@ export default function VistaExterna({ peritajeData: data, onChange }) {
               <div>
                 <label className="block text-xs font-bold text-slate-400 tracking-wider uppercase mb-1.5">Foto de Evidencia</label>
                 <input type="file" name="foto" accept="image/*" onChange={handleFileChange} className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-bold file:bg-slate-800 file:text-blue-400 hover:file:bg-slate-700 cursor-pointer" />
-                
+
                 {formDano.foto && (
                   <div className="mt-2 space-y-2">
                     <p className="text-[11px] text-emerald-400 font-mono">✓ Cargada: {formDano.fotoNombre || 'evidencia.jpg'}</p>
@@ -412,14 +412,17 @@ export default function VistaExterna({ peritajeData: data, onChange }) {
               <span className="text-3xl mb-2">🎨</span>
               <p className="text-xs font-bold uppercase tracking-wider">Ninguna Pieza Seleccionada</p>
               <p className="text-[11px] text-slate-400 mt-1 max-w-xs">Toca cualquier componente en el esquema para registrar daños.</p>
-              
+
               {Object.keys(safeData.danosExternos || {}).length > 0 && (
                 <div className="w-full mt-6 pt-4 border-t border-slate-100 text-left">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Resumen de daños ({Object.keys(safeData.danosExternos).length}):</p>
                   <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
                     {Object.entries(safeData.danosExternos).map(([piezaKey, val]) => (
                       <div key={piezaKey} className="flex justify-between items-center text-xs py-1.5 px-2 bg-slate-50 border rounded font-medium">
-                        <span className="text-slate-700 font-bold">{piezasCarroceria.find(p => p.id === piezaKey)?.name || piezaKey}</span>
+                        {/* Se usa el catálogo global para evitar que devuelva undefined si cambia el tipo de vehículo */}
+                        <span className="text-slate-700 font-bold">
+                          {todasLasPiezasGlobales.find(p => p.id === piezaKey)?.name || piezaKey}
+                        </span>
                         <div className="flex items-center space-x-2">
                           {val.foto && <span className="text-[10px] text-emerald-600 font-bold">🖼️ Foto</span>}
                           <span className="text-slate-500 font-mono">{val.tipo} {val.micras ? `(${val.micras} μm)` : ''}</span>

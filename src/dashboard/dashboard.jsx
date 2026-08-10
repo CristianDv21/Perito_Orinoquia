@@ -167,6 +167,8 @@ export default function Dashboard({ onLogout }) {
     }
   };
 
+
+
   const fetchInspecciones = async () => {
     try {
       setLoadingInspecciones(true);
@@ -232,7 +234,7 @@ export default function Dashboard({ onLogout }) {
   };
 
   const handleGuardarConfiguracion = (e) => {
-    if(e) e.preventDefault();
+    if (e) e.preventDefault();
     localStorage.setItem('peritaje_config_sistema', JSON.stringify(configSistema));
     alert('¡Configuración del sistema guardada exitosamente!');
   };
@@ -380,6 +382,8 @@ export default function Dashboard({ onLogout }) {
     }
   };
 
+
+
   const guardarPeritajeCompleto = async (formDataDelEstado) => {
     try {
       const token = localStorage.getItem('auth_token');
@@ -423,7 +427,6 @@ export default function Dashboard({ onLogout }) {
       if (formDataDelEstado.venceSoat) dataToSend.append('vence_soat', formDataDelEstado.venceSoat);
       dataToSend.append('soat_al_dia', formDataDelEstado.soatAlDia ? '1' : '0');
 
-
       dataToSend.append('numero_control_rtm', formDataDelEstado.numeroControlRtm || '');
       dataToSend.append('cda_emisor', formDataDelEstado.cdaEmisor || '');
       if (formDataDelEstado.venceTecnicoMecanica) dataToSend.append('vence_tecnico_mecanica', formDataDelEstado.venceTecnicoMecanica);
@@ -435,9 +438,8 @@ export default function Dashboard({ onLogout }) {
       dataToSend.append('fugas_aceite', formDataDelEstado.fugasAceite ? '1' : '0');
       dataToSend.append('estado_bateria', formDataDelEstado.estadoBateria || 'Bueno');
       dataToSend.append('ruidos_extranos', formDataDelEstado.ruidosExtranos ? '1' : '0');
-      // Motor.jsx guarda el dictamen final en "comentariosMotor" (no "motorObservaciones")
+
       dataToSend.append('comentarios_motor', formDataDelEstado.comentariosMotor || '');
-      // Motor.jsx también captura estos tres campos y nunca se estaban enviando
       dataToSend.append('tipo_transmision', formDataDelEstado.tipoTransmision || '');
       dataToSend.append('traccion', formDataDelEstado.traccion || '');
       dataToSend.append('estado_transmision', formDataDelEstado.estadoTransmision || '');
@@ -450,12 +452,10 @@ export default function Dashboard({ onLogout }) {
       dataToSend.append('score_electrico', Number(formDataDelEstado.scoreElectrico ?? 100));
       dataToSend.append('score_legal', Number(formDataDelEstado.scoreLegal ?? 100));
 
-      // Cliente / Propietario — se capturaban en Documentacion.jsx pero nunca se enviaban
       dataToSend.append('cliente_nombre', formDataDelEstado.clienteNombre || '');
       dataToSend.append('cliente_documento', formDataDelEstado.clienteDocumento || '');
       dataToSend.append('cliente_telefono', formDataDelEstado.clienteTelefono || '');
 
-      // Firma digital del inspector (Firmas.jsx) — nunca se enviaba
       if (formDataDelEstado.firmaInspector) {
         dataToSend.append('firma_inspector', formDataDelEstado.firmaInspector);
       }
@@ -468,25 +468,16 @@ export default function Dashboard({ onLogout }) {
       };
 
       dataToSend.append('accesorios', JSON.stringify(normalizarLista(formDataDelEstado.accesoriosList)));
-      // OJO: los módulos guardan estos objetos SIN sufijo "List"
-      // (VistaExterna.jsx -> danosExternos, VistaInterna.jsx -> danosInternos,
-      // DetallesTecnicos.jsx -> detallesTecnicos, Motor.jsx -> sistemasMecanicos).
-      // Leer "...List" siempre daba undefined y el guardado mandaba [] vacío,
-      // borrando esa sección cada vez que se guardaba el peritaje.
       dataToSend.append('danos_externos', JSON.stringify(normalizarLista(formDataDelEstado.danosExternos)));
       dataToSend.append('danos_internos', JSON.stringify(normalizarLista(formDataDelEstado.danosInternos)));
       dataToSend.append('detalles_tecnicos', JSON.stringify(normalizarLista(formDataDelEstado.detallesTecnicos)));
       dataToSend.append('sistemas_mecanicos', JSON.stringify(normalizarLista(formDataDelEstado.sistemasMecanicos)));
 
-      // La compresión se captura por cilindro (compresionCil1..4), no como lista aparte
       const compresionCilindros = [1, 2, 3, 4]
         .map((n) => formDataDelEstado[`compresionCil${n}`])
         .filter((v) => v !== undefined && v !== null && v !== '');
       dataToSend.append('compresion_cilindros', JSON.stringify(compresionCilindros));
 
-      // Soportes adjuntos de SOAT y Técnico-Mecánica (Documentacion.jsx los guarda
-      // como { file, name, type, previewUrl, dataUrl } bajo "archivoSoat" /
-      // "archivoTecnicoMecanica", no como "fotoSoat"/"fotoRtm")
       if (formDataDelEstado.archivoSoat?.file instanceof File) {
         dataToSend.append('foto_soat', formDataDelEstado.archivoSoat.file);
       }
@@ -555,18 +546,20 @@ export default function Dashboard({ onLogout }) {
 
     return {
       ...item,
+      ...compresionCilFields,
       tipoVehiculo: resolverTipoVehiculo(item),
       tipoVehiculoId: item.tipo_vehiculo_id || item.tipoVehiculoId || '',
-      modelo: item.modelo_anio || item.modelo || '',
+      modelo: item.modelo || (item.modelo_anio ? String(item.modelo_anio) : ''),
       version: item.version || '',
       cilindrada: item.cilindrada || '',
+      color: item.color || '',
       tipoTransmision: item.tipo_transmision || item.tipoTransmision || '',
       traccion: item.traccion || '',
       estadoTransmision: item.estado_transmision || item.estadoTransmision || '',
       numMotor: item.num_motor || item.numMotor || '',
       numChasis: item.num_chasis || item.numChasis || '',
       kilometraje: item.kilometraje || item.km || 0,
-      ...compresionCilFields,
+      comprimido: item.comprimido || item.compresionCil1 || item.compresionCil2 || item.compresionCil3 || item.compresionCil4 || false,
       venceSoat: item.vence_soat || item.venceSoat || '',
       soatAlDia: item.soat_al_dia ?? item.soatAlDia ?? true,
       archivoSoat: item.archivo_soat || item.archivoSoat || item.foto_soat || null,
@@ -731,7 +724,7 @@ export default function Dashboard({ onLogout }) {
       {showCrearUsuarioModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
-             {/* Contenido modal crear usuario */}
+            {/* Contenido modal crear usuario */}
             <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <div>
                 <h3 className="text-base font-bold text-slate-900">Registrar Nuevo Usuario</h3>
@@ -790,7 +783,7 @@ export default function Dashboard({ onLogout }) {
       {showEditarUsuarioModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
-             {/* Contenido modal editar usuario */}
+            {/* Contenido modal editar usuario */}
             <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <div>
                 <h3 className="text-base font-bold text-slate-900">Editar Usuario / Perfil</h3>
@@ -1482,12 +1475,12 @@ export default function Dashboard({ onLogout }) {
 
                     {/* Columna Derecha: Formularios rediseñados */}
                     <div className="lg:col-span-2 space-y-6">
-                      
+
                       {/* Form: Empresa */}
                       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                         <div className="bg-slate-50 px-6 py-4 border-b border-slate-100">
                           <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                            <Building size={18} className="text-blue-600"/> Datos Fiscales y del CDA
+                            <Building size={18} className="text-blue-600" /> Datos Fiscales y del CDA
                           </h3>
                         </div>
                         <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -1518,7 +1511,7 @@ export default function Dashboard({ onLogout }) {
                       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                         <div className="bg-slate-50 px-6 py-4 border-b border-slate-100">
                           <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                            <Sliders size={18} className="text-blue-600"/> Parámetros de Inspección
+                            <Sliders size={18} className="text-blue-600" /> Parámetros de Inspección
                           </h3>
                         </div>
                         <div className="p-6 space-y-5">
@@ -1532,7 +1525,7 @@ export default function Dashboard({ onLogout }) {
                               <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                             </label>
                           </div>
-                          
+
                           <div className="space-y-1.5 w-full sm:w-1/2">
                             <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Score / Puntaje Inicial</label>
                             <div className="relative">
@@ -1548,7 +1541,7 @@ export default function Dashboard({ onLogout }) {
                       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                         <div className="bg-slate-50 px-6 py-4 border-b border-slate-100">
                           <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                            <FileText size={18} className="text-blue-600"/> Términos y PDF
+                            <FileText size={18} className="text-blue-600" /> Términos y PDF
                           </h3>
                         </div>
                         <div className="p-6 space-y-1.5">
@@ -1906,6 +1899,6 @@ export default function Dashboard({ onLogout }) {
           </div>
         </div>
       )}
-    </div>  
+    </div>
   );
 }

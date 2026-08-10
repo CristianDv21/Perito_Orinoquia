@@ -104,13 +104,18 @@ export default function DetallesTecnicos({ peritajeData, onChange }) {
   const esVehiculoLiviano = tipoVehiculo.includes('auto') || tipoVehiculo.includes('camioneta') || tipoVehiculo.includes('campero') || tipoVehiculo.includes('suv') || (!tipoVehiculo.includes('moto') && !tipoVehiculo.includes('motocarro'));
 
   // Calcular costo total manejando correctamente el tipo numérico
+  // Calcular costo total manejando correctamente el tipo numérico (incluyendo opcionalmente la mano de obra)
   const calcularCostoTotal = (currentForm) => {
     let total = 0;
     elementosIniciales.forEach((item) => {
       const costoItem = parseFloat(currentForm[item.id]?.costo) || 0;
       total += costoItem;
     });
-    return total;
+    
+    // Opcional: Si deseas que también sume la mano de obra (costoAlistamiento) automáticamente:
+    const costoManoDeObra = parseFloat(currentForm.costoAlistamiento) || 0;
+    
+    return total + costoManoDeObra;
   };
 
   const handleCheckboxChange = (id, checked) => {
@@ -126,11 +131,9 @@ export default function DetallesTecnicos({ peritajeData, onChange }) {
     const updatedItem = { ...(form[id] || {}), [field]: value };
     const tempForm = { ...form, [id]: updatedItem };
     
-    const costoReparacionTotal = field === 'costo' ? calcularCostoTotal(tempForm) : form.costoReparacion;
-
     const updated = {
       ...tempForm,
-      costoReparacion: costoReparacionTotal
+      costoReparacion: calcularCostoTotal(tempForm)
     };
 
     setForm(updated);
@@ -138,7 +141,11 @@ export default function DetallesTecnicos({ peritajeData, onChange }) {
   };
 
   const handleGlobalChange = (field, value) => {
-    const updated = { ...form, [field]: value };
+    const tempForm = { ...form, [field]: value };
+    const updated = {
+      ...tempForm,
+      costoReparacion: calcularCostoTotal(tempForm) // Asegura que si cambia la mano de obra, el total se actualice
+    };
     setForm(updated);
     if (onChange) onChange({ detallesTecnicos: updated });
   };

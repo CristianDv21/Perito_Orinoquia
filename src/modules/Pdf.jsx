@@ -122,7 +122,6 @@ const ITEMS_MOTOR = {
   ],
 };
 
-// --- Listas de Detalles Técnicos actualizadas con soporte para Camionetas / SUVs ---
 const ELEMENTOS_DETALLES_TECNICOS_AUTO = [
   { id: 'motor', nombre: 'Motor' },
   { id: 'caja_diferencial', nombre: 'Caja y Diferencial' },
@@ -193,7 +192,6 @@ const ELEMENTOS_DETALLES_TECNICOS_MOTOCARRO = [
   { id: 'sistema_electrico', nombre: 'Sistema Eléctrico y Batería' },
 ];
 
-// Posiciones aproximadas de cada pieza exterior sobre el esquema
 const POSICIONES_DIAGRAMA_CARRO = {
   bomper_del: [0.5, 0.05], capo: [0.5, 0.16], techo: [0.5, 0.5], baul: [0.5, 0.84], bomper_tras: [0.5, 0.95],
   guardabarro_del_izq: [0.14, 0.15], puerta_del_izq: [0.1, 0.34], puerta_tras_izq: [0.1, 0.6], guardabarro_tras_izq: [0.14, 0.82],
@@ -250,7 +248,7 @@ export const generarInstanciaPdf = (peritajeData) => {
     accesoriosList, sistemasMecanicos, comentariosMotor,
     danosExternos, danosInternos, detallesTecnicos,
     firmaInspector,
-    firmaCliente, // <-- Se añade la propiedad de la firma del cliente / solicitante
+    firmaCliente,
     tiempoCompletitud, fechaPeritaje,
   } = data;
 
@@ -279,9 +277,12 @@ export const generarInstanciaPdf = (peritajeData) => {
   const esPesado = tipoStr === "pesado";
   const esCamioneta = tipoStr.includes("camioneta") || tipoStr.includes("campero") || tipoStr.includes("suv");
 
-  const catalogoKey = ["carro", "moto", "pesado", "motocarro"].includes(tipoStr) ? tipoStr : "carro";
-  
-  // Selección dinámica de detalles técnicos según el tipo de vehículo evaluado
+  // Corrección de catálogo key para evitar errores con camionetas o pesados
+  let catalogoKey = "carro";
+  if (esMoto) catalogoKey = "moto";
+  else if (esMotocarro) catalogoKey = "motocarro";
+  else if (esPesado || esCamioneta) catalogoKey = "pesado";
+
   const obtenerElementosTecnicos = () => {
     if (esCamioneta) return ELEMENTOS_DETALLES_TECNICOS_CAMIONETA;
     if (esMoto) return ELEMENTOS_DETALLES_TECNICOS_MOTO;
@@ -328,19 +329,34 @@ export const generarInstanciaPdf = (peritajeData) => {
     currentY = doc.lastAutoTable.finalY;
   };
 
-  // --- ENCABEZADO PRINCIPAL (con logo) ---
+  // --- ENCABEZADO PRINCIPAL (con Logotipo Corporativo) ---
   doc.setFillColor(248, 250, 252);
   doc.setDrawColor(...colorBordeGrid);
   doc.roundedRect(10, 8, 196, 22, 1, 1, "FD");
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.setTextColor(15, 23, 42);
-  doc.text("LLANCIGRANDE", 32, 16);
+  // LOGOTIPO: Reemplaza este string Base64 con el de tu logo corporativo real (ej: "data:image/png;base64,...")
+  const logoBase64 = null; 
+
+  if (logoBase64) {
+    try {
+      doc.addImage(logoBase64, 'PNG', 12, 10, 18, 18, undefined, 'FAST');
+    } catch {
+      // Si falla la carga del logo, dibuja un marcador de posición de texto
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      doc.text("LOGO", 15, 20);
+    }
+  } else {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(15, 23, 42);
+    doc.text("LLANCIGRANDE", 14, 16);
+  }
 
   doc.setFontSize(7);
   doc.setTextColor(71, 85, 105);
-  doc.text(`USADOS • INSPECCIÓN ${esMoto ? 'MOTOCICLETA' : esPesado ? 'VEHÍCULO PESADO' : 'AUTOMOTRIZ'}`, 32, 20.5);
+  doc.text(`USADOS • INSPECCIÓN ${esMoto ? 'MOTOCICLETA' : esPesado ? 'VEHÍCULO PESADO' : 'AUTOMOTRIZ'}`, 34, 20.5);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
@@ -519,15 +535,14 @@ export const generarInstanciaPdf = (peritajeData) => {
     ["Costo total de reparación:", `$ ${costoReparacion || "0"}`],
   ], { styles: { fontSize: 6.5, textColor: colorTextoNegro, cellPadding: 1, halign: "right", lineColor: colorBordeGrid } });
 
-  // --- BLOQUE DE FIRMAS: INSPECTOR Y CLIENTE / SOLICITANTE ---
+  // --- BLOQUE DE FIRMAS ---
   agregarBarraSeccion(esMoto ? "9. Firmas de Autorización e Inspección" : "10. Firmas de Autorización e Inspección");
   asegurarEspacio(32);
   
-  // Dos cuadros de firma lado a lado (Inspector a la izquierda, Solicitante a la derecha)
   const anchoCajaFirma = 94;
   const altoCajaFirma = 26;
   
-  // Cuadro Firma Inspector
+  // Firma Inspector
   doc.setDrawColor(...colorBordeGrid);
   doc.roundedRect(10, currentY, anchoCajaFirma, altoCajaFirma, 1, 1, "S");
   if (firmaInspector) {
@@ -547,7 +562,7 @@ export const generarInstanciaPdf = (peritajeData) => {
   doc.setTextColor(...colorTextoNegro);
   doc.text(`Inspector: ${inspectorNombre ? extraerTexto(inspectorNombre) : "N/A"}`, 14, currentY + 22);
 
-  // Cuadro Firma Cliente / Solicitante
+  // Firma Cliente
   doc.roundedRect(112, currentY, anchoCajaFirma, altoCajaFirma, 1, 1, "S");
   if (firmaCliente) {
     try {
@@ -570,9 +585,7 @@ export const generarInstanciaPdf = (peritajeData) => {
 
   currentY += 28;
 
-  // ==========================================================================
-  // PÁGINA FINAL: ESQUEMA DE INSPECCIÓN + RESUMEN VISUAL
-  // ==========================================================================
+  // --- PÁGINA FINAL: ESQUEMA DE INSPECCIÓN ---
   doc.addPage();
   currentY = 15;
   agregarBarraSeccion("Resumen Visual de la Inspección");
@@ -715,9 +728,7 @@ export const generarInstanciaPdf = (peritajeData) => {
   });
   currentY = doc.lastAutoTable.finalY;
 
-  // ==========================================================================
-  // SET DE IMÁGENES
-  // ==========================================================================
+  // --- SET DE IMÁGENES ---
   const imagenes = [];
   piezasTipo.forEach((p) => {
     const info = danosExt[p.id];
@@ -727,8 +738,13 @@ export const generarInstanciaPdf = (peritajeData) => {
     const info = detalles[el.id];
     if (info?.imagen) imagenes.push({ label: `Téc.: ${el.nombre}`, src: info.imagen });
   });
-  if (archivoSoat?.dataUrl) imagenes.push({ label: "Soporte SOAT", src: archivoSoat.dataUrl });
-  if (archivoTecnicoMecanica?.dataUrl) imagenes.push({ label: "Soporte Técnico-Mecánica", src: archivoTecnicoMecanica.dataUrl });
+  
+  // Manejo robusto por si el archivo viene como string directo (base64) o propiedad interna
+  const imgSoat = typeof archivoSoat === 'string' ? archivoSoat : archivoSoat?.dataUrl;
+  const imgRtm = typeof archivoTecnicoMecanica === 'string' ? archivoTecnicoMecanica : archivoTecnicoMecanica?.dataUrl;
+
+  if (imgSoat) imagenes.push({ label: "Soporte SOAT", src: imgSoat });
+  if (imgRtm) imagenes.push({ label: "Soporte Técnico-Mecánica", src: imgRtm });
 
   if (imagenes.length > 0) {
     doc.addPage();

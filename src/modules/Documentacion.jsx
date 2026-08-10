@@ -131,13 +131,12 @@ export default function Documentacion({
   onAgregarVendedor
 }) {
   const safeData = data || {};
-  const tipoVehiculo = safeData.tipoVehiculo || 'carro';
+  const tipoVehiculo = safeData.tipoVehiculo || safeData.tipo_vehiculo || 'carro';
 
   const handleInputChange = (field, value) => {
     if (onChange) {
       const updatedData = { ...safeData, [field]: value };
 
-      // Mapeo automático de compatibilidad camelCase <-> snake_case para campos del cliente
       const equivalencias = {
         clienteNombre: 'cliente_nombre',
         cliente_nombre: 'clienteNombre',
@@ -145,6 +144,29 @@ export default function Documentacion({
         cliente_documento: 'clienteDocumento',
         clienteTelefono: 'cliente_telefono',
         cliente_telefono: 'clienteTelefono',
+        archivoSoat: 'archivo_soat',
+        archivo_soat: 'archivoSoat',
+        archivoTecnicoMecanica: 'archivo_tecnico_mecanica',
+        archivo_tecnico_mecanica: 'archivoTecnicoMecanica',
+        sucursalVendedorId: 'sucursal_vendedor_id',
+        sucursal_vendedor_id: 'sucursalVendedorId',
+        sucursalInspeccionId: 'sucursal_inspeccion_id',
+        sucursal_inspeccion_id: 'sucursalInspeccionId',
+        vendedorId: 'vendedor_id',
+        vendedor_id: 'vendedorId',
+        soatAlDia: 'soat_al_dia',
+        soat_al_dia: 'soatAlDia',
+        tecnicoMecanicaAlDia: 'tecnico_mecanica_al_dia',
+        tecnico_mecanica_al_dia: 'tecnicoMecanicaAlDia',
+        numMotor: 'num_motor',
+        num_motor: 'numMotor',
+        numChasis: 'num_chasis',
+        num_chasis: 'numChasis',
+        // Nuevas equivalencias añadidas para las fechas de vencimiento:
+        venceSoat: 'vence_soat',
+        vence_soat: 'venceSoat',
+        venceTecnicoMecanica: 'vence_tecnico_mecanica',
+        vence_tecnico_mecanica: 'venceTecnicoMecanica',
       };
 
       if (equivalencias[field]) {
@@ -357,7 +379,7 @@ export default function Documentacion({
             <input
               type="number"
               placeholder={placeholders.modelo}
-              value={safeData.modelo || ''}
+              value={safeData.modelo || safeData.modelo_anio || ''}
               onChange={(e) => handleInputChange('modelo', e.target.value)}
               className={`${inputStyle} font-mono font-bold`}
               required
@@ -394,7 +416,7 @@ export default function Documentacion({
           <textarea
             rows="2"
             placeholder={placeholders.siniestros}
-            value={safeData.siniestros || ''}
+            value={safeData.siniestros || safeData.comentarios_siniestros || ''}
             onChange={(e) => handleInputChange('siniestros', e.target.value)}
             className={inputStyle}
           />

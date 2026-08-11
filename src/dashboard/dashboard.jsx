@@ -930,7 +930,7 @@ export default function Dashboard({ onLogout }) {
               }}
               className="transition duration-500 hover:scale-105"
             >
-              <img src="/Logo1.png" alt="Servi-Centro CDA" className="w-40 object-contain" draggable={false} />
+              <img src="/Logo1.png" alt="Servi-Centro CDA" className="w-520 object-contain" draggable={false} />
             </button>
             <button onClick={toggleSidebar} className="absolute right-4 top-4 lg:hidden text-slate-400 hover:text-white">✕</button>
           </div>

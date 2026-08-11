@@ -118,18 +118,12 @@ export default function Accesorios({ peritajeData: data, onChange }) {
 
   const listaIdeal = listasPorTipo[tipoVehiculo] || listasPorTipo.carro;
 
-  // Fusiona inteligentemente la información guardada en la base de datos con los ítems ideales del vehículo actual
+  // 🛠️ Fusión segura mejorada: Evita descartar la info si la BD trae datos con IDs válidos
   const accesoriosActivos = (() => {
-    if (!safeData.accesoriosList || safeData.accesoriosList.length === 0) {
+    if (!safeData.accesoriosList || !Array.isArray(safeData.accesoriosList) || safeData.accesoriosList.length === 0) {
       return listaIdeal;
     }
-    const coincidencias = safeData.accesoriosList.filter(item => 
-      listaIdeal.some(l => l.id === item.id)
-    ).length;
 
-    if (coincidencias < listaIdeal.length * 0.3) {
-      return listaIdeal;
-    }
     return listaIdeal.map(idealItem => {
       const encontrado = safeData.accesoriosList.find(item => item.id === idealItem.id);
       return encontrado ? { ...idealItem, ...encontrado } : idealItem;
@@ -143,9 +137,14 @@ export default function Accesorios({ peritajeData: data, onChange }) {
       }
       return item;
     });
-    // Se preservan los demás datos del formulario al actualizar la lista de accesorios
+    
+    // Se envían todos los datos previos conservando el formato correcto de la lista
     onChange({ ...safeData, accesoriosList: listaActualizada });
   };
+
+  // 🔍 Útil para depurar: Agrega este console.log temporalmente para inspeccionar qué trae tu base de datos al editar
+  console.log("Datos recibidos en peritajeData:", safeData);
+  console.log("Accesorios mapeados para render:", accesoriosActivos);
 
   return (
     <div className="space-y-6 animate-fadeIn pb-10">

@@ -103,12 +103,12 @@ export default function Dashboard({ onLogout }) {
     comentariosSiniestros: '',
     numeroSoat: '',
     entityEmisoraSoat: '',
-    venceSoat: '',
+    vence_soat: '',
     soatAlDia: true,
     fotoSoat: null,
     numeroControlRtm: '',
     cdaEmisor: '',
-    venceTecnicoMecanica: '',
+    vence_tecnico_mecanica: '',
     tecnicoMecanicaAlDia: true,
     fotoRtm: null,
     coincidePropietarioRunt: true,
@@ -166,8 +166,6 @@ export default function Dashboard({ onLogout }) {
       setLoadingUsuarios(false);
     }
   };
-
-
 
   const fetchInspecciones = async () => {
     try {
@@ -326,20 +324,20 @@ export default function Dashboard({ onLogout }) {
       { id: 'Documentacion', label: '1. Documentación', icon: '📄' },
       { id: 'Accesorios y Equipamiento', label: '2. Accesorios y Equipamiento', icon: '🚗' },
       { id: 'Motor', label: '3. Motor', icon: '🔧' },
-      { id: 'Pintura', label: '3. Vista Externa', icon: '🎨' },
+      { id: 'Pintura', label: '4. Vista Externa', icon: '🎨' },
     ];
 
     if (tipo !== 'moto' && tipo !== 'motocarro') {
-      steps.push({ id: 'VistaInterna', label: '4. Vista Interna', icon: '👀' });
+      steps.push({ id: 'VistaInterna', label: '5. Vista Interna', icon: '👀' });
     }
 
     if (tipo !== 'moto') {
-      steps.push({ id: 'Detalles Técnicos', label: '5. Detalles Técnicos', icon: '🛠️' });
+      steps.push({ id: 'Detalles Técnicos', label: '6. Detalles Técnicos', icon: '🛠️' });
     }
 
     steps.push(
-      { id: 'Firma', label: '6. Firma Digital', icon: '🖋️' },
-      { id: 'PDF', label: '7. Reporte & PDF', icon: '📋' }
+      { id: 'Firma', label: '7. Firma Digital', icon: '🖋️' },
+      { id: 'PDF', label: '8. Reporte & PDF', icon: '📋' }
     );
 
     return steps;
@@ -381,8 +379,6 @@ export default function Dashboard({ onLogout }) {
       alert(error.response?.data?.message || "Ocurrió un error al actualizar la contraseña.");
     }
   };
-
-
 
   const guardarPeritajeCompleto = async (formDataDelEstado) => {
     try {
@@ -547,44 +543,44 @@ export default function Dashboard({ onLogout }) {
     return {
       ...item,
       ...compresionCilFields,
+      id: item.id,
       tipoVehiculo: resolverTipoVehiculo(item),
       tipoVehiculoId: item.tipo_vehiculo_id || item.tipoVehiculoId || '',
+      placa: item.placa || '',
+      marca: item.marca || '',
+      linea: item.linea || '',
       modelo: item.modelo || (item.modelo_anio ? String(item.modelo_anio) : ''),
-      version: item.version || '',
-      cilindrada: item.cilindrada || '',
       color: item.color || '',
-      tipoTransmision: item.tipo_transmision || item.tipoTransmision || '',
-      traccion: item.traccion || '',
-      estadoTransmision: item.estado_transmision || item.estadoTransmision || '',
       numMotor: item.num_motor || item.numMotor || '',
       numChasis: item.num_chasis || item.numChasis || '',
       kilometraje: item.kilometraje || item.km || 0,
-      comprimido: item.comprimido || item.compresionCil1 || item.compresionCil2 || item.compresionCil3 || item.compresionCil4 || false,
-      venceSoat: item.vence_soat || item.venceSoat || '',
+      organismoTransito: item.organismo_transito || item.organismoTransito || '',
+
+      vence_soat: item.vence_soat ? item.vence_soat.split('T')[0] : (item.venceSoat ? item.venceSoat.split('T')[0] : ''),
+      vence_tecnico_mecanica: item.vence_tecnico_mecanica ? item.vence_tecnico_mecanica.split('T')[0] : (item.venceTecnicoMecanica ? item.venceTecnicoMecanica.split('T')[0] : ''),
+
       soatAlDia: item.soat_al_dia ?? item.soatAlDia ?? true,
-      archivoSoat: item.archivo_soat || item.archivoSoat || item.foto_soat || null,
-      venceTecnicoMecanica: item.vence_tecnico_mecanica || item.venceTecnicoMecanica || '',
       tecnicoMecanicaAlDia: item.tecnico_mecanica_al_dia ?? item.tecnicoMecanicaAlDia ?? true,
-      archivoTecnicoMecanica: item.archivo_tecnico_mecanica || item.archivoTecnicoMecanica || item.archivoRtm || item.foto_rtm || null,
+
+      sucursalVendedorId: item.sucursal_vendedor_id || item.sucursalVendedorId || '',
+      sucursalInspeccionId: item.sucursal_inspeccion_id || item.sucursalInspeccionId || '',
+      vendedorId: item.vendedor_id || item.vendedorId || '',
+
+      archivoSoat: item.archivo_soat || item.archivoSoat || item.foto_soat || null,
+      archivoTecnicoMecanica: item.archivo_rtm || item.archivoTecnicoMecanica || item.foto_rtm || null,
+
+      nombre_cliente: item.cliente_nombre || item.cliente?.nombre || item.cliente_nombre || '',
+      documento_cliente: item.documento_cliente || item.cliente?.documento || item.documento_cliente || '',
+      telefono_cliene: item.telefono_cliene || item.cliente_telefono || item.telefono_cliene || '',
+
       siniestros: item.siniestros || item.comentarios_siniestros || '',
-      tarjetaOperacion: item.tarjeta_operacion || item.tarjetaOperacion || '',
-      configuracionEjes: item.configuracion_ejes || item.configuracionEjes || '',
-      clienteNombre: item.cliente_nombre || item.cliente?.nombre || item.clienteNombre || '',
-      clienteDocumento: item.cliente_documento || item.cliente?.documento || item.clienteDocumento || '',
-      clienteTelefono: item.cliente_telefono || item.cliente?.telefono || item.clienteTelefono || '',
-      sistemasMecanicos: item.sistemas_mecanicos || item.sistemasMecanicos || {},
       comentariosMotor: item.comentarios_motor || item.comentariosMotor || '',
+
+      accesoriosList: Array.isArray(item.accesorios) ? item.accesorios : [],
       danosExternos: item.danos_externos || item.danosExternos || {},
       danosInternos: item.danos_internos || item.danosInternos || {},
       detallesTecnicos: item.detalles_tecnicos || item.detallesTecnicos || {},
-      accesoriosList: item.accesorios || item.accesoriosList || [],
       firmaInspector: item.firma_inspector || item.firmaInspector || null,
-      tiempoCompletitud: item.tiempo_completitud || item.tiempoCompletitud || '',
-      sucursalVendedorNombre: item.sucursal_vendedor?.nombre || item.sucursalVendedor?.nombre || null,
-      sucursalInspeccionNombre: item.sucursal_inspeccion?.nombre || item.sucursalInspeccion?.nombre || null,
-      vendedorNombre: item.vendedor?.nombre || (typeof item.vendedor === 'string' ? item.vendedor : null),
-      inspectorNombre: item.inspector?.name || 'Inspector Activo',
-      fechaPeritaje: item.fechaPeritaje || item.fecha_peritaje || item.created_at,
     };
   };
 
@@ -618,7 +614,6 @@ export default function Dashboard({ onLogout }) {
     setInspectionStep('Documentacion');
   };
 
-  // Novedad: Helper para forzar la visualización del nombre de la sucursal si el backend manda el ID
   const getNombreSucursal = (id, obj) => {
     if (obj?.nombre) return obj.nombre;
     if (id) {
@@ -650,7 +645,6 @@ export default function Dashboard({ onLogout }) {
         <div onClick={toggleSidebar} className="fixed inset-0 bg-black/40 z-40 lg:hidden" />
       )}
 
-      {/* Selectors y Modales existentes */}
       {showVehicleSelector && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden transform transition-all">
@@ -724,7 +718,6 @@ export default function Dashboard({ onLogout }) {
       {showCrearUsuarioModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
-            {/* Contenido modal crear usuario */}
             <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <div>
                 <h3 className="text-base font-bold text-slate-900">Registrar Nuevo Usuario</h3>
@@ -783,7 +776,6 @@ export default function Dashboard({ onLogout }) {
       {showEditarUsuarioModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
-            {/* Contenido modal editar usuario */}
             <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <div>
                 <h3 className="text-base font-bold text-slate-900">Editar Usuario / Perfil</h3>
@@ -839,7 +831,6 @@ export default function Dashboard({ onLogout }) {
         </div>
       )}
 
-      {/* Modal para ver el perfil del usuario (Audit/Admin) */}
       {showUserProfileModal && selectedUserForProfile && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
@@ -870,7 +861,6 @@ export default function Dashboard({ onLogout }) {
                 </div>
               </div>
 
-              {/* AQUI SE AGREGA LA ESTADÍSTICA DE PERITAJES REALIZADOS PARA EL GESTOR DE USUARIOS */}
               <div className="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100 text-xs">
                 <div>
                   <span className="block text-[10px] font-bold text-slate-400 uppercase">Sucursal</span>
@@ -925,7 +915,6 @@ export default function Dashboard({ onLogout }) {
         </div>
       )}
 
-      {/* Sidebar */}
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-[#080d1a] border-r border-slate-800/50 flex flex-col justify-between shrink-0
         transition-transform duration-300 ease-in-out lg:static lg:translate-x-0
@@ -941,7 +930,7 @@ export default function Dashboard({ onLogout }) {
               }}
               className="transition duration-500 hover:scale-105"
             >
-              <img src="/Logo1.png" alt="Servi-Centro CDA" className="w-40 object-contain" draggable={false} />
+              <img src="/Logo1.png" alt="Servi-Centro CDA" className="w-520 object-contain" draggable={false} />
             </button>
             <button onClick={toggleSidebar} className="absolute right-4 top-4 lg:hidden text-slate-400 hover:text-white">✕</button>
           </div>
@@ -979,7 +968,6 @@ export default function Dashboard({ onLogout }) {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 w-full">
         <header className="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-6 lg:px-8 shrink-0">
           <div className="flex items-center space-x-4">
@@ -1170,7 +1158,6 @@ export default function Dashboard({ onLogout }) {
                                     {item.placa || 'SIN PLACA'}
                                   </span>
                                 </td>
-                                {/* AQUI ESTÁ EL AJUSTE PARA MOSTRAR SUCURSALES (Usando getNombreSucursal) */}
                                 <td className="px-4 py-4 whitespace-nowrap text-slate-500">
                                   {getNombreSucursal(item.sucursal_vendedor_id || item.sucursalVendedorId, item.sucursal_vendedor || item.sucursalVendedor)}
                                 </td>
@@ -1225,7 +1212,6 @@ export default function Dashboard({ onLogout }) {
 
               {activeTab === 'Estadisticas' && (
                 <div className="space-y-6">
-                  {/* Contenido Estadísticas existente */}
                   <div className="border-b border-slate-200 pb-4">
                     <h1 className="text-2xl font-bold tracking-tight text-slate-900">Estadísticas y Rendimiento</h1>
                     <p className="text-slate-500 mt-1 text-sm">Análisis global de los peritajes vehiculares registrados en el sistema con filtros avanzados.</p>
@@ -1430,7 +1416,6 @@ export default function Dashboard({ onLogout }) {
                 </div>
               )}
 
-              {/* REDISEÑO COMPLETO DE CONFIGURACIONES */}
               {activeTab === 'Configuracion' && (
                 <div className="space-y-6 max-w-5xl mx-auto">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-4">
@@ -1448,7 +1433,6 @@ export default function Dashboard({ onLogout }) {
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Columna Izquierda: Menú Navegación Rápida */}
                     <div className="lg:col-span-1 space-y-4">
                       <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
                         <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Módulos de Ajuste</h3>
@@ -1473,10 +1457,7 @@ export default function Dashboard({ onLogout }) {
                       </div>
                     </div>
 
-                    {/* Columna Derecha: Formularios rediseñados */}
                     <div className="lg:col-span-2 space-y-6">
-
-                      {/* Form: Empresa */}
                       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                         <div className="bg-slate-50 px-6 py-4 border-b border-slate-100">
                           <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
@@ -1507,7 +1488,6 @@ export default function Dashboard({ onLogout }) {
                         </div>
                       </div>
 
-                      {/* Form: Reglas */}
                       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                         <div className="bg-slate-50 px-6 py-4 border-b border-slate-100">
                           <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
@@ -1537,7 +1517,6 @@ export default function Dashboard({ onLogout }) {
                         </div>
                       </div>
 
-                      {/* Form: Textos Legales */}
                       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                         <div className="bg-slate-50 px-6 py-4 border-b border-slate-100">
                           <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
@@ -1891,7 +1870,7 @@ export default function Dashboard({ onLogout }) {
               </button>
               <button
                 onClick={modalConfig.onConfirm}
-                className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-white bg-red-600 hover:bg-red-700 rounded-xl shadow transition"
+                className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-white bg-red-600 hover:bg-red-700 rounded-xl transition shadow"
               >
                 Confirmar
               </button>

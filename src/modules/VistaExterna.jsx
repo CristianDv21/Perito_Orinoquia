@@ -417,18 +417,23 @@ export default function VistaExterna({ peritajeData: data, onChange }) {
                 <div className="w-full mt-6 pt-4 border-t border-slate-100 text-left">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Resumen de daños ({Object.keys(safeData.danosExternos).length}):</p>
                   <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
-                    {Object.entries(safeData.danosExternos).map(([piezaKey, val]) => (
-                      <div key={piezaKey} className="flex justify-between items-center text-xs py-1.5 px-2 bg-slate-50 border rounded font-medium">
-                        {/* Se usa el catálogo global para evitar que devuelva undefined si cambia el tipo de vehículo */}
-                        <span className="text-slate-700 font-bold">
-                          {todasLasPiezasGlobales.find(p => p.id === piezaKey)?.name || piezaKey}
-                        </span>
-                        <div className="flex items-center space-x-2">
-                          {val.foto && <span className="text-[10px] text-emerald-600 font-bold">🖼️ Foto</span>}
-                          <span className="text-slate-500 font-mono">{val.tipo} {val.micras ? `(${val.micras} μm)` : ''}</span>
+                    {Object.entries(safeData.danosExternos).map(([piezaKey, val]) => {
+                      // Solución: Buscamos la pieza uniendo todos los arrays de todasLasPiezasGlobales de forma segura
+                      const listaTotalPiezas = Object.values(todasLasPiezasGlobales).flat();
+                      const piezaInfo = listaTotalPiezas.find(p => p.id === piezaKey);
+
+                      return (
+                        <div key={piezaKey} className="flex justify-between items-center text-xs py-1.5 px-2 bg-slate-50 border rounded font-medium">
+                          <span className="text-slate-700 font-bold">
+                            {piezaInfo?.name || piezaKey}
+                          </span>
+                          <div className="flex items-center space-x-2">
+                            {val.foto && <span className="text-[10px] text-emerald-600 font-bold">🖼️ Foto</span>}
+                            <span className="text-slate-500 font-mono">{val.tipo} {val.micras ? `(${val.micras} μm)` : ''}</span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                      })}
                   </div>
                 </div>
               )}

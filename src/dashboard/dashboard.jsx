@@ -104,12 +104,12 @@ export default function Dashboard({ onLogout }) {
     comentariosSiniestros: '',
     numeroSoat: '',
     entityEmisoraSoat: '',
-    venceSoat: '',
+    vence_soat: '',
     soatAlDia: true,
     fotoSoat: null,
     numeroControlRtm: '',
     cdaEmisor: '',
-    venceTecnicoMecanica: '',
+    vence_tecnico_mecanica: '',
     tecnicoMecanicaAlDia: true,
     fotoRtm: null,
     coincidePropietarioRunt: true,
@@ -327,20 +327,20 @@ export default function Dashboard({ onLogout }) {
       { id: 'Documentacion', label: '1. Documentación', icon: '📄' },
       { id: 'Accesorios y Equipamiento', label: '2. Accesorios y Equipamiento', icon: '🚗' },
       { id: 'Motor', label: '3. Motor', icon: '🔧' },
-      { id: 'Pintura', label: '3. Vista Externa', icon: '🎨' },
+      { id: 'Pintura', label: '4. Vista Externa', icon: '🎨' },
     ];
 
     if (tipo !== 'moto' && tipo !== 'motocarro') {
-      steps.push({ id: 'VistaInterna', label: '4. Vista Interna', icon: '👀' });
+      steps.push({ id: 'VistaInterna', label: '5. Vista Interna', icon: '👀' });
     }
 
     if (tipo !== 'moto') {
-      steps.push({ id: 'Detalles Técnicos', label: '5. Detalles Técnicos', icon: '🛠️' });
+      steps.push({ id: 'Detalles Técnicos', label: '6. Detalles Técnicos', icon: '🛠️' });
     }
 
     steps.push(
-      { id: 'Firma', label: '6. Firma Digital', icon: '🖋️' },
-      { id: 'PDF', label: '7. Reporte & PDF', icon: '📋' }
+      { id: 'Firma', label: '7. Firma Digital', icon: '🖋️' },
+      { id: 'PDF', label: '8. Reporte & PDF', icon: '📋' }
     );
 
     return steps;
@@ -382,8 +382,6 @@ export default function Dashboard({ onLogout }) {
       alert(error.response?.data?.message || "Ocurrió un error al actualizar la contraseña.");
     }
   };
-
-
 
   const guardarPeritajeCompleto = async (formDataDelEstado) => {
     try {
@@ -561,12 +559,16 @@ export default function Dashboard({ onLogout }) {
       numChasis: item.num_chasis || item.numChasis || '',
       kilometraje: item.kilometraje || item.km || 0,
       comprimido: item.comprimido || item.compresionCil1 || item.compresionCil2 || item.compresionCil3 || item.compresionCil4 || false,
-      venceSoat: item.vence_soat || item.venceSoat || '',
+
       soatAlDia: item.soat_al_dia ?? item.soatAlDia ?? true,
       archivoSoat: item.archivo_soat || item.archivoSoat || item.foto_soat || null,
-      venceTecnicoMecanica: item.vence_tecnico_mecanica || item.venceTecnicoMecanica || '',
-      tecnicoMecanicaAlDia: item.tecnico_mecanica_al_dia ?? item.tecnicoMecanicaAlDia ?? true,
-      archivoTecnicoMecanica: item.archivo_tecnico_mecanica || item.archivoTecnicoMecanica || item.archivoRtm || item.foto_rtm || null,
+
+      vence_soat: item.vence_soat ? item.vence_soat.split('T')[0] : '',
+      fechaIngresadaSoat: item.vence_soat ? item.vence_soat.split('T')[0] : '',
+
+      vence_tecnico_mecanica: item.vence_tecnico_mecanica ? item.venceTecnicoMecanica.split('T')[0] : '',
+      fechaIngresadaRTM: item.vence_tecnico_mecanica ? item.vence_tecnico_mecanica.split('T')[0] : '',
+
       siniestros: item.siniestros || item.comentarios_siniestros || '',
       tarjetaOperacion: item.tarjeta_operacion || item.tarjetaOperacion || '',
       configuracionEjes: item.configuracion_ejes || item.configuracionEjes || '',
@@ -588,7 +590,6 @@ export default function Dashboard({ onLogout }) {
       fechaPeritaje: item.fechaPeritaje || item.fecha_peritaje || item.created_at,
     };
   };
-
   const handleDescargarPDF = (item) => {
     generarPdfEstiloCliente(mapearPeritajeDeBackend(item));
   };
@@ -1891,7 +1892,7 @@ export default function Dashboard({ onLogout }) {
               </button>
               <button
                 onClick={modalConfig.onConfirm}
-                className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-white bg-red-600 hover:bg-red-700 rounded-xl shadow transition"
+                className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-white bg-red-600 hover:bg-red-700 rounded-xl transition shadow"
               >
                 Confirmar
               </button>

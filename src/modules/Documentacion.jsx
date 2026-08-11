@@ -5,16 +5,16 @@ function FileUploader({ field, acceptedFile, onFileChange }) {
 
   const esUrlBackend = typeof acceptedFile === 'string' && acceptedFile.trim() !== '';
 
-  const urlVisualizacion = esUrlBackend 
+  const urlVisualizacion = esUrlBackend
     ? (acceptedFile.startsWith('http') ? acceptedFile : `http://127.0.0.1:8000/storage/${acceptedFile}`)
     : (acceptedFile?.previewUrl || null);
 
-  const nombreArchivo = esUrlBackend 
-    ? "Documento registrado en BD" 
+  const nombreArchivo = esUrlBackend
+    ? "Documento registrado en BD"
     : (acceptedFile?.name || "Documento adjunto");
 
-  const tipoArchivoTexto = esUrlBackend 
-    ? "archivo" 
+  const tipoArchivoTexto = esUrlBackend
+    ? "archivo"
     : (acceptedFile?.type ? acceptedFile.type.split('/')[1] : '');
 
   const handleFileChange = (e) => {
@@ -32,7 +32,7 @@ function FileUploader({ field, acceptedFile, onFileChange }) {
       const lector = new FileReader();
       lector.onload = (evento) => {
         onFileChange(field, {
-          file: file, 
+          file: file,
           name: file.name,
           type: file.type,
           previewUrl: evento.target.result,
@@ -42,7 +42,7 @@ function FileUploader({ field, acceptedFile, onFileChange }) {
       lector.readAsDataURL(file);
     } else {
       onFileChange(field, {
-        file: file, 
+        file: file,
         name: file.name,
         type: file.type,
         previewUrl: null,
@@ -101,9 +101,9 @@ function FileUploader({ field, acceptedFile, onFileChange }) {
 
           <div className="flex items-center gap-2">
             {esUrlBackend && (
-              <a 
-                href={urlVisualizacion} 
-                target="_blank" 
+              <a
+                href={urlVisualizacion}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition"
               >
@@ -177,6 +177,10 @@ export default function Documentacion({
     }
   };
 
+  const obtenerFechaMinima = () => {
+    const hoy = new Date();
+    return hoy.toISOString().split('T')[0];
+  };
   const inputStyle = "w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-500 transition duration-150";
 
   const placeholdersConfig = {
@@ -469,23 +473,36 @@ export default function Documentacion({
 
           <div className="p-4 bg-white border border-slate-200 rounded-xl flex flex-col justify-between shadow-sm space-y-4">
             <div className="space-y-3">
-              <div className="flex items-center justify-between pb-1">
-                <span className="text-xs font-bold text-slate-700">¿SOAT Vigente?</span>
-                <input
-                  type="checkbox"
-                  checked={!!(safeData.soatAlDia ?? safeData.soat_al_dia)}
-                  onChange={(e) => handleInputChange('soatAlDia', e.target.checked)}
-                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer border-slate-300"
-                />
-              </div>
+              <div className="flex flex-col gap-1 w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <label className="text-xs font-bold text-slate-700">
+                  ¿Fecha de Vencimiento SOAT?
+                </label>
 
-              <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1.5 tracking-wide">Fecha de Vencimiento SOAT</label>
                 <input
                   type="date"
-                  value={safeData.venceSoat || safeData.vence_soat || ''}
-                  onChange={(e) => handleInputChange('venceSoat', e.target.value)}
-                  className={`${inputStyle} font-mono font-bold text-slate-600`}
+                  // ESTO ES CLAVE: El atributo 'min' le prohíbe nativamente al calendario seleccionar fechas anteriores a hoy
+                  min={obtenerFechaMinima()}
+
+                  value={safeData.vence_soat ?? safeData.vence_soat ?? ''}
+
+                  onChange={(e) => {
+                    const fechaIngresadaSoat = e.target.value; // Formato YYYY-MM-DD
+
+                    if (!fechaIngresadaSoat) {
+                      handleInputChange('vence_soat', '');
+                      return;
+                    }
+
+                    const hoyStr = obtenerFechaMinima();
+                    if (fechaIngresadaSoat < hoyStr) {
+                      console.warn("Fecha no permitida: SOAT vencido");
+                      handleInputChange('vence_soat', '');
+                      e.target.value = '';
+                      return;
+                    }
+                    handleInputChange('vence_soat', fechaIngresadaSoat);
+                  }}
+                  className="rounded-lg text-slate-800 focus:ring-2 focus:ring-blue-500 p-2 text-sm cursor-pointer border border-slate-300 bg-slate-50"
                 />
               </div>
             </div>
@@ -495,34 +512,37 @@ export default function Documentacion({
 
           <div className="p-4 bg-white border border-slate-200 rounded-xl flex flex-col justify-between shadow-sm space-y-4">
             <div className="space-y-3">
-              <div className="flex items-center justify-between pb-1">
-                <span className="text-xs font-bold text-slate-700">¿Técnico Mecánica Vigente?</span>
-                <input
-                  type="checkbox"
-                  checked={!!(safeData.tecnicoMecanicaAlDia ?? safeData.tecnico_mecanica_al_dia)}
-                  onChange={(e) => handleInputChange('tecnicoMecanicaAlDia', e.target.checked)}
-                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer border-slate-300"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1.5 tracking-wide">Fecha de Vencimiento RTM</label>
+              <div className="flex flex-col gap-1 w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <label className="text-xs font-bold text-slate-700">
+                  ¿Fecha de Vencimiento RTM?
+                </label>
                 <input
                   type="date"
-                  value={safeData.venceTecnicoMecanica || safeData.vence_tecnico_mecanica || ''}
-                  onChange={(e) => handleInputChange('venceTecnicoMecanica', e.target.value)}
-                  className={`${inputStyle} font-mono font-bold text-slate-600`}
+                  min={obtenerFechaMinima()}
+                  value={safeData.vence_tecnico_mecanica ?? safeData.venceTecnicoMecanica ?? ''}
+                  onChange={(e) => {
+                    const fechaIngresadaRTM = e.target.value;
+                    if (!fechaIngresadaRTM) {
+                      handleInputChange('vence_tecnico_mecanica', '');
+                      return;
+                    }
+                    const hoyStr = obtenerFechaMinima();
+                    if (fechaIngresadaRTM < hoyStr) {
+                      console.warn("Fecha no permitida: RTM vencido");
+                      handleInputChange('vence_tecnico_mecanica', '');
+                      e.target.value = '';
+                      return;
+                    }
+                    handleInputChange('vence_tecnico_mecanica', fechaIngresadaRTM);
+                  }}
+                  className="rounded-lg text-slate-800 focus:ring-2 focus:ring-blue-500 p-2 text-sm cursor-pointer border border-slate-300 bg-slate-50"
                 />
               </div>
             </div>
-
             <FileUploader field="archivoTecnicoMecanica" acceptedFile={safeData.archivoTecnicoMecanica || safeData.archivo_tecnico_mecanica} onFileChange={handleInputChange} />
           </div>
-
         </div>
-
       </div>
-
     </div>
   );
 }

@@ -1,8 +1,19 @@
 export default function Accesorios({ peritajeData: data, onChange }) {
   const safeData = data || {};
-  const tipoVehiculo = safeData.tipoVehiculo || 'carro';
 
-  // 1. Definir los listados específicos para cada categoría de vehículo
+  // 1. Detectar el tipo de vehículo de forma robusta
+  const rawTipo = safeData.tipoVehiculo || safeData.tipo_vehiculo_id || 'carro';
+  
+  const mapTipoVehiculo = (val) => {
+    const v = String(val).toLowerCase();
+    if (v.includes('moto') && !v.includes('motocarro')) return 'moto';
+    if (v.includes('motocarro')) return 'motocarro';
+    if (v.includes('pesado') || v.includes('carga')) return 'pesado';
+    return 'carro';
+  };
+
+  const tipoVehiculo = mapTipoVehiculo(rawTipo);
+  
   const listasPorTipo = {
     carro: [
       { id: 'aire', name: 'Aire Acondicionado', presente: true, danado: false },
@@ -116,20 +127,43 @@ export default function Accesorios({ peritajeData: data, onChange }) {
     ]
   };
 
-  const listaIdeal = listasPorTipo[tipoVehiculo] || listasPorTipo.carro;
+const listaIdeal = listasPorTipo[tipoVehiculo] || listasPorTipo.carro;
 
-  // 🛠️ Fusión segura mejorada: Evita descartar la info si la BD trae datos con IDs válidos
+  // 3. Fusión inteligente con los datos guardados en la BD
   const accesoriosActivos = (() => {
-    if (!safeData.accesoriosList || !Array.isArray(safeData.accesoriosList) || safeData.accesoriosList.length === 0) {
+    const guardados = safeData.accesoriosList || safeData.accesorios || safeData.detalles || [];
+
+    if (!Array.isArray(guardados) || guardados.length === 0) {
       return listaIdeal;
     }
 
-    return listaIdeal.map(idealItem => {
-      const encontrado = safeData.accesoriosList.find(item => item.id === idealItem.id);
-      return encontrado ? { ...idealItem, ...encontrado } : idealItem;
+    return listaIdeal.map((idealItem, index) => {
+      // Buscamos si el registro de la BD coincide por ID, por ID de catálogo, o por el índice de la lista
+      const encontrado = guardados.find((item, idx) => 
+        item.id === idealItem.id || 
+        item.catalogo_accesorio_id === idealItem.id ||
+        item.pivot?.catalogo_accesorio_id === idealItem.id ||
+        item.accesorio_id === idealItem.id ||
+        idx === index // Respaldo por posición si el orden es idéntico
+      );
+
+      if (encontrado) {
+        return {
+          ...idealItem,
+          // Guardamos también el ID real de la BD por si se va a actualizar después
+          db_id: encontrado.id, 
+          presente: encontrado.presente !== undefined ? Boolean(encontrado.presente) : (encontrado.valor === 'Sí' || encontrado.estado === true),
+          danado: encontrado.danado !== undefined ? Boolean(encontrado.danado) : Boolean(encontrado.mal_estado || encontrado.dañado),
+          seleccion: encontrado.seleccion || encontrado.valor || encontrado.opcion_seleccionada || idealItem.seleccion,
+          costoReparacion: encontrado.costoReparacion || encontrado.costo_reparacion || '',
+          comentarioDaño: encontrado.comentarioDaño || encontrado.comentario_dano || ''
+        };
+      }
+      return idealItem;
     });
   })();
 
+  // 4. Definición de la función dentro del ámbito correcto del componente
   const handleItemChange = (id, campo, valor) => {
     const listaActualizada = accesoriosActivos.map((item) => {
       if (item.id === id) {
@@ -138,17 +172,11 @@ export default function Accesorios({ peritajeData: data, onChange }) {
       return item;
     });
     
-    // Se envían todos los datos previos conservando el formato correcto de la lista
     onChange({ ...safeData, accesoriosList: listaActualizada });
   };
 
-  // 🔍 Útil para depurar: Agrega este console.log temporalmente para inspeccionar qué trae tu base de datos al editar
-  console.log("Datos recibidos en peritajeData:", safeData);
-  console.log("Accesorios mapeados para render:", accesoriosActivos);
-
   return (
     <div className="space-y-6 animate-fadeIn pb-10">
-      
       <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
         <div>
           <h3 className="text-base font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
@@ -233,7 +261,7 @@ export default function Accesorios({ peritajeData: data, onChange }) {
                   <input 
                     type="number" 
                     placeholder="Costo..."
-                    value={item.costoReparacion || ''}
+                    value={item.costoReparacion || item.costo_reparacion || ''}
                     onChange={(e) => handleItemChange(item.id, 'costoReparacion', e.target.value)}
                     className="w-full pl-5 pr-2 py-1 text-[11px] border border-red-200 rounded bg-red-50/50 text-red-700 focus:outline-none"
                   />
@@ -241,7 +269,7 @@ export default function Accesorios({ peritajeData: data, onChange }) {
                 <textarea 
                   rows="2"
                   placeholder="Comentario..."
-                  value={item.comentarioDaño || ''}
+                  value={item.comentarioDaño || item.comentario_dano || ''}
                   onChange={(e) => handleItemChange(item.id, 'comentarioDaño', e.target.value)}
                   className="w-full p-1.5 text-[11px] border border-red-200 rounded bg-red-50/50 text-red-700 focus:outline-none"
                 />
@@ -250,7 +278,6 @@ export default function Accesorios({ peritajeData: data, onChange }) {
           </div>
         ))}
       </div>
-
     </div>
   );
 }

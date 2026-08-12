@@ -537,7 +537,27 @@ export default function Dashboard({ onLogout }) {
     const compresiones = Array.isArray(item.compresion_cilindros) ? item.compresion_cilindros : [];
     const compresionCilFields = {};
     [0, 1, 2, 3].forEach((idx) => {
-      compresionCilFields[`compresionCil${idx + 1}`] = item[`compresionCil${idx + 1}`] || compresiones[idx] || null;
+      const compObj = compresiones[idx];
+      const valorCompresion = typeof compObj === 'object' ? (compObj?.valor || compObj?.psi || '') : compObj;
+      compresionCilFields[`compresionCil${idx + 1}`] = item[`compresionCil${idx + 1}`] || valorCompresion || null;
+    });
+
+    // --- MAPEO INTELIGENTE DE ACCESORIOS ---
+    // Transformamos el array de la BD en un objeto clave-valor para que el formulario los reconozca
+    const accesoriosMapeados = {};
+    const accesoriosArray = Array.isArray(item.accesorios) ? item.accesorios : [];
+
+    accesoriosArray.forEach((acc) => {
+      const key = acc.catalogo_accesorio_id;
+      if (key) {
+        accesoriosMapeados[key] = {
+          presente: acc.presente ?? false,
+          seleccion: acc.seleccion ?? '',
+          danado: acc.danado ?? false,
+          costo_reparacion: acc.costo_reparacion || '0.00',
+          comentario_dano: acc.comentario_dano || ''
+        };
+      }
     });
 
     return {
@@ -569,14 +589,17 @@ export default function Dashboard({ onLogout }) {
       archivoSoat: item.archivo_soat || item.archivoSoat || item.foto_soat || null,
       archivoTecnicoMecanica: item.archivo_rtm || item.archivoTecnicoMecanica || item.foto_rtm || null,
 
-      nombre_cliente: item.cliente_nombre || item.cliente?.nombre || item.cliente_nombre || '',
-      documento_cliente: item.documento_cliente || item.cliente?.documento || item.documento_cliente || '',
-      telefono_cliene: item.telefono_cliene || item.cliente_telefono || item.telefono_cliene || '',
+      nombre_cliente: item.cliente_nombre || item.cliente?.nombre || '',
+      documento_cliente: item.documento_cliente || item.cliente?.documento || '',
+      telefono_cliente: item.telefono_cliente || item.cliente_telefono || item.telefono_cliene || '',
 
       siniestros: item.siniestros || item.comentarios_siniestros || '',
       comentariosMotor: item.comentarios_motor || item.comentariosMotor || '',
 
-      accesoriosList: Array.isArray(item.accesorios) ? item.accesorios : [],
+      // Asignamos tanto la versión en objeto (si tu formulario usa diccionarios) como la de array
+      accesorios: accesoriosMapeados,
+      accesoriosList: accesoriosArray,
+
       danosExternos: item.danos_externos || item.danosExternos || {},
       danosInternos: item.danos_internos || item.danosInternos || {},
       detallesTecnicos: item.detalles_tecnicos || item.detallesTecnicos || {},
@@ -683,7 +706,16 @@ export default function Dashboard({ onLogout }) {
                         id: peritajeCreado.id,
                         tipoVehiculo: tipo.id,
                         tipoVehiculoId: tipo.tipoId,
-                        accesoriosList: []
+                        placa: '',
+                        modelo: '',
+                        marca: '',
+                        linea: '',
+                        kilometraje: '',
+                        color: '',
+                        observaciones: '',
+                        accesoriosList: [],
+                        documentacionList: [],
+                        carroceriaList: []
                       });
 
                       setShowVehicleSelector(false);

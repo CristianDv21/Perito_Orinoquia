@@ -25,10 +25,10 @@ export default function Motor({ peritajeData: data, onChange }) {
     handleInputChange('sistemasMecanicos', updatedItems);
   };
 
+
+
   // Clase de diseño estándar y uniforme
   const inputStyle = "w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-500 transition duration-150";
-
-  // Clases compartidas para los selectores de diagnóstico tipo pastilla (Pills)
   const pillBase = "px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg border transition duration-150 cursor-pointer flex-1 text-center select-none";
 
   // 🌐 Listado de sistemas mecánicos adaptados por tipo de vehículo
@@ -70,6 +70,8 @@ export default function Motor({ peritajeData: data, onChange }) {
 
   const itemsMecanicos = itemsPorModelo[tipoVehiculo] || itemsPorModelo.carro;
 
+
+
   // 🧮 Definir cantidad de cilindros para la prueba de compresión según el vehículo
   const getCilindrosConfig = () => {
     if (tipoVehiculo === 'moto') return [1];
@@ -77,7 +79,7 @@ export default function Motor({ peritajeData: data, onChange }) {
     return [1, 2, 3, 4];
   };
 
-  const cilindrosActivos = getCilindrosConfig();
+  const cilindrosActivos = tipoVehiculo === 'moto' ? [1] : tipoVehiculo === 'motocarro' ? [1, 2] : [1, 2, 3, 4]; getCilindrosConfig();
 
   return (
     <div className="space-y-6 text-slate-800">
@@ -169,11 +171,11 @@ export default function Motor({ peritajeData: data, onChange }) {
               className={`${inputStyle} font-mono font-bold text-blue-600`}
             />
           </div>
-          
+
           <div className="max-w-xs">
             <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Cilindraje</label>
             <input
-              type="text" 
+              type="text"
               placeholder="Ej. 1500cc"
               value={safeData.cilindrada ?? ''}
               onChange={(e) => handleInputChange('cilindrada', e.target.value)}
@@ -268,7 +270,7 @@ export default function Motor({ peritajeData: data, onChange }) {
                 <input
                   type="number"
                   placeholder="000"
-                  value={safeData[`compresionCil${num}`] ?? ''}
+                  value={typeof safeData[`compresionCil${num}`] === 'object' ? '' : (safeData[`compresionCil${num}`] ?? '')}
                   onChange={(e) => handleInputChange(`compresionCil${num}`, e.target.value)}
                   className={`${inputStyle} pl-12 text-right font-mono font-bold text-blue-600`}
                 />

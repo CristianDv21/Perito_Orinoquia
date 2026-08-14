@@ -5,12 +5,15 @@ export default function ModuloFirma({ peritajeData, onChange }) {
   const safeData = peritajeData || {};
   const padFirma = useRef(null);
   const containerRef = useRef(null);
-  
-  // Inicializamos el estado directamente con la prop para evitar el useEffect sincrónico
-  const [firmaGuardada, setFirmaGuardada] = useState(safeData.firmaInspector || null);
+
+  const [firmaGuardada, setFirmaGuardada] = useState(() => {
+    const imagenes = safeData.imagenes || [];
+    const firmaExistente = imagenes.find(img => img.seccion === 'firma_inspector');
+    return firmaExistente ? firmaExistente.imagen_base64 : (safeData.firmaInspector || null);
+  });
+
   const [canvasSize, setCanvasSize] = useState({ width: 500, height: 150 });
 
-  // Solo dejamos el efecto para manejar el redimensionamiento responsivo de la ventana
   useEffect(() => {
     const actualizarAncho = () => {
       if (containerRef.current) {
@@ -29,7 +32,16 @@ export default function ModuloFirma({ peritajeData, onChange }) {
       padFirma.current.clear();
     }
     setFirmaGuardada(null);
-    if (onChange) onChange({ firmaInspector: null });
+
+    if (onChange) {
+      const imagenesActuales = safeData.imagenes || [];
+      const nuevasImagenes = imagenesActuales.filter(img => img.seccion !== 'firma_inspector');
+      onChange({ 
+        ...safeData,
+        firmaInspector: null,
+        imagenes: nuevasImagenes 
+      });
+    }
   };
 
   const guardarFirma = () => {
@@ -45,7 +57,28 @@ export default function ModuloFirma({ peritajeData, onChange }) {
       setFirmaGuardada(urlImagenFirma);
 
       if (onChange) {
-        onChange({ firmaInspector: urlImagenFirma });
+        const imagenesActuales = safeData.imagenes || [];
+        const index = imagenesActuales.findIndex(img => img.seccion === 'firma_inspector');
+        
+        let nuevasImagenes = [...imagenesActuales];
+        const objetoFirma = {
+          seccion: 'firma_inspector',
+          item_id: null,
+          imagen_base64: urlImagenFirma,
+          nombre_archivo: 'firma_inspector.png'
+        };
+
+        if (index >= 0) {
+          nuevasImagenes[index] = objetoFirma;
+        } else {
+          nuevasImagenes.push(objetoFirma);
+        }
+
+        onChange({
+          ...safeData,
+          firmaInspector: urlImagenFirma,
+          imagenes: nuevasImagenes
+        });
       }
     } catch (error) {
       console.error("Error al procesar la firma:", error);

@@ -589,7 +589,7 @@ export default function Dashboard({ onLogout }) {
       archivoSoat: item.archivo_soat || item.archivoSoat || item.foto_soat || null,
       archivoTecnicoMecanica: item.archivo_rtm || item.archivoTecnicoMecanica || item.foto_rtm || null,
 
-      nombre_cliente: item.cliente_nombre || item.cliente?.nombre || '',
+      nombre_cliente: item.nombre_cliente || item.cliente?.nombre || '',
       documento_cliente: item.documento_cliente || item.cliente?.documento || '',
       telefono_cliente: item.telefono_cliente || item.cliente_telefono || item.telefono_cliene || '',
 
@@ -1160,7 +1160,7 @@ export default function Dashboard({ onLogout }) {
                             <th className="px-4 py-3">Placa</th>
                             <th className="px-4 py-3">Sucursal Vendedor</th>
                             <th className="px-4 py-3">Sucursal Inspección</th>
-                            <th className="px-4 py-3">Vendedor</th>
+                            <th className="px-4 py-3">Cliente</th>
                             <th className="px-4 py-3">Inspector</th>
                             <th className="px-4 py-3">Costo reparación</th>
                             <th className="px-4 py-3">Tiempo de reparación</th>
@@ -1197,7 +1197,7 @@ export default function Dashboard({ onLogout }) {
                                   {getNombreSucursal(item.sucursal_inspeccion_id || item.sucursalInspeccionId, item.sucursal_inspeccion || item.sucursalInspeccion)}
                                 </td>
                                 <td className="px-4 py-4 whitespace-nowrap text-slate-700">
-                                  {item.vendedor?.nombre || item.vendedor || 'Sin vendedor'}
+                                  {item.nombre_cliente?.nombre || item.nombre_cliente || 'Sin cliente'}
                                 </td>
                                 <td className="px-4 py-4 whitespace-nowrap font-medium text-slate-800">
                                   {item.inspector?.name || item.inspector || 'Inspector Activo'}
@@ -1685,7 +1685,7 @@ export default function Dashboard({ onLogout }) {
                       onClick={() => setShowCrearUsuarioModal(true)}
                       className="px-5 py-2.5 bg-blue-600 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow hover:bg-blue-700 transition self-start sm:self-auto"
                     >
-                      + Crear Nuevo Usuario
+                      + Crear Usuario
                     </button>
                   </div>
 

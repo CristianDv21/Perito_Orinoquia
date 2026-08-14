@@ -340,10 +340,11 @@ export default function Documentacion({
               <input
                 type="text"
                 placeholder="Nombre del cliente..."
-                value={safeData.clienteNombre || safeData.cliente_nombre || ''}
+                value={safeData.nombre_cliente || ''}
                 onChange={async (e) => {
                   const valor = e.target.value;
-                  handleInputChange('clienteNombre', valor);
+                  // Usa el nombre exacto de la columna de la base de datos
+                  handleInputChange('nombre_cliente', valor);
 
                   if (valor.length > 1) {
                     try {
@@ -359,7 +360,6 @@ export default function Documentacion({
                 className={inputStyle}
                 autoComplete="off"
               />
-
               {sugerencias && sugerencias.length > 0 && (
                 <ul className="absolute z-50 left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
                   {sugerencias.map((cliente) => (
@@ -387,7 +387,7 @@ export default function Documentacion({
               <input
                 type="text"
                 placeholder="Cédula o NIT..."
-                value={safeData.clienteDocumento || safeData.cliente_documento || ''}
+                value={safeData.clienteDocumento || safeData.documento_cliente || ''}
                 onChange={(e) => handleInputChange('clienteDocumento', e.target.value)}
                 className={`${inputStyle} font-mono`}
               />
@@ -399,7 +399,7 @@ export default function Documentacion({
               <input
                 type="text"
                 placeholder="Teléfono..."
-                value={safeData.clienteTelefono || safeData.cliente_telefono || ''}
+                value={safeData.clienteTelefono || safeData.telefono_cliene || ''}
                 onChange={(e) => handleInputChange('clienteTelefono', e.target.value)}
                 className={`${inputStyle} font-mono`}
               />

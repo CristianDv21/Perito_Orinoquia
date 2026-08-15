@@ -1,178 +1,199 @@
 export default function Accesorios({ peritajeData: data, onChange }) {
   const safeData = data || {};
 
-  // 1. Detectar el tipo de vehículo de forma robusta
-  const rawTipo = safeData.tipoVehiculo || safeData.tipo_vehiculo_id || 'carro';
-  
-  const mapTipoVehiculo = (val) => {
-    const v = String(val).toLowerCase();
-    if (v.includes('moto') && !v.includes('motocarro')) return 'moto';
-    if (v.includes('motocarro')) return 'motocarro';
-    if (v.includes('pesado') || v.includes('carga')) return 'pesado';
+  const resolverTipoVehiculo = (valor) => {
+    if (valor && typeof valor === 'object') {
+      valor = valor.id || valor.codigo || valor.slug || valor.nombre || valor.name;
+    }
+
+    const v = String(valor || '').toLowerCase().trim();
+
+    if (v === '7c68a26d-372b-42dc-be00-92c4ed2ee6ce' || v === 'moto' || v.includes('moto')) return 'moto';
+    if (v === 'd5017832-04ac-4ead-8f57-efbe8af78860' || v === 'pesado' || v.includes('pesado') || v.includes('carga') || v.includes('camion') || v.includes('camión')) return 'pesado';
+    if (v === 'e8ca5ff6-fe17-4916-b949-c13cac3a706e' || v === 'motocarro' || v.includes('motocarro')) return 'motocarro';
     return 'carro';
   };
 
-  const tipoVehiculo = mapTipoVehiculo(rawTipo);
-  
+  const tipoValor =
+    safeData.tipoVehiculoId ||
+    safeData.tipo_vehiculo_id ||
+    safeData.tipoVehiculo ||
+    safeData.tipo_vehiculo;
+
+  const tipoVehiculo = resolverTipoVehiculo(tipoValor);
+
+  const tipoVehiculoId =
+    typeof tipoValor === 'object'
+      ? tipoValor?.id || tipoValor?.tipo_vehiculo_id || ''
+      : tipoValor || '';
+
+  const accesoriosCarro = [
+    { id: 'aire', name: 'Aire Acondicionado' },
+    { id: 'climatizador', name: 'Climatizador' },
+    { id: 'frenos_abs', name: 'Frenos ABS' },
+    { id: 'airbags', name: 'Airbags' },
+    { id: 'cierre', name: 'Cierre Centralizado' },
+    { id: 'llantas', name: 'Llantas' },
+    { id: 'neblineros', name: 'Neblineros' },
+    { id: 'espejos', name: 'Espejos Eléctricos' },
+    { id: 'alza_vidrios', name: 'Alza Vidrios Eléctricos' },
+    { id: 'direccion', name: 'Dirección', tipo: 'seleccion_multiple', opciones: ['Asistida', 'Eléctrica', 'Hidráulica'] },
+    { id: 'techo_corr', name: 'Techo Corredizo' },
+    { id: 'techo_pano', name: 'Techo Panorámico' },
+    { id: 'crucero', name: 'Velocidad Crucero' },
+    { id: 'gps', name: 'GPS' },
+    { id: 'bluetooth', name: 'Bluetooth' },
+    { id: 'sensor_retro', name: 'Sensor de Retroceso', tipo: 'seleccion_multiple', opciones: ['Solo Sensor', 'Solo Cámara', 'Ambos', 'No'] },
+    { id: 'paddle_shift', name: 'Paddle shift' },
+    { id: 'asientos_elec', name: 'Asientos Eléctricos' },
+    { id: 'radio_orig', name: 'Radio Original' },
+    { id: 'segunda_copia', name: 'Segunda copia llave', tipo: 'seleccion_multiple', opciones: ['Sí', 'No'] },
+    { id: 'anclaje_isofix', name: 'Anclaje Isofix' },
+    { id: 'control_est', name: 'Control de Estabilidad' },
+    { id: 'pelicula_seg', name: 'Película de seguridad' },
+    { id: 'sensor_lluvia', name: 'Sensor de Lluvia' },
+    { id: 'tiro_arrastre', name: 'Tiro de Arrastre' },
+    { id: 'volante_ajust', name: 'Volante Ajustable' },
+    { id: 'asiento_memoria', name: 'Asiento con memoria' },
+    { id: 'tapiz_cuero', name: 'Tapiz de Cuero' },
+    { id: 'transmision', name: 'Transmisión', tipo: 'seleccion_multiple', opciones: ['Mecánico', 'Automático'] },
+    { id: 'traccion', name: 'Tracción', tipo: 'seleccion_multiple', opciones: ['4x2', '4x4'] },
+    { id: 'combustible', name: 'Tipo de combustible', tipo: 'seleccion_multiple', opciones: ['Gasolina', 'Diesel', 'Híbrido', 'Eléctrico'] },
+    { id: 'kit_inflado', name: 'Kit de inflado', tipo: 'seleccion_multiple', opciones: ['Sí', 'No', 'No corresponde'] },
+    { id: 'piso_goma', name: 'Piso de goma', tipo: 'seleccion_multiple', opciones: ['Sí (original de la marca)', 'Alternativo', 'Sin piso de goma'] },
+    { id: 'tuerca_seg', name: 'Dado y tuerca de seguridad' },
+    { id: 'gato', name: 'Gato hidráulico' },
+    { id: 'llave_rueda', name: 'Llave rueda' },
+    { id: 'extintor', name: 'Extintor' },
+    { id: 'triangulo', name: 'Triángulo' },
+    { id: 'botiquin', name: 'Botiquín' },
+    { id: 'chaleco', name: 'Chaleco reflectante' },
+    { id: 'libro', name: 'Libro de mantenciones' },
+    { id: 'repuesto', name: 'Rueda de Repuesto' },
+    { id: 'cubre_equipaje', name: 'Cubre equipaje' }
+  ];
+
+  const accesoriosMoto = [
+    { id: 'espejos_moto', name: 'Espejos Retrovisores (Par)' },
+    { id: 'herramientas_moto', name: 'Kit de Herramientas Básico' },
+    { id: 'pata_apoyo', name: 'Pata Lateral / Central' },
+    { id: 'reposapies', name: 'Estribos / Reposapiés' },
+    { id: 'tapa_gasolina', name: 'Tapa de Tanque con Llave' },
+    { id: 'cadena_transmision', name: 'Kit de Arrastre (Cadena/Piñones)' }
+  ];
+
+  const accesoriosMotocarro = [
+    { id: 'espejos_moto', name: 'Espejos Retrovisores (Par)' },
+    { id: 'herramientas_moto', name: 'Kit de Herramientas Básico' },
+    { id: 'sillas_pasajeros', name: 'Tapicería / Sillas' }
+  ];
+
+  const accesoriosPesado = [
+    ...accesoriosCarro,
+    { id: 'extintor_pesado', name: 'Extintor de Mayor Capacidad' },
+    { id: 'botiquin_pesado', name: 'Botiquín Industrial' },
+    { id: 'conos_pesados', name: 'Conos y Tacos Viales' },
+    { id: 'cinturones_pesado', name: 'Cinturones de Seguridad' },
+    { id: 'tacografo', name: 'Tacógrafo / Sistema de Monitoreo' }
+  ];
+
   const listasPorTipo = {
-    carro: [
-      { id: 'aire', name: 'Aire Acondicionado', presente: true, danado: false },
-      { id: 'climatizador', name: 'Climatizador', presente: true, danado: false },
-      { id: 'frenos_abs', name: 'Frenos ABS', presente: true, danado: false },
-      { id: 'airbags', name: 'Airbags', presente: true, danado: false },
-      { id: 'cierre', name: 'Cierre Centralizado', presente: true, danado: false },
-      { id: 'llantas', name: 'Llantas', presente: true, danado: false },
-      { id: 'neblineros', name: 'Neblineros', presente: true, danado: false },
-      { id: 'espejos', name: 'Espejos Eléctricos', presente: true, danado: false },
-      { id: 'alza_vidrios', name: 'Alza Vidrios Eléctricos', presente: true, danado: false },
-      { id: 'direccion', name: 'Dirección', tipo: 'seleccion_multiple', opciones: ['Asistida', 'Eléctrica', 'Hidráulica'], seleccion: 'Eléctrica' },
-      { id: 'techo_corr', name: 'Techo Corredizo', presente: true, danado: false },
-      { id: 'techo_pano', name: 'Techo Panorámico', presente: true, danado: false },
-      { id: 'crucero', name: 'Velocidad Crucero', presente: true, danado: false },
-      { id: 'gps', name: 'GPS', presente: true, danado: false },
-      { id: 'bluetooth', name: 'Bluetooth', presente: true, danado: false },
-      { id: 'sensor_retro', name: 'Sensor de Retroceso', tipo: 'seleccion_multiple', opciones: ['Solo Sensor', 'Solo Cámara', 'Ambos', 'No'], seleccion: 'Ambos' },
-      { id: 'paddle_shift', name: 'Paddle shift', presente: true, danado: false },
-      { id: 'asientos_elec', name: 'Asientos Eléctricos', presente: true, danado: false },
-      { id: 'radio_orig', name: 'Radio Original', presente: true, danado: false },
-      { id: 'segunda_copia', name: 'Segunda copia llave', tipo: 'seleccion_multiple', opciones: ['Sí', 'No'], seleccion: 'No' },
-      { id: 'anclaje_isofix', name: 'Anclaje Isofix', presente: true, danado: false },
-      { id: 'control_est', name: 'Control de Estabilidad', presente: true, danado: false },
-      { id: 'pelicula_seg', name: 'Película de seguridad', presente: true, danado: false },
-      { id: 'sensor_lluvia', name: 'Sensor de Lluvia', presente: true, danado: false },
-      { id: 'tiro_arrastre', name: 'Tiro de Arrastre', presente: true, danado: false },
-      { id: 'volante_ajust', name: 'Volante Ajustable', presente: true, danado: false },
-      { id: 'asiento_memoria', name: 'Asiento con memoria', presente: true, danado: false },
-      { id: 'tapiz_cuero', name: 'Tapiz de Cuero', presente: true, danado: false },
-      { id: 'transmision', name: 'Transmisión', tipo: 'seleccion_multiple', opciones: ['Mecánico', 'Automático'], seleccion: 'Automático' },
-      { id: 'traccion', name: 'Tracción', tipo: 'seleccion_multiple', opciones: ['4x2', '4x4'], seleccion: '4x2' },
-      { id: 'combustible', name: 'Tipo de combustible', tipo: 'seleccion_multiple', opciones: ['Gasolina', 'Diesel', 'Híbrido', 'Eléctrico'], seleccion: 'Gasolina' },
-      { id: 'kit_inflado', name: 'Kit de inflado', tipo: 'seleccion_multiple', opciones: ['Sí', 'No', 'No corresponde'], seleccion: 'No' },
-      { id: 'piso_goma', name: 'Piso de goma', tipo: 'seleccion_multiple', opciones: ['Sí (original de la marca)', 'Alternativo', 'Sin piso de goma'], seleccion: 'Sí (original de la marca)' },
-      { id: 'tuerca_seg', name: 'Dado y tuerca de seguridad', presente: true, danado: false },
-      // Maleta
-      { id: 'gato', name: 'Gato hidráulico', presente: true, danado: false },
-      { id: 'llave_rueda', name: 'Llave rueda', presente: true, danado: false },
-      { id: 'extintor', name: 'Extintor', presente: true, danado: false },
-      { id: 'triangulo', name: 'Triángulo', presente: true, danado: false },
-      { id: 'botiquin', name: 'Botiquín', presente: true, danado: false },
-      { id: 'chaleco', name: 'Chaleco reflectante', presente: true, danado: false },
-      { id: 'libro', name: 'Libro de mantenciones', presente: true, danado: false },
-      { id: 'repuesto', name: 'Rueda de Repuesto', presente: true, danado: false },
-      { id: 'cubre_equipaje', name: 'Cubre equipaje', presente: true, danado: false },
-    ],
-    moto: [
-      { id: 'espejos_moto', name: 'Espejos Retrovisores (Par)', presente: true, danado: false },
-      { id: 'herramientas_moto', name: 'Kit de Herramientas Básico', presente: true, danado: false },
-      { id: 'pata_apoyo', name: 'Pata Lateral / Central', presente: true, danado: false },
-      { id: 'reposapies', name: 'Estribos / Reposapiés', presente: true, danado: false },
-      { id: 'tapa_gasolina', name: 'Tapa de Tanque con Llave', presente: true, danado: false },
-      { id: 'cadena_transmision', name: 'Kit de Arrastre (Cadena/Piñones)', presente: true, danado: false },
-    ],
-    motocarro: [
-      { id: 'espejos_moto', name: 'Espejos Retrovisores (Par)', presente: true, danado: false },
-      { id: 'herramientas_moto', name: 'Kit de Herramientas Básico', presente: true, danado: false },
-      { id: 'sillas_pasajeros', name: 'Tapicería / Sillas', presente: true, danado: false },
-    ],
-    pesado: [
-      { id: 'aire', name: 'Aire Acondicionado', presente: true, danado: false },
-      { id: 'climatizador', name: 'Climatizador', presente: true, danado: false },
-      { id: 'frenos_abs', name: 'Frenos ABS', presente: true, danado: false },
-      { id: 'airbags', name: 'Airbags', presente: true, danado: false },
-      { id: 'cierre', name: 'Cierre Centralizado', presente: true, danado: false },
-      { id: 'llantas', name: 'Llantas', presente: true, danado: false },
-      { id: 'neblineros', name: 'Neblineros', presente: true, danado: false },
-      { id: 'espejos', name: 'Espejos Eléctricos', presente: true, danado: false },
-      { id: 'alza_vidrios', name: 'Alza Vidrios Eléctricos', presente: true, danado: false },
-      { id: 'direccion', name: 'Dirección', tipo: 'seleccion_multiple', opciones: ['Asistida', 'Eléctrica', 'Hidráulica'], seleccion: 'Eléctrica' },
-      { id: 'techo_corr', name: 'Techo Corredizo', presente: true, danado: false },
-      { id: 'techo_pano', name: 'Techo Panorámico', presente: true, danado: false },
-      { id: 'crucero', name: 'Velocidad Crucero', presente: true, danado: false },
-      { id: 'gps', name: 'GPS', presente: true, danado: false },
-      { id: 'bluetooth', name: 'Bluetooth', presente: true, danado: false },
-      { id: 'sensor_retro', name: 'Sensor de Retroceso', tipo: 'seleccion_multiple', opciones: ['Solo Sensor', 'Solo Cámara', 'Ambos', 'No'], seleccion: 'Ambos' },
-      { id: 'paddle_shift', name: 'Paddle shift', presente: true, danado: false },
-      { id: 'asientos_elec', name: 'Asientos Eléctricos', presente: true, danado: false },
-      { id: 'radio_orig', name: 'Radio Original', presente: true, danado: false },
-      { id: 'segunda_copia', name: 'Segunda copia llave', tipo: 'seleccion_multiple', opciones: ['Sí', 'No'], seleccion: 'No' },
-      { id: 'anclaje_isofix', name: 'Anclaje Isofix', presente: true, danado: false },
-      { id: 'control_est', name: 'Control de Estabilidad', presente: true, danado: false },
-      { id: 'pelicula_seg', name: 'Película de seguridad', presente: true, danado: false },
-      { id: 'sensor_lluvia', name: 'Sensor de Lluvia', presente: true, danado: false },
-      { id: 'tiro_arrastre', name: 'Tiro de Arrastre', presente: true, danado: false },
-      { id: 'volante_ajust', name: 'Volante Ajustable', presente: true, danado: false },
-      { id: 'asiento_memoria', name: 'Asiento con memoria', presente: true, danado: false },
-      { id: 'tapiz_cuero', name: 'Tapiz de Cuero', presente: true, danado: false },
-      { id: 'transmision', name: 'Transmisión', tipo: 'seleccion_multiple', opciones: ['Mecánico', 'Automático'], seleccion: 'Automático' },
-      { id: 'traccion', name: 'Tracción', tipo: 'seleccion_multiple', opciones: ['4x2', '4x4'], seleccion: '4x2' },
-      { id: 'combustible', name: 'Tipo de combustible', tipo: 'seleccion_multiple', opciones: ['Gasolina', 'Diesel', 'Híbrido', 'Eléctrico'], seleccion: 'Gasolina' },
-      { id: 'kit_inflado', name: 'Kit de inflado', tipo: 'seleccion_multiple', opciones: ['Sí', 'No', 'No corresponde'], seleccion: 'No' },
-      { id: 'piso_goma', name: 'Piso de goma', tipo: 'seleccion_multiple', opciones: ['Sí (original de la marca)', 'Alternativo', 'Sin piso de goma'], seleccion: 'Sí (original de la marca)' },
-      { id: 'tuerca_seg', name: 'Dado y tuerca de seguridad', presente: true, danado: false },
-      // Maleta
-      { id: 'gato', name: 'Gato hidráulico', presente: true, danado: false },
-      { id: 'llave_rueda', name: 'Llave rueda', presente: true, danado: false },
-      { id: 'extintor', name: 'Extintor', presente: true, danado: false },
-      { id: 'triangulo', name: 'Triángulo', presente: true, danado: false },
-      { id: 'botiquin', name: 'Botiquín', presente: true, danado: false },
-      { id: 'chaleco', name: 'Chaleco reflectante', presente: true, danado: false },
-      { id: 'libro', name: 'Libro de mantenciones', presente: true, danado: false },
-      { id: 'repuesto', name: 'Rueda de Repuesto', presente: true, danado: false },
-      { id: 'cubre_equipaje', name: 'Cubre equipaje', presente: true, danado: false },
-      { id: 'extintor_pesado', name: 'Extintor de Mayor Capacidad', presente: true, danado: false },
-      { id: 'botiquin_pesado', name: 'Botiquín Industrial', presente: true, danado: false },
-      { id: 'conos_pesados', name: 'Conos y Tacos Viales', presente: true, danado: false },
-      { id: 'cinturones_pesado', name: 'Cinturones de Seguridad', presente: true, danado: false },
-      { id: 'tacografo', name: 'Tacógrafo / Sistema de Monitoreo', presente: true, danado: false },
-    ]
+    carro: accesoriosCarro,
+    moto: accesoriosMoto,
+    motocarro: accesoriosMotocarro,
+    pesado: accesoriosPesado
   };
 
-const listaIdeal = listasPorTipo[tipoVehiculo] || listasPorTipo.carro;
+  const listaIdeal = listasPorTipo[tipoVehiculo] || accesoriosCarro;
 
-  // 3. Fusión inteligente con los datos guardados en la BD
-  const accesoriosActivos = (() => {
-    const guardados = safeData.accesoriosList || safeData.accesorios || safeData.detalles || [];
+  const guardados = safeData.accesoriosList ?? safeData.accesorios ?? [];
+  const accesoriosGuardados = Array.isArray(guardados) ? guardados : [];
 
-    if (!Array.isArray(guardados) || guardados.length === 0) {
-      return listaIdeal;
+  const normalizar = (valor) => String(valor ?? '').trim().toLowerCase();
+
+  const convertirBooleano = (valor) => {
+    if (valor === true || valor === 1 || valor === '1') return true;
+    if (typeof valor === 'string') {
+      return ['true', 'si', 'sí', 'yes', 'on'].includes(valor.toLowerCase().trim());
+    }
+    return false;
+  };
+
+  const buscarGuardado = (idealItem) => {
+    const idealId = normalizar(idealItem.id);
+
+    return accesoriosGuardados.find((item) => {
+      const catalogo = item.catalogo_accesorio || item.catalogoAccesorio || {};
+
+      const valores = [
+        item.id,
+        item.catalogo_accesorio_id,
+        item.catalogoAccesorioId,
+        item.codigo,
+        item.slug,
+        catalogo.id,
+        catalogo.codigo,
+        catalogo.slug
+      ].map(normalizar).filter(Boolean);
+
+      return valores.includes(idealId);
+    });
+  };
+
+  const accesoriosActivos = listaIdeal.map((idealItem) => {
+    const guardado = buscarGuardado(idealItem);
+
+    if (!guardado) {
+      return {
+        ...idealItem,
+        db_id: null,
+        catalogo_accesorio_id: null,
+        presente: false,
+        danado: false,
+        seleccion: '',
+        costoReparacion: '',
+        comentarioDaño: ''
+      };
     }
 
-    return listaIdeal.map((idealItem, index) => {
-      // Buscamos si el registro de la BD coincide por ID, por ID de catálogo, o por el índice de la lista
-      const encontrado = guardados.find((item, idx) => 
-        item.id === idealItem.id || 
-        item.catalogo_accesorio_id === idealItem.id ||
-        item.pivot?.catalogo_accesorio_id === idealItem.id ||
-        item.accesorio_id === idealItem.id ||
-        idx === index // Respaldo por posición si el orden es idéntico
-      );
+    const catalogo = guardado.catalogo_accesorio || guardado.catalogoAccesorio || {};
 
-      if (encontrado) {
-        return {
-          ...idealItem,
-          // Guardamos también el ID real de la BD por si se va a actualizar después
-          db_id: encontrado.id, 
-          presente: encontrado.presente !== undefined ? Boolean(encontrado.presente) : (encontrado.valor === 'Sí' || encontrado.estado === true),
-          danado: encontrado.danado !== undefined ? Boolean(encontrado.danado) : Boolean(encontrado.mal_estado || encontrado.dañado),
-          seleccion: encontrado.seleccion || encontrado.valor || encontrado.opcion_seleccionada || idealItem.seleccion,
-          costoReparacion: encontrado.costoReparacion || encontrado.costo_reparacion || '',
-          comentarioDaño: encontrado.comentarioDaño || encontrado.comentario_dano || ''
-        };
-      }
-      return idealItem;
-    });
-  })();
+    return {
+      ...idealItem,
+      db_id: guardado.id || null,
+      catalogo_accesorio_id:
+        guardado.catalogo_accesorio_id ||
+        guardado.catalogoAccesorioId ||
+        catalogo.id ||
+        null,
+      codigo: guardado.codigo || catalogo.codigo || idealItem.id,
+      slug: guardado.slug || catalogo.slug || idealItem.id,
+      presente: convertirBooleano(guardado.presente),
+      danado: convertirBooleano(guardado.danado),
+      seleccion: guardado.seleccion ?? '',
+      costoReparacion:
+        guardado.costoReparacion ??
+        guardado.costo_reparacion ??
+        '',
+      comentarioDaño:
+        guardado.comentarioDaño ??
+        guardado.comentario_dano ??
+        ''
+    };
+  });
 
-  // 4. Definición de la función dentro del ámbito correcto del componente
   const handleItemChange = (id, campo, valor) => {
-    const listaActualizada = accesoriosActivos.map((item) => {
-      if (item.id === id) {
-        return { ...item, [campo]: valor };
-      }
-      return item;
+    const listaActualizada = accesoriosActivos.map((item) =>
+      item.id === id ? { ...item, [campo]: valor } : item
+    );
+
+    onChange?.({
+      ...safeData,
+      tipoVehiculo: tipoVehiculo,
+      tipoVehiculoId: tipoVehiculoId,
+      accesoriosList: listaActualizada,
+      accesorios: listaActualizada
     });
-    
-    onChange({ ...safeData, accesoriosList: listaActualizada });
   };
 
   return (
@@ -183,7 +204,7 @@ const listaIdeal = listasPorTipo[tipoVehiculo] || listasPorTipo.carro;
             <span>🧰</span> Equipamiento Específico ({tipoVehiculo.toUpperCase()})
           </h3>
           <p className="text-xs text-slate-500 mt-1">
-            Se muestran exclusivamente los componentes y accesorios válidos para esta categoría vehicular.
+            Se muestran los componentes y accesorios válidos para esta categoría vehicular.
           </p>
         </div>
       </div>
@@ -199,14 +220,17 @@ const listaIdeal = listasPorTipo[tipoVehiculo] || listasPorTipo.carro;
               <div className="space-y-2 text-xs">
                 {item.tipo === 'seleccion_multiple' ? (
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">Selección:</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">
+                      Selección:
+                    </label>
                     <select
-                      value={item.seleccion !== undefined ? item.seleccion : item.opciones[0]}
+                      value={item.seleccion || ''}
                       onChange={(e) => handleItemChange(item.id, 'seleccion', e.target.value)}
                       className="w-full p-1.5 border border-slate-200 rounded text-xs bg-slate-50 text-slate-700 focus:outline-none focus:border-blue-500"
                     >
-                      {item.opciones.map((op, idx) => (
-                        <option key={idx} value={op}>{op}</option>
+                      <option value="">Seleccione...</option>
+                      {item.opciones.map((op) => (
+                        <option key={op} value={op}>{op}</option>
                       ))}
                     </select>
                   </div>
@@ -214,9 +238,9 @@ const listaIdeal = listasPorTipo[tipoVehiculo] || listasPorTipo.carro;
                   <div className="space-y-1.5">
                     <div className="flex items-center space-x-4">
                       <label className="flex items-center space-x-1.5 cursor-pointer">
-                        <input 
-                          type="radio" 
-                          name={`estado-${item.id}`}
+                        <input
+                          type="radio"
+                          name={`estado-${tipoVehiculo}-${item.id}`}
                           checked={item.presente === true}
                           onChange={() => handleItemChange(item.id, 'presente', true)}
                           className="text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
@@ -225,9 +249,9 @@ const listaIdeal = listasPorTipo[tipoVehiculo] || listasPorTipo.carro;
                       </label>
 
                       <label className="flex items-center space-x-1.5 cursor-pointer">
-                        <input 
-                          type="radio" 
-                          name={`estado-${item.id}`}
+                        <input
+                          type="radio"
+                          name={`estado-${tipoVehiculo}-${item.id}`}
                           checked={item.presente === false}
                           onChange={() => handleItemChange(item.id, 'presente', false)}
                           className="text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
@@ -240,9 +264,9 @@ const listaIdeal = listasPorTipo[tipoVehiculo] || listasPorTipo.carro;
 
                 <div className="pt-2 mt-2 border-t border-slate-50">
                   <label className="flex items-center space-x-1.5 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={item.danado || false}
+                    <input
+                      type="checkbox"
+                      checked={item.danado === true}
                       onChange={(e) => handleItemChange(item.id, 'danado', e.target.checked)}
                       className="h-3.5 w-3.5 text-red-600 border-slate-300 rounded focus:ring-red-500"
                     />
@@ -257,19 +281,22 @@ const listaIdeal = listasPorTipo[tipoVehiculo] || listasPorTipo.carro;
             {item.danado && (
               <div className="mt-3 pt-2 border-t border-red-100 space-y-2 animate-fadeIn">
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-2 flex items-center text-xs text-slate-400 font-semibold">$</span>
-                  <input 
-                    type="number" 
+                  <span className="absolute inset-y-0 left-0 pl-2 flex items-center text-xs text-slate-400 font-semibold">
+                    $
+                  </span>
+                  <input
+                    type="number"
                     placeholder="Costo..."
-                    value={item.costoReparacion || item.costo_reparacion || ''}
+                    value={item.costoReparacion || ''}
                     onChange={(e) => handleItemChange(item.id, 'costoReparacion', e.target.value)}
                     className="w-full pl-5 pr-2 py-1 text-[11px] border border-red-200 rounded bg-red-50/50 text-red-700 focus:outline-none"
                   />
                 </div>
-                <textarea 
+
+                <textarea
                   rows="2"
                   placeholder="Comentario..."
-                  value={item.comentarioDaño || item.comentario_dano || ''}
+                  value={item.comentarioDaño || ''}
                   onChange={(e) => handleItemChange(item.id, 'comentarioDaño', e.target.value)}
                   className="w-full p-1.5 text-[11px] border border-red-200 rounded bg-red-50/50 text-red-700 focus:outline-none"
                 />

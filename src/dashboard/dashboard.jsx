@@ -536,29 +536,43 @@ export default function Dashboard({ onLogout }) {
   const mapearPeritajeDeBackend = (item) => {
     const compresiones = Array.isArray(item.compresion_cilindros) ? item.compresion_cilindros : [];
     const compresionCilFields = {};
+
     [0, 1, 2, 3].forEach((idx) => {
       const compObj = compresiones[idx];
-      const valorCompresion = typeof compObj === 'object' ? (compObj?.valor || compObj?.psi || '') : compObj;
-      compresionCilFields[`compresionCil${idx + 1}`] = item[`compresionCil${idx + 1}`] || valorCompresion || null;
+      const valorCompresion = typeof compObj === 'object'
+        ? (compObj?.valor || compObj?.psi || '')
+        : compObj;
+
+      compresionCilFields[`compresionCil${idx + 1}`] =
+        item[`compresionCil${idx + 1}`] || valorCompresion || null;
     });
 
-    // --- MAPEO INTELIGENTE DE ACCESORIOS ---
-    // Transformamos el array de la BD en un objeto clave-valor para que el formulario los reconozca
-    const accesoriosMapeados = {};
-    const accesoriosArray = Array.isArray(item.accesorios) ? item.accesorios : [];
+    const convertirBooleano = (valor, defecto = false) => {
+      if (valor === true || valor === 1 || valor === '1' || valor === 'true') return true;
+      if (valor === false || valor === 0 || valor === '0' || valor === 'false') return false;
+      return defecto;
+    };
 
-    accesoriosArray.forEach((acc) => {
-      const key = acc.catalogo_accesorio_id;
-      if (key) {
-        accesoriosMapeados[key] = {
-          presente: acc.presente ?? false,
-          seleccion: acc.seleccion ?? '',
-          danado: acc.danado ?? false,
-          costo_reparacion: acc.costo_reparacion || '0.00',
-          comentario_dano: acc.comentario_dano || ''
-        };
-      }
-    });
+    const accesoriosArray = Array.isArray(item.accesorios)
+      ? item.accesorios
+      : item.accesorios && typeof item.accesorios === 'object'
+        ? Object.values(item.accesorios)
+        : [];
+
+    const accesoriosNormalizados = accesoriosArray.map((acc) => ({
+      ...acc,
+      id: acc.catalogo_accesorio?.slug || acc.codigo || acc.catalogo_accesorio_id || acc.id,
+      db_id: acc.id || null,
+      codigo: acc.codigo || acc.catalogo_accesorio?.codigo || '',
+      catalogo_accesorio_id: acc.catalogo_accesorio_id || acc.catalogo_accesorio?.id || null,
+      catalogo_accesorio: acc.catalogo_accesorio || null,
+      name: acc.name || acc.nombre || acc.catalogo_accesorio?.nombre || acc.catalogo_accesorio?.name || '',
+      presente: convertirBooleano(acc.presente),
+      seleccion: acc.seleccion ?? '',
+      danado: convertirBooleano(acc.danado),
+      costoReparacion: acc.costoReparacion ?? acc.costo_reparacion ?? '',
+      comentarioDaño: acc.comentarioDaño ?? acc.comentario_dano ?? ''
+    }));
 
     return {
       ...item,
@@ -575,35 +589,26 @@ export default function Dashboard({ onLogout }) {
       numChasis: item.num_chasis || item.numChasis || '',
       kilometraje: item.kilometraje || item.km || 0,
       organismoTransito: item.organismo_transito || item.organismoTransito || '',
-
       vence_soat: item.vence_soat ? item.vence_soat.split('T')[0] : (item.venceSoat ? item.venceSoat.split('T')[0] : ''),
       vence_tecnico_mecanica: item.vence_tecnico_mecanica ? item.vence_tecnico_mecanica.split('T')[0] : (item.venceTecnicoMecanica ? item.venceTecnicoMecanica.split('T')[0] : ''),
-
-      soatAlDia: item.soat_al_dia ?? item.soatAlDia ?? true,
-      tecnicoMecanicaAlDia: item.tecnico_mecanica_al_dia ?? item.tecnicoMecanicaAlDia ?? true,
-
+      soatAlDia: convertirBooleano(item.soat_al_dia ?? item.soatAlDia, true),
+      tecnicoMecanicaAlDia: convertirBooleano(item.tecnico_mecanica_al_dia ?? item.tecnicoMecanicaAlDia, true),
       sucursalVendedorId: item.sucursal_vendedor_id || item.sucursalVendedorId || '',
       sucursalInspeccionId: item.sucursal_inspeccion_id || item.sucursalInspeccionId || '',
       vendedorId: item.vendedor_id || item.vendedorId || '',
-
       archivoSoat: item.archivo_soat || item.archivoSoat || item.foto_soat || null,
       archivoTecnicoMecanica: item.archivo_rtm || item.archivoTecnicoMecanica || item.foto_rtm || null,
-
       nombre_cliente: item.nombre_cliente || item.cliente?.nombre || '',
       documento_cliente: item.documento_cliente || item.cliente?.documento || '',
       telefono_cliente: item.telefono_cliente || item.cliente_telefono || item.telefono_cliene || '',
-
       siniestros: item.siniestros || item.comentarios_siniestros || '',
       comentariosMotor: item.comentarios_motor || item.comentariosMotor || '',
-
-      // Asignamos tanto la versión en objeto (si tu formulario usa diccionarios) como la de array
-      accesorios: accesoriosMapeados,
-      accesoriosList: accesoriosArray,
-
+      accesorios: accesoriosNormalizados,
+      accesoriosList: accesoriosNormalizados,
       danosExternos: item.danos_externos || item.danosExternos || {},
       danosInternos: item.danos_internos || item.danosInternos || {},
       detallesTecnicos: item.detalles_tecnicos || item.detallesTecnicos || {},
-      firmaInspector: item.firma_inspector || item.firmaInspector || null,
+      firmaInspector: item.firma_inspector || item.firmaInspector || null
     };
   };
 

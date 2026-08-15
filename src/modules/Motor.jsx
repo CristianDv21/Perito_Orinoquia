@@ -1,37 +1,35 @@
 export default function Motor({ peritajeData: data, onChange }) {
   const safeData = data || {};
-  const tipoVehiculo = safeData.tipoVehiculo || 'carro'; // Heredado globalmente
+  const tipoVehiculo = safeData.tipoVehiculo || safeData.tipo_vehiculo || 'carro';
 
-  // Manejador genérico seguro para actualizar campos raíz sin sobrescribir el resto del estado
   const handleInputChange = (field, value) => {
-    if (onChange) {
-      onChange({
-        ...safeData,
-        [field]: value
-      });
-    }
+    if (!onChange) return;
+    onChange({
+      ...safeData,
+      [field]: value
+    });
   };
 
-  // Manejador específico para los componentes mecánicos del checklist asegurando inmutabilidad
   const handleMecanicoItemChange = (itemKey, field, value) => {
-    const currentItems = safeData.sistemasMecanicos || {};
-    const updatedItems = {
+    const currentItems = safeData.sistemasMecanicos && typeof safeData.sistemasMecanicos === 'object'
+      ? safeData.sistemasMecanicos
+      : {};
+    const currentItem = currentItems[itemKey] && typeof currentItems[itemKey] === 'object'
+      ? currentItems[itemKey]
+      : { estado: '', observaciones: '' };
+
+    handleInputChange('sistemasMecanicos', {
       ...currentItems,
       [itemKey]: {
-        ...(currentItems[itemKey] || { estado: '', observaciones: '' }),
+        ...currentItem,
         [field]: value
       }
-    };
-    handleInputChange('sistemasMecanicos', updatedItems);
+    });
   };
 
+  const inputStyle = 'w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-500 transition duration-150';
+  const pillBase = 'px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg border transition duration-150 cursor-pointer flex-1 text-center select-none';
 
-
-  // Clase de diseño estándar y uniforme
-  const inputStyle = "w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-500 transition duration-150";
-  const pillBase = "px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg border transition duration-150 cursor-pointer flex-1 text-center select-none";
-
-  // 🌐 Listado de sistemas mecánicos adaptados por tipo de vehículo
   const itemsPorModelo = {
     carro: [
       { key: 'fugasMotor', label: 'Estanqueidad del Motor (Fugas de Aceite)' },
@@ -40,14 +38,14 @@ export default function Motor({ peritajeData: data, onChange }) {
       { key: 'correas', label: 'Correas de Accesorios (Estado / Tensión)' },
       { key: 'soportesMotor', label: 'Soportes de Motor y Caja' },
       { key: 'sistemaEscape', label: 'Sistema de Escape (Humo / Roturas)' },
-      { key: 'bateria', label: 'Sistema Eléctrico y Batería (Bornes / Voltaje)' },
+      { key: 'bateria', label: 'Sistema Eléctrico y Batería (Bornes / Voltaje)' }
     ],
     moto: [
       { key: 'fugasMotor', label: 'Estanqueidad del Motor (Fugas de Aceite / Empaques)' },
       { key: 'ruidosMotor', label: 'Componentes Internos (Ruidos de Válvulas / Cadena de Distribución)' },
       { key: 'transmisionSecundaria', label: 'Kit de Arrastre (Cadena, Sprocket / Correa)' },
       { key: 'sistemaEscape', label: 'Sistema de Escape / Mofle' },
-      { key: 'bateria', label: 'Sistema Eléctrico y Batería (Carga / C.G.)' },
+      { key: 'bateria', label: 'Sistema Eléctrico y Batería (Carga / C.G.)' }
     ],
     pesado: [
       { key: 'fugasMotor', label: 'Estanqueidad del Motor (Fugas de Aceite / Turbo)' },
@@ -56,7 +54,7 @@ export default function Motor({ peritajeData: data, onChange }) {
       { key: 'correas', label: 'Correas y Tensores' },
       { key: 'soportesMotor', label: 'Soportes de Motor y Chasis' },
       { key: 'sistemaEscape', label: 'Sistema de Escape y Freno de Acometida / Motor' },
-      { key: 'bateria', label: 'Sistema Eléctrico y Baterías (24V / Bornes)' },
+      { key: 'bateria', label: 'Sistema Eléctrico y Baterías (24V / Bornes)' }
     ],
     motocarro: [
       { key: 'fugasMotor', label: 'Estanqueidad del Motor y Reversa' },
@@ -64,27 +62,22 @@ export default function Motor({ peritajeData: data, onChange }) {
       { key: 'ruidosMotor', label: 'Componentes Internos / Embrague Centrífugo' },
       { key: 'transmisionSecundaria', label: 'Eje de Transmisión / Cardán / Cadena' },
       { key: 'sistemaEscape', label: 'Sistema de Escape' },
-      { key: 'bateria', label: 'Sistema Eléctrico y Batería' },
+      { key: 'bateria', label: 'Sistema Eléctrico y Batería' }
     ]
   };
 
   const itemsMecanicos = itemsPorModelo[tipoVehiculo] || itemsPorModelo.carro;
 
-
-
-  // 🧮 Definir cantidad de cilindros para la prueba de compresión según el vehículo
   const getCilindrosConfig = () => {
     if (tipoVehiculo === 'moto') return [1];
     if (tipoVehiculo === 'motocarro') return [1, 2];
     return [1, 2, 3, 4];
   };
 
-  const cilindrosActivos = tipoVehiculo === 'moto' ? [1] : tipoVehiculo === 'motocarro' ? [1, 2] : [1, 2, 3, 4]; getCilindrosConfig();
+  const cilindrosActivos = getCilindrosConfig();
 
   return (
     <div className="space-y-6 text-slate-800">
-
-      {/* ⚙️ SECCIÓN 1: ESTADO DE COMPONENTES MECÁNICOS */}
       <div className="bg-white border border-slate-200/60 rounded-xl p-6 space-y-4 shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider">
@@ -94,23 +87,19 @@ export default function Motor({ peritajeData: data, onChange }) {
             Clase: {tipoVehiculo}
           </span>
         </div>
-
         <div className="divide-y divide-slate-100">
           {itemsMecanicos.map((item) => {
-            const itemState = safeData.sistemasMecanicos?.[item.key] || { estado: '', observaciones: '' };
+            const itemState = safeData.sistemasMecanicos?.[item.key] || {
+              estado: '',
+              observaciones: ''
+            };
 
             return (
-              <div key={item.key} className="py-4 first:pt-0 last:pb-0 flex flex-col lg:flex-row lg:items-center justify-between gap-4 animate-fadeIn">
-
-                {/* Nombre del sistema o pieza */}
+              <div key={item.key} className="py-4 first:pt-0 last:pb-0 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div className="lg:w-1/3">
                   <span className="text-xs font-bold text-slate-700 block">{item.label}</span>
                 </div>
-
-                {/* Controles de estado y notas */}
                 <div className="flex flex-col sm:flex-row items-center gap-3 flex-1 lg:w-2/3 w-full">
-
-                  {/* Selector de Diagnóstico (Pills) */}
                   <div className="flex bg-slate-100 p-1 rounded-xl w-full sm:w-auto min-w-[240px] gap-1">
                     <button
                       type="button"
@@ -134,8 +123,6 @@ export default function Motor({ peritajeData: data, onChange }) {
                       Malo
                     </button>
                   </div>
-
-                  {/* Detalle o gravedad del hallazgo */}
                   <div className="flex-1 w-full">
                     <input
                       type="text"
@@ -145,7 +132,6 @@ export default function Motor({ peritajeData: data, onChange }) {
                       className={inputStyle}
                     />
                   </div>
-
                 </div>
               </div>
             );
@@ -153,27 +139,28 @@ export default function Motor({ peritajeData: data, onChange }) {
         </div>
       </div>
 
-      {/* 📊 SECCIÓN 2: PARÁMETROS DE TRANSMISIÓN, TRACCIÓN, KILOMETRAJE Y COMPRESIÓN */}
       <div className="bg-white border border-slate-200/60 rounded-xl p-6 space-y-4 shadow-sm">
         <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider border-b border-slate-100 pb-3">
           Parámetros de Motor, Transmisión y Tracción
         </h3>
-
-        {/* Odómetro y Cilindraje limpios y ordenados */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-slate-100">
           <div className="max-w-xs">
-            <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Lectura Actual del Odómetro (KM)</label>
+            <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">
+              Lectura Actual del Odómetro (KM)
+            </label>
             <input
               type="number"
+              min="0"
               placeholder="Ej. 15000"
               value={safeData.kilometraje ?? ''}
               onChange={(e) => handleInputChange('kilometraje', e.target.value)}
               className={`${inputStyle} font-mono font-bold text-blue-600`}
             />
           </div>
-
           <div className="max-w-xs">
-            <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Cilindraje</label>
+            <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">
+              Cilindraje
+            </label>
             <input
               type="text"
               placeholder="Ej. 1500cc"
@@ -184,12 +171,11 @@ export default function Motor({ peritajeData: data, onChange }) {
           </div>
         </div>
 
-        {/* ⚙️ CAMPOS DE TRANSMISIÓN Y TRACCIÓN */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-
-          {/* Tipo de Transmisión */}
           <div>
-            <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Tipo de Transmisión</label>
+            <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">
+              Tipo de Transmisión
+            </label>
             <select
               value={safeData.tipoTransmision || ''}
               onChange={(e) => handleInputChange('tipoTransmision', e.target.value)}
@@ -212,10 +198,10 @@ export default function Motor({ peritajeData: data, onChange }) {
               )}
             </select>
           </div>
-
-          {/* Tipo de Tracción */}
           <div>
-            <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Tipo de Tracción</label>
+            <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">
+              Tipo de Tracción
+            </label>
             <select
               value={safeData.traccion || ''}
               onChange={(e) => handleInputChange('traccion', e.target.value)}
@@ -239,10 +225,10 @@ export default function Motor({ peritajeData: data, onChange }) {
               )}
             </select>
           </div>
-
-          {/* Estado del Embrague / Caja / Transmisión */}
           <div>
-            <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Estado del Conjunto / Caja</label>
+            <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">
+              Estado del Conjunto / Caja
+            </label>
             <select
               value={safeData.estadoTransmision || ''}
               onChange={(e) => handleInputChange('estadoTransmision', e.target.value)}
@@ -255,27 +241,33 @@ export default function Motor({ peritajeData: data, onChange }) {
               <option value="ruidoRodamiento">Ruido de rodamiento interno</option>
             </select>
           </div>
-
         </div>
 
-        {/* Datos técnicos de compresión dinámicos */}
         <div className="pt-4 border-t border-slate-100">
-          <label className="block text-xs font-bold uppercase text-slate-500 mb-2 tracking-wide">Lectura de Compresión (PSI)</label>
+          <label className="block text-xs font-bold uppercase text-slate-500 mb-2 tracking-wide">
+            Lectura de Compresión (PSI)
+          </label>
           <div className={`grid grid-cols-2 ${cilindrosActivos.length > 2 ? 'sm:grid-cols-4' : 'sm:grid-cols-2'} gap-3 max-w-2xl`}>
-            {cilindrosActivos.map((num) => (
-              <div key={num} className="relative flex items-center">
-                <span className="absolute left-3 text-[10px] font-extrabold text-slate-400 uppercase select-none">
-                  Cil {num}
-                </span>
-                <input
-                  type="number"
-                  placeholder="000"
-                  value={typeof safeData[`compresionCil${num}`] === 'object' ? '' : (safeData[`compresionCil${num}`] ?? '')}
-                  onChange={(e) => handleInputChange(`compresionCil${num}`, e.target.value)}
-                  className={`${inputStyle} pl-12 text-right font-mono font-bold text-blue-600`}
-                />
-              </div>
-            ))}
+            {cilindrosActivos.map((num) => {
+              const campo = `compresionCil${num}`;
+              const valor = safeData[campo];
+
+              return (
+                <div key={num} className="relative flex items-center">
+                  <span className="absolute left-3 text-[10px] font-extrabold text-slate-400 uppercase select-none">
+                    Cil {num}
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="000"
+                    value={typeof valor === 'object' ? '' : valor ?? ''}
+                    onChange={(e) => handleInputChange(campo, e.target.value)}
+                    className={`${inputStyle} pl-12 text-right font-mono font-bold text-blue-600`}
+                  />
+                </div>
+              );
+            })}
           </div>
           <span className="text-[10px] text-slate-400 mt-1.5 block font-medium">
             * Ingrese los valores obtenidos con el manómetro/compresómetro para el motor de {cilindrosActivos.length} cilindro(s).
@@ -283,13 +275,14 @@ export default function Motor({ peritajeData: data, onChange }) {
         </div>
       </div>
 
-      {/* 📝 SECCIÓN 3: DICTAMEN FINAL DEL MOTOR */}
       <div className="bg-white border border-slate-200/60 rounded-xl p-6 space-y-4 shadow-sm">
         <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider border-b border-slate-100 pb-3">
           Resumen Técnico del Conjunto Motor
         </h3>
         <div>
-          <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">Notas y Concepto Mecánico Final</label>
+          <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 tracking-wide">
+            Notas y Concepto Mecánico Final
+          </label>
           <textarea
             rows="3"
             placeholder="Registre observaciones finales sobre el estado operativo del motor, si requiere reparaciones urgentes, sincronización o cambios de fluidos..."
@@ -299,7 +292,6 @@ export default function Motor({ peritajeData: data, onChange }) {
           />
         </div>
       </div>
-
     </div>
   );
 }

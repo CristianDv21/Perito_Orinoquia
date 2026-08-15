@@ -8,8 +8,7 @@ export default function Accesorios({ peritajeData: data, onChange }) {
 
     const v = String(valor || '').toLowerCase().trim();
 
-    if (v === '7c68a26d-372b-42dc-be00-92c4ed2ee6ce' || v === 'moto' || v.includes('moto')) return 'moto';
-    if (v === 'd5017832-04ac-4ead-8f57-efbe8af78860' || v === 'pesado' || v.includes('pesado') || v.includes('carga') || v.includes('camion') || v.includes('camión')) return 'pesado';
+    if (v === '7c68a26d-372b-42dc-be00-92c4ed2ee6ce' || v === 'moto' || v.includes('moto')) return 'moto'; if (v === 'd5017832-04ac-4ead-8f57-efbe8af78860' || v === 'pesado' || v.includes('pesado') || v.includes('carga') || v.includes('camion') || v.includes('camión')) return 'pesado';
     if (v === 'e8ca5ff6-fe17-4916-b949-c13cac3a706e' || v === 'motocarro' || v.includes('motocarro')) return 'motocarro';
     return 'carro';
   };
@@ -119,24 +118,31 @@ export default function Accesorios({ peritajeData: data, onChange }) {
     return false;
   };
 
-  const buscarGuardado = (idealItem) => {
+const buscarGuardado = (idealItem) => {
     const idealId = normalizar(idealItem.id);
+    const idealName = normalizar(idealItem.name);
 
     return accesoriosGuardados.find((item) => {
       const catalogo = item.catalogo_accesorio || item.catalogoAccesorio || {};
 
-      const valores = [
+      const valoresParaComparar = [
         item.id,
-        item.catalogo_accesorio_id,
-        item.catalogoAccesorioId,
         item.codigo,
         item.slug,
+        item.name,
+        item.nombre,
         catalogo.id,
         catalogo.codigo,
-        catalogo.slug
+        catalogo.slug,
+        catalogo.nombre,
+        catalogo.name,
+        // Si el backend guarda el identificador en otra propiedad:
+        item.catalogo_accesorio_id,
+        item.catalogoAccesorioId
       ].map(normalizar).filter(Boolean);
 
-      return valores.includes(idealId);
+      // Compara si alguna de las propiedades del registro guardado coincide con el ID o el nombre del frontend
+      return valoresParaComparar.includes(idealId) || valoresParaComparar.includes(idealName);
     });
   };
 
@@ -160,7 +166,8 @@ export default function Accesorios({ peritajeData: data, onChange }) {
 
     return {
       ...idealItem,
-      db_id: guardado.id || null,
+      
+      db_id: guardado.db_id || (guardado.id !== idealItem.id ? guardado.id : null),
       catalogo_accesorio_id:
         guardado.catalogo_accesorio_id ||
         guardado.catalogoAccesorioId ||

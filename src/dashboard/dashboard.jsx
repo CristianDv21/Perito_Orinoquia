@@ -561,8 +561,9 @@ export default function Dashboard({ onLogout }) {
 
     const accesoriosNormalizados = accesoriosArray.map((acc) => ({
       ...acc,
-      id: acc.catalogo_accesorio?.slug || acc.codigo || acc.catalogo_accesorio_id || acc.id,
+      id: acc.id || acc.catalogo_accesorio_id || acc.codigo,
       db_id: acc.id || null,
+      catalogo_slug: acc.catalogo_accesorio?.slug || acc.codigo || '',
       codigo: acc.codigo || acc.catalogo_accesorio?.codigo || '',
       catalogo_accesorio_id: acc.catalogo_accesorio_id || acc.catalogo_accesorio?.id || null,
       catalogo_accesorio: acc.catalogo_accesorio || null,
@@ -572,7 +573,11 @@ export default function Dashboard({ onLogout }) {
       danado: convertirBooleano(acc.danado),
       costoReparacion: acc.costoReparacion ?? acc.costo_reparacion ?? '',
       comentarioDaño: acc.comentarioDaño ?? acc.comentario_dano ?? ''
+
+      
     }));
+
+    console.log("Accesorios mapeados para edición:", accesoriosNormalizados);
 
     return {
       ...item,
@@ -635,6 +640,7 @@ export default function Dashboard({ onLogout }) {
     });
   };
 
+  
   const handleEditarPeritaje = (item) => {
     const peritajeMapeado = mapearPeritajeDeBackend(item);
     setPeritajeData(peritajeMapeado);

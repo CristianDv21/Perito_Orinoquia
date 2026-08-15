@@ -1,16 +1,31 @@
-# React + Vite
+# Perito Orinoquia - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Sistema web frontend desarrollado para la gestión, peritaje y diagnóstico vehicular en la región de la Orinoquia. Este módulo se encarga de la interfaz de usuario, control de flujos de inspección técnica, registro de accesorios y visualización de reportes detallados.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🚀 Tecnologías Principales
 
-## React Compiler
+- **React** (Vite)
+- **Tailwind CSS** (Estilos y diseño responsivo)
+- **Lucide React** (Iconografía)
+- **Axios** (Consumo de servicios del backend)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## 📂 Estructura del Proyecto
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```text
+src/
+├── assets/          # Imágenes, logos y recursos estáticos
+├── components/      # Componentes reutilizables (Botones, Modales, Tarjetas)
+├── context/         # Estados globales y contextos de autenticación
+├── hooks/           # Custom hooks para lógica de negocio
+├── layouts/         # Estructuras principales (Sidebar, Header, Footer)
+├── pages/
+│   ├── Dashboard/   # Panel general de estadísticas y accesos rápidos
+│   ├── Inspections/ # Módulo central de peritaje e inspección técnica
+│   ├── Accessories/ # Módulo independiente de gestión de accesorios
+│   └── Vehicles/    # Registro y filtrado de vehículos
+├── services/        # Configuración de peticiones HTTP (API Client)
+└── utils/           # Validaciones y funciones de formato

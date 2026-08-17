@@ -331,80 +331,82 @@ export default function Documentacion({
         </h3>
 
         <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl space-y-3">
-          <h4 className="text-[11px] font-bold uppercase text-slate-600 tracking-wider">Información del Propietario / Cliente</h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <h3 className="text-xs font-bold uppercase text-slate-600 mb-3">Información del Propietario / Cliente</h3>
 
-            {/* Nombre Completo con Autocompletado */}
-            <div className="relative">
-              <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Nombre Completo *</label>
-              <input
-                type="text"
-                placeholder="Nombre del cliente..."
-                value={safeData.nombre_cliente || ''}
-                onChange={async (e) => {
-                  const valor = e.target.value;
-                  // Usa el nombre exacto de la columna de la base de datos
-                  handleInputChange('nombre_cliente', valor);
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-                  if (valor.length > 1) {
-                    try {
-                      const res = await api.get(`/clientes/buscar?q=${encodeURIComponent(valor)}`);
-                      setSugerencias(res.data);
-                    } catch (err) {
-                      console.error("Error buscando cliente", err);
+              {/* Nombre Completo con Autocompletado */}
+              <div className="relative">
+                <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Nombre Completo *</label>
+                <input
+                  type="text"
+                  placeholder="Nombre del cliente..."
+                  value={safeData.nombre_cliente || ''}
+                  onChange={async (e) => {
+                    const valor = e.target.value;
+                    handleInputChange('nombre_cliente', valor);
+
+                    if (valor.length > 1) {
+                      try {
+                        const res = await api.get(`/clientes/buscar?q=${encodeURIComponent(valor)}`);
+                        setSugerencias(res.data);
+                      } catch (err) {
+                        console.error("Error buscando cliente", err);
+                      }
+                    } else {
+                      setSugerencias([]);
                     }
-                  } else {
-                    setSugerencias([]);
-                  }
-                }}
-                className={inputStyle}
-                autoComplete="off"
-              />
-              {sugerencias && sugerencias.length > 0 && (
-                <ul className="absolute z-50 left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
-                  {sugerencias.map((cliente) => (
-                    <li
-                      key={cliente.id}
-                      onClick={() => {
-                        handleInputChange('clienteNombre', cliente.nombre_cliente || '');
-                        handleInputChange('clienteDocumento', cliente.documento_cliente || '');
-                        handleInputChange('clienteTelefono', cliente.telefono_cliene || ''); // Mapeo exacto respetando el typo de la BD
-                        setSugerencias([]);
-                      }}
-                      className="p-2 hover:bg-indigo-50 cursor-pointer text-xs border-b border-slate-100 last:border-none"
-                    >
-                      <p className="font-semibold text-slate-700">{cliente.nombre_cliente}</p>
-                      <p className="text-[10px] text-slate-400">Doc: {cliente.documento_cliente} | Tel: {cliente.telefono_cliene}</p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+                  }}
+                  className={inputStyle}
+                  autoComplete="off"
+                />
+                {sugerencias && sugerencias.length > 0 && (
+                  <ul className="absolute z-50 left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
+                    {sugerencias.map((cliente) => (
+                      <li
+                        key={cliente.id}
+                        onClick={() => {
+                          handleInputChange('nombre_cliente', cliente.nombre_cliente || '');
+                          handleInputChange('documento_cliente', cliente.documento_cliente || '');
+                          handleInputChange('telefono_cliene', cliente.telefono_cliene || cliente.telefono_cliente || '');
+                          setSugerencias([]);
+                        }}
+                        className="p-2 hover:bg-indigo-50 cursor-pointer text-xs border-b border-slate-100 last:border-none"
+                      >
+                        <p className="font-semibold text-slate-700">{cliente.nombre_cliente}</p>
+                        <p className="text-[10px] text-slate-400">Doc: {cliente.documento_cliente} | Tel: {cliente.telefono_cliene}</p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
 
-            {/* Documento de Identidad */}
-            <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Documento de Identidad *</label>
-              <input
-                type="text"
-                placeholder="Cédula o NIT..."
-                value={safeData.clienteDocumento || safeData.documento_cliente || ''}
-                onChange={(e) => handleInputChange('clienteDocumento', e.target.value)}
-                className={`${inputStyle} font-mono`}
-              />
-            </div>
+              {/* Documento de Identidad */}
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Documento de Identidad *</label>
+                <input
+                  type="text"
+                  placeholder="Cédula o NIT..."
+                  value={safeData.documento_cliente || ''}
+                  onChange={(e) => handleInputChange('documento_cliente', e.target.value)}
+                  className={`${inputStyle} font-mono`}
+                />
+              </div>
 
-            {/* Teléfono / Contacto */}
-            <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Teléfono / Contacto</label>
-              <input
-                type="text"
-                placeholder="Teléfono..."
-                value={safeData.clienteTelefono || safeData.telefono_cliene || ''}
-                onChange={(e) => handleInputChange('clienteTelefono', e.target.value)}
-                className={`${inputStyle} font-mono`}
-              />
-            </div>
+              {/* Teléfono / Contacto */}
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Teléfono / Contacto</label>
+                <input
+                  type="text"
+                  placeholder="Teléfono..."
+                  value={safeData.telefono_cliene || ''}
+                  onChange={(e) => handleInputChange('telefono_cliene', e.target.value)}
+                  className={`${inputStyle} font-mono`}
+                />
+              </div>
 
+            </div>
           </div>
         </div>
 

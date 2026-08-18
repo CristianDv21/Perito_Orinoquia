@@ -12,7 +12,7 @@ export default function Motor({ peritajeData: data, onChange }) {
   }
 
   const kilometraje = safeData.kilometraje ?? '';
-  const cilindrada = safeData.cilindrada ?? safeData.cilindraje ?? '';
+  const cilindraje = safeData.cilindraje ?? safeData.cilindraje ?? '';
   const tipoTransmision = safeData.tipoTransmision ?? safeData.tipo_transmision ?? '';
   const traccion = safeData.traccion ?? '';
   const estadoTransmision = safeData.estadoTransmision ?? safeData.estado_transmision ?? '';
@@ -175,8 +175,8 @@ export default function Motor({ peritajeData: data, onChange }) {
             <input
               type="text"
               placeholder="Ej. 1500cc"
-              value={cilindrada}
-              onChange={(e) => handleInputChange('cilindrada', e.target.value)}
+              value={cilindraje}
+              onChange={(e) => handleInputChange('cilindraje', e.target.value)} // <--- Cámbialo a 'cilindraje'
               className={`${inputStyle} font-mono font-bold text-blue-600`}
             />
           </div>
@@ -263,7 +263,7 @@ export default function Motor({ peritajeData: data, onChange }) {
               const campoCamel = `compresionCil${num}`;
               const campoSnake = `compresion_cil_${num}`;
               const campoSnake2 = `compresion_cil${num}`;
-              
+
               let valor = safeData[campoCamel] ?? safeData[campoSnake] ?? safeData[campoSnake2];
               if (typeof valor === 'object') valor = '';
 

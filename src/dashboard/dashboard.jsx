@@ -435,6 +435,8 @@ export default function Dashboard({ onLogout }) {
       dataToSend.append('estado_bateria', formDataDelEstado.estadoBateria || 'Bueno');
       dataToSend.append('ruidos_extranos', formDataDelEstado.ruidosExtranos ? '1' : '0');
 
+      dataToSend.append('cilindraje', formDataDelEstado.cilindraje || '');
+
       dataToSend.append('comentarios_motor', formDataDelEstado.comentariosMotor || '');
       dataToSend.append('tipo_transmision', formDataDelEstado.tipoTransmision || '');
       dataToSend.append('traccion', formDataDelEstado.traccion || '');
@@ -628,6 +630,8 @@ export default function Dashboard({ onLogout }) {
       clienteNombre: item.nombre_cliente || item.cliente?.nombre_cliente || item.cliente?.nombre || '',
       clienteDocumento: item.documento_cliente || item.cliente?.documento_cliente || item.cliente?.documento || '',
       clienteTelefono: item.telefono_cliente || item.cliente?.telefono_cliente || item.cliente?.telefono || item.cliente_telefono || '',
+
+      cilindraje: item.cilindraje || '',
 
       siniestros: item.siniestros || item.comentarios_siniestros || '',
       comentariosMotor: item.comentarios_motor || item.comentariosMotor || '',

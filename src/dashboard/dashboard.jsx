@@ -428,9 +428,9 @@ export default function Dashboard({ onLogout }) {
       if (formDataDelEstado.venceTecnicoMecanica) dataToSend.append('vence_tecnico_mecanica', formDataDelEstado.venceTecnicoMecanica);
       dataToSend.append('tecnico_mecanica_al_dia', formDataDelEstado.tecnicoMecanicaAlDia ? '1' : '0');
       dataToSend.append('coincide_propietario_runt', formDataDelEstado.coincidePropietarioRunt ? '1' : '0');
-      dataToSend.append('tiene_embargos_o_alertas', formDataDelEstado.tieneEmbargosOAlertas ? '1' : '0');
-      dataToSend.append('restriccion_blindaje', formDataDelEstado.restriccionBlindaje || 'sin_blindaje');
-      dataToSend.append('compresion_motor', formDataDelEstado.compresionMotor || '');
+      //dataToSend.append('tiene_embargos_o_alertas', formDataDelEstado.tieneEmbargosOAlertas ? '1' : '0');
+      //dataToSend.append('restriccion_blindaje', formDataDelEstado.restriccionBlindaje || 'sin_blindaje');
+      //dataToSend.append('compresion_motor', formDataDelEstado.compresionMotor || '');
       dataToSend.append('fugas_aceite', formDataDelEstado.fugasAceite ? '1' : '0');
       dataToSend.append('estado_bateria', formDataDelEstado.estadoBateria || 'Bueno');
       dataToSend.append('ruidos_extranos', formDataDelEstado.ruidosExtranos ? '1' : '0');
@@ -467,11 +467,19 @@ export default function Dashboard({ onLogout }) {
       dataToSend.append('danos_externos', JSON.stringify(normalizarLista(formDataDelEstado.danosExternos)));
       dataToSend.append('danos_internos', JSON.stringify(normalizarLista(formDataDelEstado.danosInternos)));
       dataToSend.append('detalles_tecnicos', JSON.stringify(normalizarLista(formDataDelEstado.detallesTecnicos)));
-      dataToSend.append('sistemas_mecanicos', JSON.stringify(normalizarLista(formDataDelEstado.sistemasMecanicos)));
+      // Se envía como objeto {sistema_key: {estado, observaciones}} para no perder
+      // la referencia a qué sistema mecánico corresponde cada estado.
+      dataToSend.append('sistemas_mecanicos', JSON.stringify(formDataDelEstado.sistemasMecanicos || {}));
 
-      const compresionCilindros = [1, 2, 3, 4]
-        .map((n) => formDataDelEstado[`compresionCil${n}`])
-        .filter((v) => v !== undefined && v !== null && v !== '');
+      // Se envía como objeto {numero_cilindro: presion} para no depender de la
+      // posición dentro de un array (evita desalineación si algún cilindro queda vacío).
+      const compresionCilindros = {};
+      [1, 2, 3, 4].forEach((n) => {
+        const valor = formDataDelEstado[`compresionCil${n}`];
+        if (valor !== undefined && valor !== null && valor !== '') {
+          compresionCilindros[n] = valor;
+        }
+      });
       dataToSend.append('compresion_cilindros', JSON.stringify(compresionCilindros));
 
       if (formDataDelEstado.archivoSoat?.file instanceof File) {
@@ -493,8 +501,18 @@ export default function Dashboard({ onLogout }) {
       setIsInspecting(false);
       fetchInspecciones();
     } catch (error) {
-      console.error('Error al guardar el peritaje:', error);
-      alert(error.response?.data?.message || 'Hubo un error al guardar el peritaje en el servidor.');
+      console.error('--- ERROR DETALLADO DE GUARDADO ---');
+      console.error('Respuesta del servidor:', error.response?.data);
+
+      if (error.response?.data?.errors) {
+        // Esto desplegará en una alerta los errores específicos de cada campo que Laravel rechazó
+        const errores = Object.entries(error.response.data.errors)
+          .map(([campo, mensajes]) => `- ${campo}: ${mensajes.join(', ')}`)
+          .join('\n');
+        alert(`Errores de validación en el servidor:\n\n${errores}`);
+      } else {
+        alert(error.response?.data?.message || 'Hubo un error al guardar el peritaje en el servidor.');
+      }
     }
   };
 

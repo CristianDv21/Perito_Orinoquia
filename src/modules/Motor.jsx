@@ -2,6 +2,22 @@ export default function Motor({ peritajeData: data, onChange }) {
   const safeData = data || {};
   const tipoVehiculo = safeData.tipoVehiculo || safeData.tipo_vehiculo || 'carro';
 
+  let parsedSistemas = safeData.sistemasMecanicos || safeData.sistemas_mecanicos || {};
+  if (typeof parsedSistemas === 'string') {
+    try {
+      parsedSistemas = JSON.parse(parsedSistemas);
+    } catch {
+      parsedSistemas = {};
+    }
+  }
+
+  const kilometraje = safeData.kilometraje ?? '';
+  const cilindrada = safeData.cilindrada ?? safeData.cilindraje ?? '';
+  const tipoTransmision = safeData.tipoTransmision ?? safeData.tipo_transmision ?? '';
+  const traccion = safeData.traccion ?? '';
+  const estadoTransmision = safeData.estadoTransmision ?? safeData.estado_transmision ?? '';
+  const comentariosMotor = safeData.comentariosMotor ?? safeData.comentarios_motor ?? '';
+
   const handleInputChange = (field, value) => {
     if (!onChange) return;
     onChange({
@@ -11,15 +27,10 @@ export default function Motor({ peritajeData: data, onChange }) {
   };
 
   const handleMecanicoItemChange = (itemKey, field, value) => {
-    const currentItems = safeData.sistemasMecanicos && typeof safeData.sistemasMecanicos === 'object'
-      ? safeData.sistemasMecanicos
-      : {};
-    const currentItem = currentItems[itemKey] && typeof currentItems[itemKey] === 'object'
-      ? currentItems[itemKey]
-      : { estado: '', observaciones: '' };
+    const currentItem = parsedSistemas[itemKey] || { estado: '', observaciones: '' };
 
     handleInputChange('sistemasMecanicos', {
-      ...currentItems,
+      ...parsedSistemas,
       [itemKey]: {
         ...currentItem,
         [field]: value
@@ -89,7 +100,7 @@ export default function Motor({ peritajeData: data, onChange }) {
         </div>
         <div className="divide-y divide-slate-100">
           {itemsMecanicos.map((item) => {
-            const itemState = safeData.sistemasMecanicos?.[item.key] || {
+            const itemState = parsedSistemas[item.key] || {
               estado: '',
               observaciones: ''
             };
@@ -152,7 +163,7 @@ export default function Motor({ peritajeData: data, onChange }) {
               type="number"
               min="0"
               placeholder="Ej. 15000"
-              value={safeData.kilometraje ?? ''}
+              value={kilometraje}
               onChange={(e) => handleInputChange('kilometraje', e.target.value)}
               className={`${inputStyle} font-mono font-bold text-blue-600`}
             />
@@ -164,7 +175,7 @@ export default function Motor({ peritajeData: data, onChange }) {
             <input
               type="text"
               placeholder="Ej. 1500cc"
-              value={safeData.cilindrada ?? ''}
+              value={cilindrada}
               onChange={(e) => handleInputChange('cilindrada', e.target.value)}
               className={`${inputStyle} font-mono font-bold text-blue-600`}
             />
@@ -177,7 +188,7 @@ export default function Motor({ peritajeData: data, onChange }) {
               Tipo de Transmisión
             </label>
             <select
-              value={safeData.tipoTransmision || ''}
+              value={tipoTransmision}
               onChange={(e) => handleInputChange('tipoTransmision', e.target.value)}
               className={inputStyle}
             >
@@ -203,7 +214,7 @@ export default function Motor({ peritajeData: data, onChange }) {
               Tipo de Tracción
             </label>
             <select
-              value={safeData.traccion || ''}
+              value={traccion}
               onChange={(e) => handleInputChange('traccion', e.target.value)}
               className={inputStyle}
             >
@@ -230,7 +241,7 @@ export default function Motor({ peritajeData: data, onChange }) {
               Estado del Conjunto / Caja
             </label>
             <select
-              value={safeData.estadoTransmision || ''}
+              value={estadoTransmision}
               onChange={(e) => handleInputChange('estadoTransmision', e.target.value)}
               className={inputStyle}
             >
@@ -249,8 +260,12 @@ export default function Motor({ peritajeData: data, onChange }) {
           </label>
           <div className={`grid grid-cols-2 ${cilindrosActivos.length > 2 ? 'sm:grid-cols-4' : 'sm:grid-cols-2'} gap-3 max-w-2xl`}>
             {cilindrosActivos.map((num) => {
-              const campo = `compresionCil${num}`;
-              const valor = safeData[campo];
+              const campoCamel = `compresionCil${num}`;
+              const campoSnake = `compresion_cil_${num}`;
+              const campoSnake2 = `compresion_cil${num}`;
+              
+              let valor = safeData[campoCamel] ?? safeData[campoSnake] ?? safeData[campoSnake2];
+              if (typeof valor === 'object') valor = '';
 
               return (
                 <div key={num} className="relative flex items-center">
@@ -261,8 +276,8 @@ export default function Motor({ peritajeData: data, onChange }) {
                     type="number"
                     min="0"
                     placeholder="000"
-                    value={typeof valor === 'object' ? '' : valor ?? ''}
-                    onChange={(e) => handleInputChange(campo, e.target.value)}
+                    value={valor ?? ''}
+                    onChange={(e) => handleInputChange(campoCamel, e.target.value)}
                     className={`${inputStyle} pl-12 text-right font-mono font-bold text-blue-600`}
                   />
                 </div>
@@ -286,7 +301,7 @@ export default function Motor({ peritajeData: data, onChange }) {
           <textarea
             rows="3"
             placeholder="Registre observaciones finales sobre el estado operativo del motor, si requiere reparaciones urgentes, sincronización o cambios de fluidos..."
-            value={safeData.comentariosMotor || ''}
+            value={comentariosMotor}
             onChange={(e) => handleInputChange('comentariosMotor', e.target.value)}
             className={`${inputStyle} resize-none`}
           />

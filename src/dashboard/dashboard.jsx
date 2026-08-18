@@ -1213,7 +1213,7 @@ export default function Dashboard({ onLogout }) {
                                   {getNombreSucursal(item.sucursal_inspeccion_id || item.sucursalInspeccionId, item.sucursal_inspeccion || item.sucursalInspeccion)}
                                 </td>
                                 <td className="px-4 py-4 whitespace-nowrap text-slate-700">
-                                  {item.nombre_cliente?.nombre || item.nombre_cliente || 'Sin cliente'}
+                                  {item.cliente?.nombre_cliente || item.clienteNombre || item.nombre_cliente || 'Sin cliente'}
                                 </td>
                                 <td className="px-4 py-4 whitespace-nowrap font-medium text-slate-800">
                                   {item.inspector?.name || item.inspector || 'Inspector Activo'}

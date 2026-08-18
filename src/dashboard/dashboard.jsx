@@ -448,9 +448,9 @@ export default function Dashboard({ onLogout }) {
       dataToSend.append('score_electrico', Number(formDataDelEstado.scoreElectrico ?? 100));
       dataToSend.append('score_legal', Number(formDataDelEstado.scoreLegal ?? 100));
 
-      dataToSend.append('cliente_nombre', formDataDelEstado.clienteNombre || '');
-      dataToSend.append('cliente_documento', formDataDelEstado.clienteDocumento || '');
-      dataToSend.append('cliente_telefono', formDataDelEstado.clienteTelefono || '');
+      dataToSend.append('nombre_cliente', formDataDelEstado.clienteNombre || formDataDelEstado.nombre_cliente || '');
+      dataToSend.append('documento_cliente', formDataDelEstado.clienteDocumento || formDataDelEstado.documento_cliente || '');
+      dataToSend.append('telefono_cliente', formDataDelEstado.clienteTelefono || formDataDelEstado.telefono_cliente || '');
 
       if (formDataDelEstado.firmaInspector) {
         dataToSend.append('firma_inspector', formDataDelEstado.firmaInspector);
@@ -481,10 +481,10 @@ export default function Dashboard({ onLogout }) {
         dataToSend.append('foto_rtm', formDataDelEstado.archivoTecnicoMecanica.file);
       }
 
+
       await api.post(endpoint, dataToSend, {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data',
           'Accept': 'application/json'
         }
       });
@@ -574,10 +574,8 @@ export default function Dashboard({ onLogout }) {
       costoReparacion: acc.costoReparacion ?? acc.costo_reparacion ?? '',
       comentarioDaño: acc.comentarioDaño ?? acc.comentario_dano ?? ''
 
-      
-    }));
 
-    console.log("Accesorios mapeados para edición:", accesoriosNormalizados);
+    }));
 
     return {
       ...item,
@@ -603,9 +601,16 @@ export default function Dashboard({ onLogout }) {
       vendedorId: item.vendedor_id || item.vendedorId || '',
       archivoSoat: item.archivo_soat || item.archivoSoat || item.foto_soat || null,
       archivoTecnicoMecanica: item.archivo_rtm || item.archivoTecnicoMecanica || item.foto_rtm || null,
-      nombre_cliente: item.nombre_cliente || item.cliente?.nombre || '',
-      documento_cliente: item.documento_cliente || item.cliente?.documento || '',
-      telefono_cliente: item.telefono_cliente || item.cliente_telefono || item.telefono_cliene || '',
+
+      nombre_cliente: item.nombre_cliente || item.cliente?.nombre_cliente || item.cliente?.nombre || '',
+      documento_cliente: item.documento_cliente || item.cliente?.documento_cliente || item.cliente?.documento || '',
+      telefono_cliente: item.telefono_cliente || item.cliente?.telefono_cliente || item.cliente?.telefono || item.cliente_telefono || '',
+
+
+      clienteNombre: item.nombre_cliente || item.cliente?.nombre_cliente || item.cliente?.nombre || '',
+      clienteDocumento: item.documento_cliente || item.cliente?.documento_cliente || item.cliente?.documento || '',
+      clienteTelefono: item.telefono_cliente || item.cliente?.telefono_cliente || item.cliente?.telefono || item.cliente_telefono || '',
+
       siniestros: item.siniestros || item.comentarios_siniestros || '',
       comentariosMotor: item.comentarios_motor || item.comentariosMotor || '',
       accesorios: accesoriosNormalizados,
@@ -640,7 +645,7 @@ export default function Dashboard({ onLogout }) {
     });
   };
 
-  
+
   const handleEditarPeritaje = (item) => {
     const peritajeMapeado = mapearPeritajeDeBackend(item);
     setPeritajeData(peritajeMapeado);

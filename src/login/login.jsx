@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useAuth } from '../useAuth';
-import api from '../api/axios';// <-- Importamos nuestra configuración de Axios
+import api from '../api/axios'; // <-- Importamos nuestra configuración de Axios
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  
+  // 1. NUEVO ESTADO: Controla la visibilidad de la contraseña
+  const [showPassword, setShowPassword] = useState(false);
 
   // Extraemos la función login del contexto global
   const { login } = useAuth();
@@ -16,7 +19,7 @@ export default function Login() {
     
     try {
       // 1. Hacemos la petición REAL a tu backend en Laravel
-      const response = await api.post('/login', { email, password });
+      const response = await api.post('login', { email, password });
       
       // 2. Obtenemos los datos que nos responde Laravel
       const token = response.data.access_token || response.data.token;
@@ -112,15 +115,44 @@ export default function Login() {
                 ¿La olvidaste?
               </a>
             </div>
-            <input
-              id="password"
-              type="password"
-              required
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-slate-800 bg-[#030914] px-4 py-3 text-sm text-slate-200 placeholder-slate-700 outline-none transition-all duration-200 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 focus:bg-[#040c1a]"
-            />
+            
+            {/* 2. CONTENEDOR RELATIVO PARA EL INPUT Y EL BOTÓN */}
+            <div className="relative">
+              <input
+                id="password"
+                // Alternamos entre 'text' y 'password' basado en el estado
+                type={showPassword ? "text" : "password"}
+                required
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                // Agregamos 'pr-12' para que el texto no se superponga con el ícono del ojo
+                className="w-full rounded-lg border border-slate-800 bg-[#030914] px-4 py-3 pr-12 text-sm text-slate-200 placeholder-slate-700 outline-none transition-all duration-200 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 focus:bg-[#040c1a]"
+              />
+              
+              {/* 3. BOTÓN PARA MOSTRAR/OCULTAR CONTRASEÑA */}
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-cyan-400 focus:outline-none transition-colors"
+              >
+                {showPassword ? (
+                  // Ícono de Ojo Abierto (Ocultar contraseña)
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                ) : (
+                  // Ícono de Ojo Cerrado (Mostrar contraseña)
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                    <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                    <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                    <line x1="2" y1="2" x2="22" y2="22" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Remember Me */}

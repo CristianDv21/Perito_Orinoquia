@@ -161,6 +161,9 @@ export default function Documentacion({
         soat_al_dia: 'soatAlDia',
         tecnicoMecanicaAlDia: 'tecnico_mecanica_al_dia',
         tecnico_mecanica_al_dia: 'tecnicoMecanicaAlDia',
+        nombre_cliente: 'clienteNombre',
+        documento_cliente: 'clienteDocumento',
+        telefono_cliente: 'clienteTelefono',
         numMotor: 'num_motor',
         num_motor: 'numMotor',
         numChasis: 'num_chasis',
@@ -349,7 +352,7 @@ export default function Documentacion({
 
                     if (valor.length > 1) {
                       try {
-                        const res = await api.get(`/clientes/buscar?q=${encodeURIComponent(valor)}`);
+                        const res = await api.get(`clientes/buscar?query=${encodeURIComponent(valor)}`);
                         setSugerencias(res.data);
                       } catch (err) {
                         console.error("Error buscando cliente", err);
@@ -367,15 +370,23 @@ export default function Documentacion({
                       <li
                         key={cliente.id}
                         onClick={() => {
-                          handleInputChange('nombre_cliente', cliente.nombre_cliente || '');
-                          handleInputChange('documento_cliente', cliente.documento_cliente || '');
-                          handleInputChange('telefono_cliene', cliente.telefono_cliene || cliente.telefono_cliente || '');
+                          console.log('CLIENTE SELECCIONADO:', cliente);
+
+                          handleInputChange('clienteNombre', cliente.nombre_cliente || '');
+                          handleInputChange('clienteDocumento', cliente.documento_cliente || '');
+                          handleInputChange('clienteTelefono', cliente.telefono_cliente || '');
+
                           setSugerencias([]);
                         }}
                         className="p-2 hover:bg-indigo-50 cursor-pointer text-xs border-b border-slate-100 last:border-none"
                       >
-                        <p className="font-semibold text-slate-700">{cliente.nombre_cliente}</p>
-                        <p className="text-[10px] text-slate-400">Doc: {cliente.documento_cliente} | Tel: {cliente.telefono_cliene}</p>
+                        <p className="font-semibold text-slate-700">
+                          {cliente.nombre_cliente}
+                        </p>
+
+                        <p className="text-[10px] text-slate-400">
+                          Doc: {cliente.documento_cliente} | Tel: {cliente.telefono_cliente}
+                        </p>
                       </li>
                     ))}
                   </ul>
@@ -400,8 +411,8 @@ export default function Documentacion({
                 <input
                   type="text"
                   placeholder="Teléfono..."
-                  value={safeData.telefono_cliene || ''}
-                  onChange={(e) => handleInputChange('telefono_cliene', e.target.value)}
+                  value={safeData.telefono_cliente || ''}
+                  onChange={(e) => handleInputChange('telefono_cliente', e.target.value)}
                   className={`${inputStyle} font-mono`}
                 />
               </div>

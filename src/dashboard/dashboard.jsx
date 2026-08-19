@@ -10,6 +10,7 @@ import DetallesTecnicos from '../modules/DetallesTecnicos';
 import api from '../api/axios';
 import { useAuth } from '../useAuth';
 import { generarPdfEstiloCliente } from '../modules/Pdf';
+import Swal from 'sweetalert2';
 
 import {
   User,
@@ -140,7 +141,7 @@ export default function Dashboard({ onLogout }) {
   });
 
   const esAdmin = (profileData.rol || '').toLowerCase().includes('admin');
-  const usuario = JSON.parse(localStorage.getItem("peritaje_user"));
+  const usuario = JSON.parse(localStorage.getItem("user"));
 
   const [sucursales, setSucursales] = useState([]);
   const [vendedores, setVendedores] = useState([]);
@@ -224,38 +225,166 @@ export default function Dashboard({ onLogout }) {
   const handleUpdateProfile = async () => {
     try {
       await api.put('user/profile', profileData);
-      alert("Perfil actualizado correctamente");
+
+      Swal.fire({
+        icon: 'success',
+        title: '¡Perfil actualizado!',
+        text: 'Tu perfil se actualizó correctamente.',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#06b6d4',
+        background: '#060e1e',
+        color: '#e2e8f0',
+        customClass: {
+          popup: 'rounded-2xl border border-slate-700',
+          title: 'text-white',
+          confirmButton: 'rounded-xl px-6 py-3 font-bold'
+        }
+      });
     } catch (error) {
-      console.error("Error al actualizar:", error);
-      alert(error.response?.data?.message || "Error al actualizar el perfil");
+      console.error('Error al actualizar:', error);
+
+      Swal.fire({
+        icon: 'error',
+        title: 'No se pudo actualizar',
+        text:
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          'Error al actualizar el perfil.',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#06b6d4',
+        background: '#060e1e',
+        color: '#e2e8f0',
+        customClass: {
+          popup: 'rounded-2xl border border-slate-700',
+          title: 'text-white',
+          confirmButton: 'rounded-xl px-6 py-3 font-bold'
+        }
+      });
     }
   };
 
+
   const handleGuardarConfiguracion = (e) => {
     if (e) e.preventDefault();
-    localStorage.setItem('peritaje_config_sistema', JSON.stringify(configSistema));
-    alert('¡Configuración del sistema guardada exitosamente!');
+
+    localStorage.setItem(
+      'peritaje_config_sistema',
+      JSON.stringify(configSistema)
+    );
+
+    Swal.fire({
+      icon: 'success',
+      title: '¡Configuración guardada!',
+      text: 'La configuración del sistema se guardó exitosamente.',
+      timer: 2000,
+      showConfirmButton: false,
+      background: '#060e1e',
+      color: '#e2e8f0',
+      customClass: {
+        popup: 'rounded-2xl border border-slate-700'
+      }
+    });
   };
 
   const handleCrearUsuario = async (e) => {
     e.preventDefault();
+
     try {
       const token = localStorage.getItem('auth_token');
+
       await api.post('users', nuevoUsuarioData, {
-        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json'
+        }
       });
 
-      alert('¡Usuario creado exitosamente!');
+      await Swal.fire({
+        icon: 'success',
+        title: '¡Usuario creado!',
+        text: 'El usuario fue creado exitosamente.',
+        timer: 2000,
+        showConfirmButton: false,
+        background: '#060e1e',
+        color: '#e2e8f0',
+        customClass: {
+          popup: 'rounded-2xl border border-slate-700'
+        }
+      });
+
       setShowCrearUsuarioModal(false);
-      setNuevoUsuarioData({ name: '', email: '', password: '', rol: 'tecnico', sucursal_id: '', activo: true });
+
+      setNuevoUsuarioData({
+        name: '',
+        email: '',
+        password: '',
+        rol: 'tecnico',
+        sucursal_id: '',
+        activo: true
+      });
+
       fetchUsuarios();
     } catch (error) {
       console.error('Error al crear usuario:', error);
-      alert(error.response?.data?.message || 'Error al crear el usuario en el servidor.');
+
+      const status = error.response?.status;
+      const data = error.response?.data;
+
+      if (status === 422) {
+        const emailError = data?.errors?.email?.[0];
+
+        Swal.fire({
+          icon: 'warning',
+          title: 'Correo ya registrado',
+          text: emailError || 'El correo electrónico ya está en uso.',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#06b6d4',
+          background: '#060e1e',
+          color: '#e2e8f0',
+          customClass: {
+            popup: 'rounded-2xl border border-slate-700',
+            title: 'text-white',
+            confirmButton: 'rounded-xl px-6 py-3 font-bold'
+          }
+        });
+
+        return;
+      }
+
+      Swal.fire({
+        icon: 'error',
+        title: 'No se pudo crear el usuario',
+        text:
+          data?.message ||
+          data?.error ||
+          'Ocurrió un error al crear el usuario en el servidor.',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#06b6d4',
+        background: '#060e1e',
+        color: '#e2e8f0',
+        customClass: {
+          popup: 'rounded-2xl border border-slate-700',
+          title: 'text-white',
+          confirmButton: 'rounded-xl px-6 py-3 font-bold'
+        }
+      });
     }
   };
 
   const handleEditarUsuarioModalOpen = (usr) => {
+    if (usr.rol === 'admin' || usr.rol === 'superadmin') {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Acción no permitida',
+        text: 'Los usuarios administradores no se pueden editar desde Gestión de Usuarios. Puedes modificar tu propio perfil desde Perfil.',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#06b6d4',
+        background: '#060e1e',
+        color: '#fff'
+      });
+      return;
+    }
+
     setSelectedUserForProfile(usr);
     setUsuarioEditData({
       name: usr.name || '',
@@ -265,7 +394,9 @@ export default function Dashboard({ onLogout }) {
       sucursal_id: usr.sucursal_id || '',
       activo: usr.activo !== false
     });
-    setShowEditarUsuarioModal(true);
+
+
+    setSelectedUserForProfile(usr);
   };
 
   const handleActualizarUsuarioSubmit = async (e) => {
@@ -280,36 +411,129 @@ export default function Dashboard({ onLogout }) {
         headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
       });
 
-      alert('¡Usuario actualizado exitosamente!');
+      Swal.fire({
+        icon: 'success',
+        title: '¡Usuario actualizado!',
+        text: 'El usuario se actualizó exitosamente.',
+        timer: 2000,
+        showConfirmButton: false,
+        background: '#060e1e',
+        color: '#e2e8f0',
+        customClass: {
+          popup: 'rounded-2xl border border-slate-700'
+        }
+      });
+
       setShowEditarUsuarioModal(false);
       setSelectedUserForProfile(null);
       fetchUsuarios();
     } catch (error) {
       console.error('Error al actualizar usuario:', error);
-      alert(error.response?.data?.message || 'Error al actualizar el usuario en el servidor.');
+
+      Swal.fire({
+        icon: 'error',
+        title: 'No se pudo actualizar el usuario',
+        text:
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          'Ocurrió un error al actualizar el usuario en el servidor.',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#06b6d4',
+        background: '#060e1e',
+        color: '#e2e8f0',
+        customClass: {
+          popup: 'rounded-2xl border border-slate-700',
+          title: 'text-white',
+          confirmButton: 'rounded-xl px-6 py-3 font-bold'
+        }
+      });
+
     }
   };
 
-  const handleEliminarUsuario = (userId) => {
+  const handleEliminarUsuario = (usr) => {
+    if (!usr) return;
+
+    if (usr.rol === 'admin') {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Acción no permitida',
+        text: 'Los usuarios administradores no se pueden eliminar desde Gestión de Usuarios.',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#d44006',
+        background: '#060e1e',
+        color: '#fff'
+      });
+      return;
+    }
+
+    if (usr.rol === 'superadmin') {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Acción no permitida',
+        text: 'El usuario superadmin no puede ser eliminado.',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#d44006',
+        background: '#060e1e',
+        color: '#fff'
+      });
+      return;
+    }
+
     setModalConfig({
       isOpen: true,
-      mensaje: '¿Estás seguro de que deseas eliminar este usuario del sistema?',
+      mensaje: `¿Estás seguro de que deseas eliminar al usuario ${usr.name}?`,
       onConfirm: async () => {
-        setModalConfig({ isOpen: false, mensaje: '', onConfirm: null });
+        setModalConfig({
+          isOpen: false,
+          mensaje: '',
+          onConfirm: null
+        });
+
         try {
-          const token = localStorage.getItem('auth_token');
-          await api.delete(`users/${userId}`, {
-            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+          const response = await api.delete(`users/${usr.id}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+              Accept: 'application/json'
+            }
           });
-          setUsuariosList(prev => prev.filter(u => u.id !== userId));
-          alert('Usuario eliminado correctamente.');
+
+          setUsuariosList((prev) =>
+            prev.filter((usuario) => usuario.id !== usr.id)
+          );
+
+          Swal.fire({
+            icon: 'success',
+            title: 'Usuario desactivado',
+            text: response.data?.message || 'El usuario ha sido desactivado correctamente.',
+            confirmButtonText: 'Aceptar',
+            confirmButtonColor: '#06b6d4',
+            background: '#060e1e',
+            color: '#fff'
+          });
+
         } catch (error) {
           console.error('Error al eliminar usuario:', error);
-          alert(error.response?.data?.message || 'Hubo un error al intentar eliminar el usuario.');
+          console.error('Respuesta del servidor:', error.response?.data);
+
+          Swal.fire({
+            icon: 'error',
+            title: 'No se pudo eliminar',
+            text:
+              error.response?.data?.error ||
+              error.response?.data?.message ||
+              'Hubo un error al intentar eliminar el usuario.',
+            confirmButtonText: 'Cerrar',
+            confirmButtonColor: '#ef4444',
+            background: '#060e1e',
+            color: '#fff'
+          });
         }
       }
     });
   };
+
+
 
   const mainMenuItems = [
     { id: "Perfil", label: "Perfil", icon: User },
@@ -355,11 +579,37 @@ export default function Dashboard({ onLogout }) {
 
   const handleActualizarPassword = async () => {
     if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
-      alert("Por favor completa todos los campos de contraseña.");
+      Swal.fire({
+        icon: 'warning',
+        title: 'Campos incompletos',
+        text: 'Por favor completa todos los campos de contraseña.',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#d4a406',
+        background: '#060e1e',
+        color: '#e2e8f0',
+        customClass: {
+          popup: 'rounded-2xl border border-slate-700',
+          title: 'text-white',
+          confirmButton: 'rounded-xl px-6 py-3 font-bold'
+        }
+      });
       return;
     }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert("Las nuevas contraseñas no coinciden.");
+      Swal.fire({
+        icon: 'warning',
+        title: 'Contraseñas no coinciden',
+        text: 'Las nuevas contraseñas no coinciden.',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#d43306',
+        background: '#060e1e',
+        color: '#e2e8f0',
+        customClass: {
+          popup: 'rounded-2xl border border-slate-700',
+          title: 'text-white',
+          confirmButton: 'rounded-xl px-6 py-3 font-bold'
+        }
+      });
       return;
     }
     try {
@@ -372,11 +622,37 @@ export default function Dashboard({ onLogout }) {
         headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
       });
 
-      alert("¡Contraseña actualizada exitosamente!");
+      Swal.fire({
+        icon: 'success',
+        title: '¡Contraseña actualizada!',
+        text: 'La contraseña se actualizó exitosamente.',
+        timer: 2000,
+        showConfirmButton: false,
+        background: '#060e1e',
+        color: '#e2e8f0',
+        customClass: {
+          popup: 'rounded-2xl border border-slate-700'
+        }
+      });
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (error) {
-      console.error("Error al actualizar la contraseña:", error);
-      alert(error.response?.data?.message || "Ocurrió un error al actualizar la contraseña.");
+      Swal.fire({
+        icon: 'error',
+        title: 'No se pudo actualizar la contraseña',
+        text:
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          'Ocurrió un error al actualizar la contraseña.',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#0625d4',
+        background: '#060e1e',
+        color: '#e2e8f0',
+        customClass: {
+          popup: 'rounded-2xl border border-slate-700',
+          title: 'text-white',
+          confirmButton: 'rounded-xl px-6 py-3 font-bold'
+        }
+      });
     }
   };
 
@@ -499,7 +775,18 @@ export default function Dashboard({ onLogout }) {
         }
       });
 
-      alert('¡Peritaje finalizado correctamente!');
+      Swal.fire({
+        icon: 'success',
+        title: '¡Peritaje finalizado!',
+        text: 'El peritaje se finalizó exitosamente.',
+        timer: 2000,
+        showConfirmButton: false,
+        background: '#060e1e',
+        color: '#e2e8f0',
+        customClass: {
+          popup: 'rounded-2xl border border-slate-700'
+        }
+      });
       setIsInspecting(false);
       fetchInspecciones();
     } catch (error) {
@@ -507,13 +794,42 @@ export default function Dashboard({ onLogout }) {
       console.error('Respuesta del servidor:', error.response?.data);
 
       if (error.response?.data?.errors) {
-        // Esto desplegará en una alerta los errores específicos de cada campo que Laravel rechazó
         const errores = Object.entries(error.response.data.errors)
-          .map(([campo, mensajes]) => `- ${campo}: ${mensajes.join(', ')}`)
-          .join('\n');
-        alert(`Errores de validación en el servidor:\n\n${errores}`);
+          .map(([campo, mensajes]) => `<strong>${campo}:</strong> ${mensajes.join(', ')}`)
+          .join('<br>');
+
+        Swal.fire({
+          icon: 'error',
+          title: 'Error de validación',
+          html: `
+        <div style="text-align: left; margin-top: 10px;">
+          ${errores}
+        </div>
+      `,
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#ef4444',
+          background: '#060e1e',
+          color: '#e2e8f0',
+          customClass: {
+            popup: 'rounded-2xl border border-slate-700'
+          }
+        });
       } else {
-        alert(error.response?.data?.message || 'Hubo un error al guardar el peritaje en el servidor.');
+        Swal.fire({
+          icon: 'error',
+          title: 'No se pudo guardar',
+          text:
+            error.response?.data?.message ||
+            error.response?.data?.error ||
+            'Hubo un error al guardar el peritaje en el servidor.',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#ef4444',
+          background: '#060e1e',
+          color: '#e2e8f0',
+          customClass: {
+            popup: 'rounded-2xl border border-slate-700'
+          }
+        });
       }
     }
   };
@@ -658,10 +974,32 @@ export default function Dashboard({ onLogout }) {
         try {
           await api.delete(`peritajes/${idPeritaje}`);
           setInspecciones(prevLista => prevLista.filter(item => item.id !== idPeritaje));
-          alert('Peritaje eliminado correctamente.');
+          Swal.fire({
+            icon: 'success',
+            title: '¡Peritaje eliminado!',
+            text: 'El peritaje se eliminó exitosamente.',
+            timer: 2000,
+            showConfirmButton: false,
+            background: '#060e1e',
+            color: '#e2e8f0',
+            customClass: {
+              popup: 'rounded-2xl border border-slate-700'
+            }
+          });
         } catch (error) {
           console.error("Error al eliminar:", error);
-          alert(error.response?.data?.message || 'Hubo un error al intentar eliminar el peritaje.');
+          Swal.fire({
+            icon: 'error',
+            title: 'No se pudo eliminar',
+            text:
+              error.response?.data?.error ||
+              error.response?.data?.message ||
+              'Hubo un error al intentar eliminar el peritaje.',
+            confirmButtonText: 'Cerrar',
+            confirmButtonColor: '#ef4444',
+            background: '#060e1e',
+            color: '#fff'
+          });
         }
       }
     });
@@ -761,7 +1099,18 @@ export default function Dashboard({ onLogout }) {
                       setInspectionStep('Documentacion');
                     } catch (error) {
                       console.error('Error detallado:', error.response?.data);
-                      alert('Error del servidor: ' + (error.response?.data?.message || error.message));
+                      Swal.fire({
+                        icon: 'error',
+                        title: 'Error del servidor',
+                        text:
+                          error.response?.data?.message ||
+                          error.response?.data?.error ||
+                          'Hubo un error al intentar iniciar el protocolo de peritaje.',
+                        confirmButtonText: 'Cerrar',
+                        confirmButtonColor: '#ef4444',
+                        background: '#060e1e',
+                        color: '#fff'
+                      });
                     }
                   }}
                   className="flex flex-col text-left p-5 border border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 rounded-xl transition group relative shadow-sm hover:shadow"
@@ -813,6 +1162,7 @@ export default function Dashboard({ onLogout }) {
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Rol *</label>
                   <select value={nuevoUsuarioData.rol} onChange={(e) => setNuevoUsuarioData({ ...nuevoUsuarioData, rol: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="superadmin">Inspector</option>
                     <option value="tecnico">Técnico</option>
                     <option value="admin">Administrador</option>
                   </select>
@@ -871,6 +1221,7 @@ export default function Dashboard({ onLogout }) {
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Rol *</label>
                   <select value={usuarioEditData.rol} onChange={(e) => setUsuarioEditData({ ...usuarioEditData, rol: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="superadmin">Inspector</option>
                     <option value="tecnico">Técnico</option>
                     <option value="admin">Administrador</option>
                   </select>
@@ -1043,7 +1394,7 @@ export default function Dashboard({ onLogout }) {
           <div className="flex items-center space-x-4">
             <button onClick={toggleSidebar} className="lg:hidden text-slate-600 hover:text-slate-900 text-2xl">☰</button>
             <span className="text-xs font-semibold text-slate-400">
-              {usuario ? `${usuario.nombre} • ${usuario.rol}` : "Usuario"}
+              {usuario ? `${usuario.name} • ${usuario.rol}` : "Usuario"}
             </span>
           </div>
           <span className="text-xs font-medium text-slate-500">Yopal, Casanare</span>
@@ -1776,22 +2127,24 @@ export default function Dashboard({ onLogout }) {
                                         setSelectedUserForProfile(usr);
                                         setShowUserProfileModal(true);
                                       }}
-                                      className="px-3 py-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200 text-[11px] font-bold uppercase rounded-lg transition"
-                                    >
+                                      className="px-3 py-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200 text-[11px] font-bold uppercase rounded-lg transition">
                                       Ver
                                     </button>
-                                    <button
-                                      onClick={() => handleEditarUsuarioModalOpen(usr)}
-                                      className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline transition duration-140"
-                                    >
-                                      Editar
-                                    </button>
-                                    <button
-                                      onClick={() => handleEliminarUsuario(usr.id)}
-                                      className="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 text-[11px] font-bold uppercase rounded-lg transition"
-                                    >
-                                      Eliminar
-                                    </button>
+                                    {usr.rol !== 'admin' && (
+                                      <>
+                                        <button
+                                          onClick={() => handleEditarUsuarioModalOpen(usr)}
+                                          className="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100 hover:border-blue-200 text-[11px] font-bold uppercase rounded-lg transition"
+                                        >
+                                          Editar
+                                        </button>
+                                        <button
+                                          onClick={() => handleEliminarUsuario(usr)}
+                                          className="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 text-[11px] font-bold uppercase rounded-lg transition">
+                                          Eliminar
+                                        </button>
+                                      </>
+                                    )}
                                   </div>
                                 </td>
                               </tr>
@@ -1912,7 +2265,18 @@ export default function Dashboard({ onLogout }) {
                         setNombreInput('');
                       } catch (error) {
                         console.error(error);
-                        alert(error.response?.data?.message || "Ocurrió un error al guardar.");
+                        Swal.fire({
+                          icon: 'error',
+                          title: 'Error del servidor',
+                          text:
+                            error.response?.data?.message ||
+                            error.response?.data?.error ||
+                            'Hubo un error al intentar guardar los datos.',
+                          confirmButtonText: 'Cerrar',
+                          confirmButtonColor: '#ef4444',
+                          background: '#060e1e',
+                          color: '#fff'
+                        });
                       }
                     }}
                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
